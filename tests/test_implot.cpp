@@ -107,6 +107,7 @@ int main() {
   printf("after game loop\n"); 
 
   // annihilate
+  printf("annihilate window\n"); 
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
