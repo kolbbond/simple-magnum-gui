@@ -1,0 +1,4 @@
+CompileFlags:
+	Add:
+	- -I/home/kolbbond/build/guild/imgui
+	- -I/home/kolbbond/build/guild/implot

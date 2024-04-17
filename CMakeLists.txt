@@ -58,7 +58,11 @@ set(source_list
     imgui/imgui_widgets.cpp
     imgui/backends/imgui_impl_sdl2.cpp
     imgui/backends/imgui_impl_opengl3.cpp
-    imgui/imgui_demo.cpp)
+    imgui/imgui_demo.cpp
+    implot/implot.cpp
+    implot/implot_items.cpp
+    implot/implot_demo.cpp
+)
 
 # make our library (shared or static?)
 add_library(${PROJECT_NAME} SHARED ${source_list})
