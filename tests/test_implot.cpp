@@ -67,7 +67,7 @@ int main() {
 
   // implotting here
   printf("creating ImPlot context\n");
-  // ImPlot::CreateContext();
+  ImPlot::CreateContext();
 
   // event loop
   bool done = false;
@@ -101,13 +101,14 @@ int main() {
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     SDL_GL_SwapWindow(window);
     // debug done
-    //  done = true;
+      done = true;
   }
 
   printf("after game loop\n"); 
 
   // annihilate
-  printf("annihilate window\n"); 
+  printf("annihilate context/window\n"); 
+  ImPlot::DestroyContext();
   ImGui_ImplOpenGL3_Shutdown();
   ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();

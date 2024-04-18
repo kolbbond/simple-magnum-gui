@@ -138,6 +138,10 @@ int main(int, char **) {
   bool show_another_window = false;
   ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
+  // framerate
+  int fps = 30;
+  int ms_per_frame = 1000/fps;
+
   // Main loop
   bool done = false;
 #ifdef __EMSCRIPTEN__
@@ -150,6 +154,10 @@ int main(int, char **) {
   while (!done)
 #endif
   {
+
+      // time to limit framerate
+      int time_start = SDL_GetTicks();
+
     // Poll and handle events (inputs, window resize, etc.)
     // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to
     // tell if dear imgui wants to use your inputs.
@@ -169,6 +177,19 @@ int main(int, char **) {
           event.window.windowID == SDL_GetWindowID(window))
         done = true;
     }
+
+    // this is dt
+    int time = SDL_GetTicks() - time_start;
+    if(time < 0) continue; // negative check 
+
+    // limit framerate here?
+    // wait for the rest of dt
+    int time_sleep = ms_per_frame - time;
+    if (time_sleep > 0){
+        SDL_Delay(time_sleep);
+    }
+
+    // continue drawing
 
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL3_NewFrame();

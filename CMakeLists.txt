@@ -13,7 +13,7 @@ option(ENABLE_TESTING "build unit/system tests" ON)
 option(USE_SDL "use SDL for window" ON)
 option(USE_OPENGL "use OpenGL for rendering" ON)
 option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
-option(CREATE_INSTALL "install into general system dir" OFF)
+option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
 # if cmake helpers - for debug
@@ -96,6 +96,12 @@ target_compile_options(
     -Wall
     -Wextra>)
 
+# version header
+configure_file(
+    ${CMAKE_SOURCE_DIR}/cmake/version.hh.in
+    ${CMAKE_BINARY_DIR}/include/version.hh
+    )
+
 # add tests? we can probably steal from the examples? add test subdir
 if(ENABLE_TESTING)
   message(STATUS "setup tests")
@@ -119,7 +125,12 @@ if(CREATE_INSTALL)
   # change export name?
 
   # install header files
-  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR/guild)
+  #install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+  install(FILES 
+     imgui/imgui.h 
+     imgui/imconfig.h
+      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild/include)
+
   install(FILES ${CMAKE_BINARY_DIR}/include/version.hh
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
 
