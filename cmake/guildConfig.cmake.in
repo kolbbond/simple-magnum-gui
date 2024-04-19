@@ -1,0 +1,30 @@
+get_filename_component(guild_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+# add path
+list(APPEND CMAKE_MODULE_PATH ${guild_CMAKE_DIR})
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+# dependencies are SDL and OpenGL
+
+# SDL
+find_dependency(SDL2)
+if(NOT TARGET SDL2)
+    message(STATUS "SDL2 is not target")
+endif()
+
+# OpenGL
+if(NOT TARGET OpenGL)
+    message(STATUS "OpenGL is not target")
+  set(OpenGL_GL_PREFERENCE "GLVND")
+find_dependency(OpenGL)
+endif()
+
+
+# if we are not guild include guild!
+if(NOT TARGET guild)
+    message(STATUS "guild is not target")
+    # include definitions
+    include("${guild_CMAKE_DIR}/guildTargets.cmake")
+endif()
+set(guild_LIBRARIES guild)

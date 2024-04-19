@@ -38,6 +38,15 @@ if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
   )
 endif()
 
+# output paths
+if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin CACHE PATH "" FORCE)
+	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
+	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
+endif()
+
+message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+
 # find packages
 message(STATUS "find packages")
 if(USE_OPENGL)
@@ -76,6 +85,10 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+ PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot
 )
 
 # link to library
@@ -112,36 +125,93 @@ endif(ENABLE_TESTING)
 # ##############################################################################
 # INSTALLATION if we are installing
 if(CREATE_INSTALL)
+
+    # how can we install on windows? ...  @hey
   include(GNUInstallDirs)
-  set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBIDR}/cmake/guild)
+
+  set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/guild)
 
   install(
     TARGETS guild
     EXPORT guild-targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/guild
     ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/guild
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
 
   # change export name?
+  set_target_properties(guild PROPERTIES EXPORT_NAME guild)
 
   # install header files
-  #install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
   install(FILES 
-     imgui/imgui.h 
+      #imgui/imgui.h 
      imgui/imconfig.h
-      DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild/include)
+     imgui/imgui_internal.h
+     imgui/imstb_rectpack.h
+     imgui/imstb_textedit.h
+     imgui/imstb_truetype.h
+     imgui/backends/imgui_impl_opengl3.h
+     imgui/backends/imgui_impl_sdl2.h
+     implot/implot.h
+     implot/implot_internal.h
 
+     #DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild/include)
+     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+
+  # version
   install(FILES ${CMAKE_BINARY_DIR}/include/version.hh
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+
+    set(_INCLUDE_INSTALL_DIR guild)
 
   # Export targets to a script
   install(
     EXPORT guild-targets
     FILE guildTargets.cmake
-    DESTINATION ${INSTALL_CONFIGDIR})
+    NAMESPACE guild::
+    DESTINATION ${INSTALL_CONFIGDIR}
+    )
 
   # create a configversion.cmake
+  include(CMakePackageConfigHelpers)
+  write_basic_package_version_file(
+      ${CMAKE_CURRENT_BINARY_DIR}/guildConfigVersion.cmake
+      VERSION ${PROJECT_VERSION}
+      COMPATIBILITY AnyNewerVersion
+  )
+
+  configure_package_config_file(
+      ${CMAKE_CURRENT_LIST_DIR}/cmake/guildConfig.cmake.in
+      ${CMAKE_CURRENT_BINARY_DIR}/guildConfig.cmake
+      INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+      PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
+  )
 
   # install not finished!
+  # install config, configversion and custom find modules
+  # (to find with cmake in other projects)
+  install (FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/guildConfig.cmake
+      ${CMAKE_CURRENT_BINARY_DIR}/guildConfigVersion.cmake
+      DESTINATION ${INSTALL_CONFIGDIR}
+      )
+
+  ################################################## 
+  # EXPORT finally
+  export(EXPORT guild-targets
+      FILE ${CMAKE_CURRENT_BINARY_DIR}/guildTargets.cmake
+      )
+
+  # setup install paths
+  include(GNUInstallDirs)
+
+  # set rpaths
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+
+  # create debian package?
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
+    # include(GenerateDebianPackage)
 
 endif(CREATE_INSTALL)
