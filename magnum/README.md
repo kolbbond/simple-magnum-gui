@@ -1,3 +1,6 @@
+Clone the magnum-integration here
+
+
 Magnum — *Lightweight and modular C++11/C++14 graphics middleware for games and data visualization*
 
 Looking for an open-source library that gives you graphics abstraction and

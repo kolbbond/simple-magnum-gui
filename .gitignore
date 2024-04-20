@@ -9,3 +9,5 @@ magnum/
 !magnut/.not_git
 build/*
 !build/README.md
+magnum-integration
+!magnum-integration/README.md
