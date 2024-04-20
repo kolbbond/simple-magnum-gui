@@ -1,6 +1,11 @@
 imgui/
 !imgui/README.md
+!imgui/.not_git
 implot/
 !implot/README.md
+!implot/.not_git
+magnum/
+!magnum/README.md
+!magnut/.not_git
 build/*
 !build/README.md
