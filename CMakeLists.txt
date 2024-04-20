@@ -145,7 +145,7 @@ if(CREATE_INSTALL)
   # install header files
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
   install(FILES 
-      #imgui/imgui.h 
+     imgui/imgui.h 
      imgui/imconfig.h
      imgui/imgui_internal.h
      imgui/imstb_rectpack.h

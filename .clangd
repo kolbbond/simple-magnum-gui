@@ -1,4 +1,4 @@
 CompileFlags:
 	Add:
-	- -I/home/kolbbond/build/guild/imgui
-	- -I/home/kolbbond/build/guild/implot
+	- -I/home/ohr4/programs/cpp/guild/imgui
+	- -I/home/ohr4/programs/cpp/guild/implot
