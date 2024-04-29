@@ -26,6 +26,10 @@ if(@USE_LUA@)
         if(NOT TARGET Lua)
             message(STATUS "Lua is not target")
             find_dependency(Lua)
+            add_library(Lua::Lua INTERFACE IMPORTED)
+            set_target_properties(Lua::Lua PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${LUA_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${LUA_LIBRARIES}")
         endif()
     endif()
 endif()
@@ -47,3 +51,4 @@ if(NOT TARGET guild)
     include("${guild_CMAKE_DIR}/guildTargets.cmake")
 endif()
 set(guild_LIBRARIES guild)
+

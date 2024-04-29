@@ -8,8 +8,9 @@ printf "CompileFlags:\n" > .clangd
 printf "\tAdd:\n" >> .clangd
 
 # change the pwd
-printf "\t- -I$(pwd)/imgui\n" >> .clangd
-printf "\t- -I$(pwd)/implot\n" >> .clangd
+printf "\t- \"-I$(pwd)/imgui\"\n" >> .clangd
+printf "\t- \"-I$(pwd)/imgui/backends\"\n" >> .clangd
+printf "\t- \"-I$(pwd)/implot\"\n" >> .clangd
 
 printf "\t- \"-I/usr/include/SDL2\"\n" >> .clangd
 

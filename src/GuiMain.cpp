@@ -3,6 +3,7 @@
 
 // include header
 #include "GuiMain.hh"
+#include "GuiConsole.hh"
 #include "WindowWrapper.hh"
 
 // constructor
@@ -46,7 +47,27 @@ int GuiMain::demo_window() {
 
   // printf("run simple demo window\n");
   imgui_->demo_window();
-  
+
+  // we have to swap?
+  window_->swap();
+
+  // success?
+  return 1;
+}
+
+int GuiMain::demo_console() {
+  // make a demo console
+
+  // test window
+  // ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+  ImGui::SetNextWindowSize(ImVec2(500, 800));
+  ImGui::Begin("console");
+  ImGui::End();
+
+  ShGuiConsolePr gc = GuiConsole::create();
+  bool flag_console = true;
+  gc->ShowGuiConsole(&flag_console);
+
   // we have to swap?
   window_->swap();
 
@@ -88,4 +109,7 @@ bool GuiMain::get_done() {
 }
 
 // factory
-ShGuiMainPr GuiMain::create() { return std::make_shared<GuiMain>(); }
+ShGuiMainPr GuiMain::create() {
+  // factory
+  return std::make_shared<GuiMain>();
+}

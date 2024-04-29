@@ -9,7 +9,7 @@ project(
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
-option(ENABLE_TESTING "build unit/system tests" ON)
+option(ENABLE_TESTING "build unit/system tests" OFF)
 option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
@@ -93,7 +93,7 @@ set(mysources
     src/ImGuiWrapper.cpp
     src/ImPlotWrapper.cpp
     src/GuiMain.cpp
-    #src/GuiConsole.cpp
+    src/GuiConsole.cpp
     #src/GuiLog.cpp
 )
 
@@ -125,14 +125,29 @@ endif(USE_MATLAB)
 if(USE_LUA)
     message(STATUS "find lua")
     find_package(Lua 5.4 REQUIRED)
-    target_link_libraries(${PROJECT_NAME} PUBLIC
-        ${LUA_LIBRARIES})
-    #target_include_directories(${PROJECT_NAME} PRIVATE ${LUA_INCLUDE_DIR})
+    if(LUA_FOUND)
+        if(NOT TARGET Lua)
+            # create a lua library for us
+            message(STATUS "Lua is not target")
+            add_library(Lua::Lua INTERFACE IMPORTED)
+            set_target_properties(Lua::Lua PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${LUA_INCLUDE_DIR}"
+                INTERFACE_LINK_LIBRARIES "${LUA_LIBRARIES}")
+        endif()
 
+        # link lua to our library
+        #target_link_libraries(${PROJECT_NAME} PUBLIC
+        #${LUA_LIBRARIES})
+        target_link_libraries(${PROJECT_NAME} PUBLIC
+            Lua::Lua
+            )
     set(mysources ${mysources}
         src/LuaWrapper.cpp
         )
+    #target_include_directories(${PROJECT_NAME} PRIVATE ${LUA_INCLUDE_DIR})
+    endif()
 endif()
+
 
 # find python
 if(USE_PYTHON)
@@ -189,6 +204,11 @@ if(ENABLE_TESTING)
   add_subdirectory(tests)
 endif(ENABLE_TESTING)
 
+##################################################
+# working executables here?
+add_executable(main tests/test_gui_console.cpp)
+target_link_libraries(main guild)
+
 # ##############################################################################
 # INSTALLATION if we are installing
 if(CREATE_INSTALL)
@@ -211,6 +231,8 @@ if(CREATE_INSTALL)
 
   # install header files
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+
+  # install subrepo headers
   install(FILES 
      imgui/imgui.h 
      imgui/imconfig.h

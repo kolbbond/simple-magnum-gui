@@ -38,8 +38,8 @@ protected:
     std::string name_ = "test window";
 
   // Screen dimension constants
-  const int SCREEN_WIDTH_ = 640;
-  const int SCREEN_HEIGHT_ = 480;
+  const int SCREEN_WIDTH_ = 1920;
+  const int SCREEN_HEIGHT_ = 1080;
 
   // The window we'll be rendering to
   // SDL_Window* window_ = NULL;
@@ -84,9 +84,16 @@ public:
   // Renders quad to the screen
   void render();
 
+  // setters
   // set the window name
   // determines the sdl context ... 
   void set_name(std::string);
+
+  // set window size x,y
+  void set_size(int, int);
+
+  void set_fullscreen(bool);
+
 
   // get current ticks
   int get_ticks();

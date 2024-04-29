@@ -1,8 +1,9 @@
 CompileFlags:
 	Add:
 	- "-I/home/kolbbond/programs/cpp/guild/imgui"
+	- "-I/home/kolbbond/programs/cpp/guild/imgui/backends"
 	- "-I/home/kolbbond/programs/cpp/guild/implot"
 	- "-I/usr/include/SDL2"
 	- "-I/home/kolbbond/programs/cpp/guild/include"
 	- "-I/home/kolbbond/build/MATLAB/2023b/extern/include"
-	- "-I/usr/local/lua5.4"
+	- "-I/usr/include/lua5.4"

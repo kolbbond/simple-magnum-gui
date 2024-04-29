@@ -23,7 +23,7 @@ int ImGuiWrapper::init(ShWindowWrapperPr gui) {
 
   // input/output stuff
   io_ = ImGui::GetIO();
-  (void)io_;
+  //(void)io_;
   io_.ConfigFlags |=
       ImGuiConfigFlags_NavEnableKeyboard; // Enable Keyboard Controls
   io_.ConfigFlags |=
@@ -105,6 +105,8 @@ int ImGuiWrapper::demo_window() {
 
     ImGui::Text("Application average fps %.3f ms/frame (%.1f FPS)",
                 1000.0f / io_.Framerate, io_.Framerate);
+    // debug
+    printf("fps: %0.2f\n",io_.Framerate);
     if (ImGui::BeginMenu("options")) {
       // IMGUI_DEMO_MARKER("Menu/Examples");
       // ImGui::MenuItem("Main menu bar", NULL, &show_app_main_menu_bar);

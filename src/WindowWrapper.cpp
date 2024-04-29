@@ -3,6 +3,7 @@
 
 // include header
 #include "WindowWrapper.hh"
+#include "SDL_video.h"
 
 // constructor
 WindowWrapper::WindowWrapper() {}
@@ -34,11 +35,14 @@ bool WindowWrapper::init() {
   SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
   SDL_WindowFlags window_flags =
       (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
-                        SDL_WINDOW_ALLOW_HIGHDPI);
+                        SDL_WINDOW_ALLOW_HIGHDPI); //  | SDL_WINDOW_MAXIMIZED);
 
   // create our window
+  // flags determine what our initial window looks like
   window_ = SDL_CreateWindow(name_.c_str(), SDL_WINDOWPOS_CENTERED,
-                             SDL_WINDOWPOS_CENTERED, 800, 600, window_flags);
+                             SDL_WINDOWPOS_CENTERED,
+                             SCREEN_WIDTH_, SCREEN_HEIGHT_, window_flags);
+  // check 
   if (window_ == nullptr) {
     printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
     return -1;

@@ -1,5 +1,7 @@
 # testing
 
+message(STATUS "testing")
+
 # add the test files
 set(test_list 
     test_sdl2_opengl3.cpp
@@ -9,6 +11,7 @@ set(test_list
     test_sdl_window.cpp
     test_window_ptr.cpp
     test_window_wrapper.cpp
+    #test_gui_console.cpp
 )
 
 # package specific
@@ -30,8 +33,9 @@ endif(USE_MATLAB)
 foreach(srcfile ${test_list})
   string(REPLACE ".cpp" "" name ${srcfile})
   add_executable(${name} ${srcfile})
-  #target_link_libraries(${name} guild ${SDL_LIB})
   target_link_libraries(${name} guild)
 
   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name})
 endforeach()
+
+message(STATUS "end of test creation")

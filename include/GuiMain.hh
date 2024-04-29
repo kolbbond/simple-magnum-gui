@@ -6,6 +6,7 @@
 #include "ImPlotWrapper.hh"
 #include "ImGuiWrapper.hh"
 #include "WindowWrapper.hh"
+#include "GuiConsole.hh"
 //#include <guild>
 #include <memory>
 
@@ -43,6 +44,8 @@ public:
 
   // demo window?
   int demo_window();
+
+  int demo_console();
 
   // close everything
   int close();
