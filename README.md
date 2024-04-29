@@ -3,6 +3,12 @@
 * the name is cute gui (ld) linker?
 1. (i cant spell)
 
+This turned into a straight up GUI library
+1. Now we have scripting languages
+    * Lua
+    * Matlab
+    * (Python?)
+
 My attempt at a build system for a combined gui library. 
 These are amazing gui libraries to utilize but 
 * These guys did not supply a build system <br />
