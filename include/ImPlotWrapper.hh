@@ -1,10 +1,11 @@
 // ImPlotWrapper.hh
-
 #ifndef ImPlotWrapper_hh
 #define ImPlotWrapper_hh
 
 #include <memory>
-#include <guild/guild>
+//#include <guild>
+#include "implot.h"
+#include "cstdio"
 
 typedef std::shared_ptr<class ImPlotWrapper> ShImPlotWrapperPr;
 

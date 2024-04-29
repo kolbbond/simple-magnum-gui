@@ -12,7 +12,14 @@
 
 // general include
 // @hey, change the cmake so it  finds the guild directory
-#include <guild/guild>
+#include "imgui.h"
+#include "imgui.h"
+#include "imgui_impl_opengl3.h"
+#include "imgui_impl_sdl2.h"
+#include "implot.h"
+#include <SDL.h>
+#include <SDL_opengl.h>
+
 
 // c
 #include <memory>

@@ -4,7 +4,6 @@
 #define ImGuiWrapper_hh
 
 #include "WindowWrapper.hh"
-#include <guild/guild>
 
 typedef std::shared_ptr<class ImGuiWrapper> ShImGuiWrapperPr;
 class ImGuiWrapper {

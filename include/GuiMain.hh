@@ -3,10 +3,10 @@
 #ifndef GuiMain_hh
 #define GuiMain_hh
 
-#include "ImGuiWrapper.hh"
 #include "ImPlotWrapper.hh"
+#include "ImGuiWrapper.hh"
 #include "WindowWrapper.hh"
-#include <guild/guild>
+//#include <guild>
 #include <memory>
 
 typedef std::shared_ptr<class GuiMain> ShGuiMainPr;

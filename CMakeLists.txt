@@ -10,11 +10,16 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
 option(ENABLE_TESTING "build unit/system tests" ON)
-option(USE_SDL "use SDL for window" ON)
-option(USE_OPENGL "use OpenGL for rendering" ON)
 option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
+
+option(USE_SDL "use SDL for window" ON)
+option(USE_OPENGL "use OpenGL for rendering" ON)
+
+option(USE_LUA "include lua scripting engine" ON)
+option(USE_MATLAB "include matlab scripting engine" OFF)
+option(USE_PYTHON "include PYTHON scripting engine" OFF)
 
 # if cmake helpers - for debug
 if(USE_CMAKEHELPERS)
@@ -57,8 +62,7 @@ if(USE_SDL)
   find_package(SDL2 REQUIRED)
 endif(USE_SDL)
 
-# which backend?
-
+# Sources that we are not changing
 # set sources imgui and implot
 set(source_list
     imgui/imgui.cpp
@@ -74,8 +78,73 @@ set(source_list
 )
 
 # make our library (shared or static?)
+# this makes a target so we can pick and choose linking
 add_library(${PROJECT_NAME} SHARED ${source_list})
 
+# link to library
+target_link_libraries(${PROJECT_NAME} PUBLIC 
+    SDL2::SDL2 
+    OpenGL # GLEW
+)
+
+# set sources for our gui implementation
+set(mysources
+    src/WindowWrapper.cpp
+    src/ImGuiWrapper.cpp
+    src/ImPlotWrapper.cpp
+    src/GuiMain.cpp
+    #src/GuiConsole.cpp
+    #src/GuiLog.cpp
+)
+
+# Extra packages
+# find matlab
+if(USE_MATLAB)
+    set(Matlab_ROOT_DIR "$ENV{MATLAB_PATH}")
+    message(STATUS "find matlab")
+    find_package(Matlab REQUIRED)
+
+    if(Matlab_FOUND)
+        message(STATUS "found Matlab!")
+    endif(Matlab_FOUND)
+
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        Matlab::mex
+        Matlab::mx
+        Matlab::MatlabEngine
+        Matlab::MatlabDataArray
+        )
+
+    #set(mysources ${mysources}
+        #src/MatlabWrapper.cpp
+    #)
+
+endif(USE_MATLAB)
+
+# find lua
+if(USE_LUA)
+    message(STATUS "find lua")
+    find_package(Lua 5.4 REQUIRED)
+    target_link_libraries(${PROJECT_NAME} PUBLIC
+        ${LUA_LIBRARIES})
+    #target_include_directories(${PROJECT_NAME} PRIVATE ${LUA_INCLUDE_DIR})
+
+    set(mysources ${mysources}
+        src/LuaWrapper.cpp
+        )
+endif()
+
+# find python
+if(USE_PYTHON)
+
+endif()
+
+
+# add additional sources
+target_sources(${PROJECT_NAME} PRIVATE ${mysources})
+
+# at this point we can build everything
+# which backend?
 # include directories we are making an interface for projects that link to THIS
 # library (includes all dependencies in our lib)
 target_include_directories(
@@ -84,17 +153,15 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+         $<BUILD_INTERFACE:${LUA_INCLUDE_DIR}>
  PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui
     ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
     ${CMAKE_CURRENT_SOURCE_DIR}/implot
-)
-
-# link to library
-target_link_libraries(${PROJECT_NAME} PUBLIC 
-    SDL2::SDL2 
-    OpenGL # GLEW
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${LUA_INCLUDE_DIR}
 )
 
 # include(PrintVariables)

@@ -20,6 +20,25 @@ if(NOT TARGET OpenGL)
 find_dependency(OpenGL)
 endif()
 
+# lua 
+if(@USE_LUA@)
+    if(@LUA_FOUND@)
+        if(NOT TARGET Lua)
+            message(STATUS "Lua is not target")
+            find_dependency(Lua)
+        endif()
+    endif()
+endif()
+
+# matlab
+if(@USE_MATLAB@)
+    if(@MATLAB_FOUND@)
+    if(NOT TARGET Matlab)
+        message(STATUS "Matlab is not target")
+      find_dependency(Matlab)
+    endif()
+    endif()
+endif()
 
 # if we are not guild include guild!
 if(NOT TARGET guild)

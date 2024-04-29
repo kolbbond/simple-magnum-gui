@@ -4,6 +4,8 @@
 1. (i cant spell)
 
 This turned into a straight up GUI library
+The dependent libraries that this is built on are included as sub-dirs
+so you can clone/fork those repos yourself
 1. Now we have scripting languages
     * Lua
     * Matlab

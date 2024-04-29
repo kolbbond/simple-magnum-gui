@@ -4,7 +4,27 @@
 set(test_list 
     test_sdl2_opengl3.cpp
     test_implot.cpp
+    test_imgui_demos.cpp
+    test_imgui_wrapper.cpp
+    test_sdl_window.cpp
+    test_window_ptr.cpp
+    test_window_wrapper.cpp
 )
+
+# package specific
+if(USE_LUA)
+
+        set(test_list ${test_list} 
+            test_lua_api.cpp
+            )
+
+endif(USE_LUA)
+
+if(USE_MATLAB)
+        set(test_list ${test_list} 
+            test_matlab_api.cpp
+            )
+endif(USE_MATLAB)
 
 # walk over source files
 foreach(srcfile ${test_list})

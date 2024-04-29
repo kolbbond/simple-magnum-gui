@@ -10,3 +10,12 @@ printf "\tAdd:\n" >> .clangd
 # change the pwd
 printf "\t- -I$(pwd)/imgui\n" >> .clangd
 printf "\t- -I$(pwd)/implot\n" >> .clangd
+
+printf "\t- \"-I/usr/include/SDL2\"\n" >> .clangd
+
+# matlab includes
+printf "\t- \"-I$(pwd)/include\"\n" >> .clangd
+printf "\t- \"-I${MATLAB_PATH}/extern/include\"\n" >> .clangd
+
+# lua includes
+printf "\t- \"-I/usr/include/lua5.4\"\n" >> .clangd
