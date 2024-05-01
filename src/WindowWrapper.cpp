@@ -3,6 +3,7 @@
 
 // include header
 #include "WindowWrapper.hh"
+#include "SDL_hints.h"
 #include "SDL_video.h"
 
 // constructor
@@ -36,6 +37,7 @@ bool WindowWrapper::init() {
   SDL_WindowFlags window_flags =
       (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE |
                         SDL_WINDOW_ALLOW_HIGHDPI); //  | SDL_WINDOW_MAXIMIZED);
+  SDL_SetHint(SDL_HINT_RENDER_DRIVER, "opengl");
 
   // create our window
   // flags determine what our initial window looks like
