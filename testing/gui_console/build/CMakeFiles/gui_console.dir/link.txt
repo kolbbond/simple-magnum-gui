@@ -1,0 +1,1 @@
+/usr/bin/c++ CMakeFiles/gui_console.dir/main.cpp.o -o gui_console  -Wl,-rpath,/usr/local/lib/guild /usr/local/lib/guild/libguild.so /usr/lib/x86_64-linux-gnu/libSDL2.so -lOpenGL /usr/lib/x86_64-linux-gnu/liblua5.4.so -lm 
