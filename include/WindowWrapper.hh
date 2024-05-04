@@ -12,14 +12,19 @@
 
 // general include
 // @hey, change the cmake so it  finds the guild directory
-#include "imgui.h"
+#include <Magnum/Math/Color.h>
+#include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Renderer.h>
+#include <Magnum/ImGuiIntegration/Context.hpp>
+#include "implot.h"
+#include <Magnum/ImGuiIntegration/Context.hpp>
+#include <Magnum/Platform/Sdl2Application.h>
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include "imgui_impl_sdl2.h"
 #include "implot.h"
 #include <SDL.h>
 #include <SDL_opengl.h>
-
 
 // c
 #include <memory>

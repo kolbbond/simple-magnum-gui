@@ -9,23 +9,31 @@ project(
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
-option(ENABLE_TESTING "build unit/system tests" OFF)
-option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
+option(ENABLE_TESTING "build unit/system tests" ON)
+option(USE_CMAKEHELPERS "use cmakehelpers for debug" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
 option(USE_SDL "use SDL for window" ON)
 option(USE_OPENGL "use OpenGL for rendering" ON)
+option(USE_MAGNUM "use magnum and magnum integration libraries" ON)
 
 option(USE_LUA "include lua scripting engine" ON)
 option(USE_MATLAB "include matlab scripting engine" OFF)
+option(USE_OCTAVE "include octave scripting engine" OFF)
 option(USE_PYTHON "include PYTHON scripting engine" OFF)
 
 # if cmake helpers - for debug
 if(USE_CMAKEHELPERS)
   list(APPEND CMAKE_MODULE_PATH "$ENV{CMAKEHELPERS_DIR}")
-  include(PrintVariables)
+  include(PrintHelpers)
+
+
 endif(USE_CMAKEHELPERS)
+
+
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" 
+    ${CMAKE_MODULE_PATH})
 
 # system detection
 if(WIN32)
@@ -52,18 +60,6 @@ endif()
 
 message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
-# find packages
-message(STATUS "find packages")
-if(USE_OPENGL)
-  set(OpenGL_GL_PREFERENCE "GLVND")
-  find_package(OpenGL REQUIRED)
-endif(USE_OPENGL)
-if(USE_SDL)
-  find_package(SDL2 REQUIRED)
-endif(USE_SDL)
-
-# Sources that we are not changing
-# set sources imgui and implot
 set(source_list
     imgui/imgui.cpp
     imgui/imgui_draw.cpp
@@ -76,16 +72,8 @@ set(source_list
     implot/implot_items.cpp
     implot/implot_demo.cpp
 )
-
 # make our library (shared or static?)
-# this makes a target so we can pick and choose linking
 add_library(${PROJECT_NAME} SHARED ${source_list})
-
-# link to library
-target_link_libraries(${PROJECT_NAME} PUBLIC 
-    SDL2::SDL2 
-    OpenGL # GLEW
-)
 
 # set sources for our gui implementation
 set(mysources
@@ -94,13 +82,43 @@ set(mysources
     src/ImPlotWrapper.cpp
     src/GuiMain.cpp
     src/GuiConsole.cpp
+    src/ImGuiExample.cpp
     #src/GuiLog.cpp
 )
+
+
+# find magnum, imgui
+# find packages
+message(STATUS "find packages")
+if(USE_OPENGL)
+  set(OpenGL_GL_PREFERENCE "GLVND")
+  find_package(OpenGL REQUIRED)
+endif(USE_OPENGL)
+if(USE_SDL)
+  find_package(SDL2 REQUIRED)
+endif(USE_SDL)
+
+find_package(Corrade REQUIRED Main)
+find_package(Magnum REQUIRED GL)
+find_package(MagnumIntegration REQUIRED ImGui)
+find_package(Magnum REQUIRED Sdl2Application)
+
+# link them
+target_link_libraries(${PROJECT_NAME} PUBLIC
+    Corrade::Main
+    Magnum::Application
+    Magnum::GL
+    Magnum::Magnum
+    SDL2::SDL2 
+    OpenGL 
+    MagnumIntegration::ImGui
+    )
 
 # Extra packages
 # find matlab
 if(USE_MATLAB)
-    set(Matlab_ROOT_DIR "$ENV{MATLAB_PATH}")
+    #set(Matlab_ROOT_DIR "$ENV{MATLAB_PATH}")
+    PrintVars()
     message(STATUS "find matlab")
     find_package(Matlab REQUIRED)
 
@@ -154,7 +172,6 @@ if(USE_PYTHON)
 
 endif()
 
-
 # add additional sources
 target_sources(${PROJECT_NAME} PRIVATE ${mysources})
 
@@ -207,7 +224,8 @@ endif(ENABLE_TESTING)
 ##################################################
 # working executables here?
 add_executable(main tests/test_gui_console.cpp)
-target_link_libraries(main guild)
+target_link_libraries(main 
+    guild)
 
 # ##############################################################################
 # INSTALLATION if we are installing
@@ -304,3 +322,15 @@ if(CREATE_INSTALL)
     # include(GenerateDebianPackage)
 
 endif(CREATE_INSTALL)
+
+
+# cmake summary
+message("\n"
+    "Installation Summary\n"
+    "--------------------\n"
+    "* Install Directory            : ${CMAKE_INSTALL_PREFIX}\n"
+    "* Build Type                   : ${CMAKE_BUILD_TYPE}\n"
+    "* Build static libs            : ${BUILD_STATIC_LIBS}\n"
+    "* Build examples               : ${BUILD_EXAMPLE_PROGRAMS}\n"
+    "* Build tests                  : ${BUILD_TESTS}\n"
+)
