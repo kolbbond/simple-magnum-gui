@@ -1,5 +1,11 @@
 # Encapsulated build of gui parts
 # guild 
+
+This repo was changed to dig
+[dig](https://github.com/kolbbond/dig.git)
+
+##################################################
+
 * the name is cute gui (ld) linker?
 1. (i cant spell)
 
