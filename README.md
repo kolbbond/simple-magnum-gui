@@ -23,6 +23,29 @@ These are amazing gui libraries to utilize but
 
  The dependencies, git clone into the sub directories
  1. imgui: 'git@github.com:ocornut/imgui.git'
- 2. implot: 'git@github.com:epezent/implot.git'
- 3. magnum: 'git@github.com:mosra/magnum.git'
- 4. magnum-integration: 'git@github.com:mosra/magnum-integration.git'
+ 1. implot: 'git@github.com:epezent/implot.git'
+ 1. corrade: `git@github.com:mosra/corrade.git`
+ 1. magnum: 'git@github.com:mosra/magnum.git'
+ 1. magnum-integration: 'git@github.com:mosra/magnum-integration.git'
+
+ ## This is getting complicated!
+
+ * install corrade
+ * install magnum
+    * make sure to build with SDL2
+ * clone magnum-integration
+    * set cmake to build with imgui
+    * cd into src/MagnumExternal
+    * git clone imgui here, and rename > ImGui
+        * optional: git clone implot and `cp implot/implot* Imgui/. `
+    *   * if implot also add > implot.h and implot_external.h to cmakelists `
+    * go to modules/FindImGui.cmake and add the  
+    > implot implot_items implot_demo 
+    to the foreach at line 156..?
+    * this should be enough to install
+
+* make guild?
+
+
+
+
