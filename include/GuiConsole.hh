@@ -4,7 +4,7 @@
 #define GuiConsole_hh
 
 #include "ImGuiWrapper.hh"
-#include "ImPlotWrapper.hh"
+//#include "ImPlotWrapper.hh"
 #include "LuaWrapper.hh"
 #include "WindowWrapper.hh"
 

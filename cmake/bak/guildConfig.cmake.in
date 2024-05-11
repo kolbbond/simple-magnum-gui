@@ -1,8 +1,6 @@
 get_filename_component(guild_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
 include(CMakeFindDependencyMacro)
 
-message(STATUS "GUILD CONFIG")
-
 # add path
 list(APPEND CMAKE_MODULE_PATH ${guild_CMAKE_DIR})
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
@@ -21,36 +19,6 @@ if(NOT TARGET OpenGL)
   set(OpenGL_GL_PREFERENCE "GLVND")
 find_dependency(OpenGL)
 endif()
-
-# MagnumIntegration
-if(NOT TARGET MagnumIntegration)
-    message(STATUS "MagnumIntegration is not target")
-    find_dependency(MagnumIntegration)
-    #find_package(MagnumIntegration REQUIRED ImGui)
-    find_dependency(MagnumIntegration REQUIRED ImGui)
-endif()
-
-# Corrade
-if(NOT TARGET Corrade)
-    message(STATUS "Corrade is not target")
-    find_dependency(Corrade)
-    find_dependency(Corrade REQUIRED Main)
-endif()
-
-# Magnum
-if(NOT TARGET Magnum)
-    message(STATUS "Magnum is not target")
-    find_dependency(Magnum)
-    find_dependency(Magnum REQUIRED Sdl2Application)
-    find_dependency(Magnum REQUIRED GL)
-endif()
-
-
-# ImGui
-#if(NOT TARGET ImGui)
-#message(STATUS "ImGui is not target")
-#find_dependency(ImGui)
-#endif()
 
 # lua 
 if(@USE_LUA@)
@@ -79,7 +47,6 @@ endif()
 # if we are not guild include guild!
 if(NOT TARGET guild)
     message(STATUS "guild is not target")
-    message(STATUS "ADD GUILD TARGETS")
     # include definitions
     include("${guild_CMAKE_DIR}/guildTargets.cmake")
 endif()

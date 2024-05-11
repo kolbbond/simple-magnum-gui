@@ -3,7 +3,7 @@
 #ifndef GuiMain_hh
 #define GuiMain_hh
 
-#include "ImPlotWrapper.hh"
+//#include "ImPlotWrapper.hh"
 #include "ImGuiWrapper.hh"
 #include "WindowWrapper.hh"
 #include "GuiConsole.hh"
@@ -26,7 +26,7 @@ protected:
   ShImGuiWrapperPr imgui_;
 
   // the implot
-  ShImPlotWrapperPr implot_;
+  //ShImPlotWrapperPr implot_;
 
   // methods
 public:
@@ -53,7 +53,7 @@ public:
   // setters
   void set_window(ShWindowWrapperPr);
   void set_imgui(ShImGuiWrapperPr);
-  void set_implot(ShImPlotWrapperPr);
+  //void set_implot(ShImPlotWrapperPr);
 
   // getters
   bool get_done();

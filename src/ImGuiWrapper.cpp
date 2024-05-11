@@ -40,13 +40,13 @@ int ImGuiWrapper::init(ShWindowWrapperPr gui) {
   // ImGui::StyleColorsDark();
   ImGui::StyleColorsLight();
   // Setup Platform/Renderer backends
-  ImGui_ImplSDL2_InitForOpenGL(gui->get_window(), gui->get_context());
-  ImGui_ImplOpenGL3_Init(glsl_version);
+  //ImGui_ImplSDL2_InitForOpenGL(gui->get_window(), gui->get_context());
+  //ImGui_ImplOpenGL3_Init(glsl_version);
 
   // IMPLOT
   // implotting here
   printf("creating ImGui context\n");
-  ImPlot::CreateContext();
+  //ImPlot::CreateContext();
 
   // success?
   return 1;
@@ -54,8 +54,8 @@ int ImGuiWrapper::init(ShWindowWrapperPr gui) {
 
 void ImGuiWrapper::new_frame() {
   // Start the Dear ImGui frame
-  ImGui_ImplOpenGL3_NewFrame();
-  ImGui_ImplSDL2_NewFrame();
+  //ImGui_ImplOpenGL3_NewFrame();
+  //ImGui_ImplSDL2_NewFrame();
   ImGui::NewFrame();
 }
 
@@ -122,7 +122,7 @@ int ImGuiWrapper::demo_window() {
 
   // implot demo
   ImGui::Begin("implot demo");
-  ImPlot::ShowDemoWindow();
+  //ImPlot::ShowDemoWindow();
   ImGui::End();
 
   // success?
@@ -136,14 +136,14 @@ void ImGuiWrapper::render() {
   glClearColor(clear_color_.x * clear_color_.w, clear_color_.y * clear_color_.w,
                clear_color_.z * clear_color_.w, clear_color_.w);
   glClear(GL_COLOR_BUFFER_BIT);
-  ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+  //ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 int ImGuiWrapper::close() {
   printf("annihilate context/window\n");
-  ImPlot::DestroyContext();
-  ImGui_ImplOpenGL3_Shutdown();
-  ImGui_ImplSDL2_Shutdown();
+  //ImPlot::DestroyContext();
+  //ImGui_ImplOpenGL3_Shutdown();
+  //ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();
 
   // success?

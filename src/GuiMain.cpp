@@ -24,7 +24,7 @@ void GuiMain::handle_events() {
 
   SDL_Event event;
   while (SDL_PollEvent(&event)) {
-    ImGui_ImplSDL2_ProcessEvent(&event);
+    //ImGui_ImplSDL2_ProcessEvent(&event);
     if (event.type == SDL_QUIT)
       flag_done_ = true;
     if (event.type == SDL_WINDOWEVENT &&
@@ -79,7 +79,7 @@ int GuiMain::close() {
   // close everything
   window_->close();
   imgui_->close();
-  implot_->close();
+  //implot_->close();
 
   // success
   return 1;
@@ -97,10 +97,13 @@ void GuiMain::set_imgui(ShImGuiWrapperPr imgui) {
   imgui_ = imgui;
 }
 
+/*
 void GuiMain::set_implot(ShImPlotWrapperPr implot) {
+
   // set implot
   implot_ = implot;
 }
+*/
 
 // GETTERS / getters
 bool GuiMain::get_done() {

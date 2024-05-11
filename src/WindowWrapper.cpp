@@ -42,9 +42,9 @@ bool WindowWrapper::init() {
   // create our window
   // flags determine what our initial window looks like
   window_ = SDL_CreateWindow(name_.c_str(), SDL_WINDOWPOS_CENTERED,
-                             SDL_WINDOWPOS_CENTERED,
-                             SCREEN_WIDTH_, SCREEN_HEIGHT_, window_flags);
-  // check 
+                             SDL_WINDOWPOS_CENTERED, SCREEN_WIDTH_,
+                             SCREEN_HEIGHT_, window_flags);
+  // check
   if (window_ == nullptr) {
     printf("Error: SDL_CreateWindow(): %s\n", SDL_GetError());
     return -1;
@@ -102,8 +102,8 @@ void WindowWrapper::close() {
   printf("after SDL quit\n");
 }
 
-void WindowWrapper::make_current(){
-    // make this window current
+void WindowWrapper::make_current() {
+  // make this window current
   SDL_GL_MakeCurrent(window_, glContext_);
 }
 void WindowWrapper::swap() {
@@ -117,36 +117,55 @@ void WindowWrapper::set_name(std::string name) {
   name_ = name;
 }
 
-// GETTERS
-int WindowWrapper::get_ticks() {
-  // get the current tick
-  return SDL_GetTicks();
-}
-SDL_Window *WindowWrapper::get_window() {
-  // return window
-  return window_;
+void WindowWrapper::set_size(int x, int y) {
+  SCREEN_WIDTH_ = x;
+  SCREEN_HEIGHT_ = y;
 }
 
-SDL_GLContext WindowWrapper::get_context() {
-  // return context
-  return glContext_;
+void WindowWrapper::resize(int x, int y) {
+  SCREEN_WIDTH_ = x;
+  SCREEN_HEIGHT_ = y;
+
+  resize();
 }
 
-// SETTERS
-// PRINTERS
+void WindowWrapper::resize() {
+    // resize with SDL
 
-/*
-void WindowWrapper::printProgramLog(GLuint program) {
-  // Make sure name is shader
-    //program = NULL;
+    SDL_SetWindowSize(window_, SCREEN_WIDTH_, SCREEN_HEIGHT_);
+
 }
 
-void WindowWrapper::printShaderLog(GLuint shader) {
-  // Make sure name is shader
-}
-*/
+  // GETTERS
+  int WindowWrapper::get_ticks() {
+    // get the current tick
+    return SDL_GetTicks();
+  }
+  SDL_Window *WindowWrapper::get_window() {
+    // return window
+    return window_;
+  }
 
-// factory
-ShWindowWrapperPr WindowWrapper::create() {
-  return std::make_shared<WindowWrapper>();
-}
+  SDL_GLContext WindowWrapper::get_context() {
+    // return context
+    return glContext_;
+  }
+
+  // SETTERS
+  // PRINTERS
+
+  /*
+  void WindowWrapper::printProgramLog(GLuint program) {
+    // Make sure name is shader
+      //program = NULL;
+  }
+
+  void WindowWrapper::printShaderLog(GLuint shader) {
+    // Make sure name is shader
+  }
+  */
+
+  // factory
+  ShWindowWrapperPr WindowWrapper::create() {
+    return std::make_shared<WindowWrapper>();
+  }

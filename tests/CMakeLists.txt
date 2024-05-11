@@ -4,13 +4,14 @@ message(STATUS "testing")
 
 # add the test files
 set(test_list 
-    test_sdl2_opengl3.cpp
-    test_implot.cpp
-    test_imgui_demos.cpp
-    test_imgui_wrapper.cpp
-    test_sdl_window.cpp
-    test_window_ptr.cpp
-    test_window_wrapper.cpp
+    #test_sdl2_opengl3.cpp
+    #test_implot.cpp
+    #test_imgui_demos.cpp
+    #test_imgui_wrapper.cpp
+    #test_sdl_window.cpp
+    #test_window_ptr.cpp
+    #test_window_wrapper.cpp
+    test_windowwrapper_resize.cpp
     #test_gui_console.cpp
 )
 

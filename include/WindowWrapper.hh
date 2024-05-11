@@ -16,15 +16,8 @@
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
-#include "implot.h"
-#include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Platform/Sdl2Application.h>
-#include "imgui.h"
-#include "imgui_impl_opengl3.h"
-#include "imgui_impl_sdl2.h"
-#include "implot.h"
-#include <SDL.h>
-#include <SDL_opengl.h>
+#include <SDL2/SDL.h>
 
 // c
 #include <memory>
@@ -43,8 +36,8 @@ protected:
     std::string name_ = "test window";
 
   // Screen dimension constants
-  const int SCREEN_WIDTH_ = 1920;
-  const int SCREEN_HEIGHT_ = 1080;
+   int SCREEN_WIDTH_ = 1920;
+   int SCREEN_HEIGHT_ = 1080;
 
   // The window we'll be rendering to
   // SDL_Window* window_ = NULL;
@@ -96,6 +89,9 @@ public:
 
   // set window size x,y
   void set_size(int, int);
+
+  void resize(int, int);
+  void resize();
 
   void set_fullscreen(bool);
 

@@ -61,30 +61,48 @@ endif()
 
 message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
-# package finding
-find_package(Corrade REQUIRED Main)
-find_package(Magnum REQUIRED GL)
-find_package(MagnumIntegration REQUIRED ImGui)
-find_package(Magnum REQUIRED Sdl2Application)
-
-# also provide standard SDL OpenGL option?
-#find_package(SDL2)
-#find_package(OpenGL)
+set(source_list
+    imgui/imgui.cpp
+    imgui/imgui_draw.cpp
+    imgui/imgui_tables.cpp
+    imgui/imgui_widgets.cpp
+    imgui/backends/imgui_impl_sdl2.cpp
+    imgui/backends/imgui_impl_opengl3.cpp
+    imgui/imgui_demo.cpp
+    implot/implot.cpp
+    implot/implot_items.cpp
+    implot/implot_demo.cpp
+)
+# make our library (shared or static?)
+add_library(${PROJECT_NAME} SHARED ${source_list})
 
 # set sources for our gui implementation
 set(mysources
     src/WindowWrapper.cpp
     src/ImGuiWrapper.cpp
-    #src/ImPlotWrapper.cpp
+    src/ImPlotWrapper.cpp
     src/GuiMain.cpp
     src/GuiConsole.cpp
     src/ImGuiExample.cpp
     #src/GuiLog.cpp
 )
 
-# make our library (shared or static?)
-add_library(${PROJECT_NAME} SHARED ${mysources})
 
+# find magnum, imgui
+# find packages
+message(STATUS "find packages")
+if(USE_OPENGL)
+  set(OpenGL_GL_PREFERENCE "GLVND")
+  find_package(OpenGL REQUIRED)
+endif(USE_OPENGL)
+if(USE_SDL)
+  find_package(SDL2 REQUIRED)
+endif(USE_SDL)
+
+find_package(Corrade REQUIRED Main)
+find_package(Magnum REQUIRED GL)
+find_package(MagnumIntegration REQUIRED ImGui)
+find_package(Magnum REQUIRED Sdl2Application)
 
 # link them
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -93,6 +111,9 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Magnum::GL
     Magnum::Magnum
     MagnumIntegration::ImGui
+
+    SDL2::SDL2 
+    OpenGL 
 )
 
 # Extra packages
@@ -163,10 +184,16 @@ target_sources(${PROJECT_NAME} PRIVATE ${mysources})
 target_include_directories(
   ${PROJECT_NAME}
   PUBLIC $<INSTALL_INTERFACE:include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
          $<BUILD_INTERFACE:${LUA_INCLUDE_DIR}>
  PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui
+    ${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends
+    ${CMAKE_CURRENT_SOURCE_DIR}/implot
     ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${LUA_INCLUDE_DIR}
 )
@@ -204,9 +231,9 @@ endif(ENABLE_TESTING)
 
 ##################################################
 # working executables here?
-#add_executable(main tests/test_gui_console.cpp)
-#target_link_libraries(main 
-#guild)
+add_executable(main tests/test_gui_console.cpp)
+target_link_libraries(main 
+    guild)
 
 # ##############################################################################
 # INSTALLATION if we are installing
@@ -230,6 +257,22 @@ if(CREATE_INSTALL)
 
   # install header files
   install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+
+  # install subrepo headers
+  install(FILES 
+     imgui/imgui.h 
+     imgui/imconfig.h
+     imgui/imgui_internal.h
+     imgui/imstb_rectpack.h
+     imgui/imstb_textedit.h
+     imgui/imstb_truetype.h
+     imgui/backends/imgui_impl_opengl3.h
+     imgui/backends/imgui_impl_sdl2.h
+     implot/implot.h
+     implot/implot_internal.h
+
+     #DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild/include)
+     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
 
   # version header install
   install(FILES ${CMAKE_BINARY_DIR}/include/version.hh
