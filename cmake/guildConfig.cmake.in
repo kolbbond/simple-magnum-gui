@@ -10,6 +10,7 @@ list(REMOVE_AT CMAKE_MODULE_PATH -1)
 # dependencies are SDL and OpenGL
 
 # SDL
+if(OFF)
 find_dependency(SDL2)
 if(NOT TARGET SDL2)
     message(STATUS "SDL2 is not target")
@@ -20,6 +21,7 @@ if(NOT TARGET OpenGL)
     message(STATUS "OpenGL is not target")
   set(OpenGL_GL_PREFERENCE "GLVND")
 find_dependency(OpenGL)
+endif()
 endif()
 
 # MagnumIntegration
@@ -43,6 +45,12 @@ if(NOT TARGET Magnum)
     find_dependency(Magnum)
     find_dependency(Magnum REQUIRED Sdl2Application)
     find_dependency(Magnum REQUIRED GL)
+endif()
+
+# find implot?
+if(NOT TARGET ImPlot)
+    message(STATUS "ImPlot not target, find dependency")
+    find_dependency(ImPlot)
 endif()
 
 

@@ -7,11 +7,17 @@ int main(){
 
     printf("window wrapper test\n");
     //ShWindowWrapperPr window;
+
     WindowWrapper window;
 
     window.set_size(500,200);
 
     window.init();
+
+    while(true){
+
+
+    }
 
     window.close();
 

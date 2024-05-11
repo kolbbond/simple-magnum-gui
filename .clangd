@@ -1,9 +1,7 @@
 CompileFlags:
 	Add:
-	- "-I/home/ohr4/programs/cpp/guild/imgui"
-	- "-I/home/ohr4/programs/cpp/guild/imgui/backends"
-	- "-I/home/ohr4/programs/cpp/guild/implot"
 	- "-I/usr/include/SDL2"
 	- "-I/home/ohr4/programs/cpp/guild/include"
 	- "-I~/matlab//extern/include"
 	- "-I/usr/include/lua5.4"
+	- "-I/usr/local/include/MagnumExternal/ImGui/"

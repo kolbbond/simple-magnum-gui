@@ -12,6 +12,8 @@ set(test_list
     #test_window_ptr.cpp
     #test_window_wrapper.cpp
     test_windowwrapper_resize.cpp
+    #test_magnumintegration.cpp
+    test_imguiexample.cpp
     #test_gui_console.cpp
 )
 

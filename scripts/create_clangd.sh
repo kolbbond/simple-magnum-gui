@@ -16,3 +16,6 @@ printf "\t- \"-I${MATLAB_PATH}/extern/include\"\n" >> .clangd
 
 # lua includes
 printf "\t- \"-I/usr/include/lua5.4\"\n" >> .clangd
+
+# magnum
+printf "\t- \"-I/usr/local/include/MagnumExternal/ImGui/\"\n" >> .clangd

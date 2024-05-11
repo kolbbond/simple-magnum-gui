@@ -1,12 +1,11 @@
-
 // stolen from magnum integration examples
-#include "ImGuiExample.hh"
 
-//ImGuiExample::ImGuiExample() : Platform::Application{} {
-  // empty
+#include "ImGuiExample2.hh"
+// ImGuiExample2::ImGuiExample2() : Platform::Application{} {
+//  empty
 //}
 
-ImGuiExample::ImGuiExample(const Arguments &arguments)
+ImGuiExample2::ImGuiExample2(const Arguments &arguments)
     : Platform::Application{
           arguments,
           Configuration{}
@@ -30,7 +29,7 @@ ImGuiExample::ImGuiExample(const Arguments &arguments)
 #endif
 }
 
-void ImGuiExample::drawEvent() {
+void ImGuiExample2::drawEvent() {
   GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
   _imgui.newFrame();
@@ -96,39 +95,39 @@ void ImGuiExample::drawEvent() {
   redraw();
 }
 
-void ImGuiExample::viewportEvent(ViewportEvent &event) {
+void ImGuiExample2::viewportEvent(ViewportEvent &event) {
   GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
 
   _imgui.relayout(Vector2{event.windowSize()} / event.dpiScaling(),
                   event.windowSize(), event.framebufferSize());
 }
 
-void ImGuiExample::keyPressEvent(KeyEvent &event) {
+void ImGuiExample2::keyPressEvent(KeyEvent &event) {
   if (_imgui.handleKeyPressEvent(event))
     return;
 }
 
-void ImGuiExample::keyReleaseEvent(KeyEvent &event) {
+void ImGuiExample2::keyReleaseEvent(KeyEvent &event) {
   if (_imgui.handleKeyReleaseEvent(event))
     return;
 }
 
-void ImGuiExample::mousePressEvent(MouseEvent &event) {
+void ImGuiExample2::mousePressEvent(MouseEvent &event) {
   if (_imgui.handleMousePressEvent(event))
     return;
 }
 
-void ImGuiExample::mouseReleaseEvent(MouseEvent &event) {
+void ImGuiExample2::mouseReleaseEvent(MouseEvent &event) {
   if (_imgui.handleMouseReleaseEvent(event))
     return;
 }
 
-void ImGuiExample::mouseMoveEvent(MouseMoveEvent &event) {
+void ImGuiExample2::mouseMoveEvent(MouseMoveEvent &event) {
   if (_imgui.handleMouseMoveEvent(event))
     return;
 }
 
-void ImGuiExample::mouseScrollEvent(MouseScrollEvent &event) {
+void ImGuiExample2::mouseScrollEvent(MouseScrollEvent &event) {
   if (_imgui.handleMouseScrollEvent(event)) {
     /* Prevent scrolling the page */
     event.setAccepted();
@@ -136,7 +135,10 @@ void ImGuiExample::mouseScrollEvent(MouseScrollEvent &event) {
   }
 }
 
-void ImGuiExample::textInputEvent(TextInputEvent &event) {
+void ImGuiExample2::textInputEvent(TextInputEvent &event) {
   if (_imgui.handleTextInputEvent(event))
     return;
 }
+
+// This is main
+MAGNUM_APPLICATION_MAIN(ImGuiExample2);

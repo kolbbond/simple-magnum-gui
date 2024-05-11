@@ -4,6 +4,7 @@
 #define ImGuiWrapper_hh
 
 #include "WindowWrapper.hh"
+#include "ImPlotWrapper.hh"
 
 typedef std::shared_ptr<class ImGuiWrapper> ShImGuiWrapperPr;
 class ImGuiWrapper {

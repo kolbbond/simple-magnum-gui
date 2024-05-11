@@ -13,7 +13,7 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
 option(ENABLE_TESTING "build unit/system tests" ON)
-option(USE_CMAKEHELPERS "use cmakehelpers for debug" ON)
+option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
@@ -67,6 +67,8 @@ find_package(Magnum REQUIRED GL)
 find_package(MagnumIntegration REQUIRED ImGui)
 find_package(Magnum REQUIRED Sdl2Application)
 
+find_package(ImPlot REQUIRED)
+
 # also provide standard SDL OpenGL option?
 #find_package(SDL2)
 #find_package(OpenGL)
@@ -75,7 +77,7 @@ find_package(Magnum REQUIRED Sdl2Application)
 set(mysources
     src/WindowWrapper.cpp
     src/ImGuiWrapper.cpp
-    #src/ImPlotWrapper.cpp
+    src/ImPlotWrapper.cpp
     src/GuiMain.cpp
     src/GuiConsole.cpp
     src/ImGuiExample.cpp
@@ -93,6 +95,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Magnum::GL
     Magnum::Magnum
     MagnumIntegration::ImGui
+    ImPlot::ImPlot
 )
 
 # Extra packages
