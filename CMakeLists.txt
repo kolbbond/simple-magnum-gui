@@ -17,8 +17,10 @@ option(USE_CMAKEHELPERS "use cmakehelpers for debug" OFF)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
-option(USE_SDL "use SDL for window" ON)
-option(USE_OPENGL "use OpenGL for rendering" ON)
+# pick either SDL and OpenGL or Magnum
+# we are going to transition to just using Magnum
+option(USE_SDL "use SDL for window" OFF)
+option(USE_OPENGL "use OpenGL for rendering" OFF)
 option(USE_MAGNUM "use magnum and magnum integration libraries" ON)
 
 option(USE_LUA "include lua scripting engine" ON)
@@ -32,13 +34,12 @@ if(USE_CMAKEHELPERS)
   include(PrintHelpers)
 endif(USE_CMAKEHELPERS)
 
-
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" 
     ${CMAKE_MODULE_PATH})
 
 # system detection
 if(WIN32)
-  message(STATUS "this is a linux machine")
+    message(STATUS "this is a Windows machine")
 endif(WIN32)
 if(UNIX)
   message(STATUS "this is a linux machine")
@@ -67,11 +68,13 @@ find_package(Magnum REQUIRED GL)
 find_package(MagnumIntegration REQUIRED ImGui)
 find_package(Magnum REQUIRED Sdl2Application)
 
-find_package(ImPlot REQUIRED)
-
 # also provide standard SDL OpenGL option?
 #find_package(SDL2)
 #find_package(OpenGL)
+
+# either include implot or build here
+#find_package(ImPlot REQUIRED)
+#find_package(MagnumIntegration REQUIRED ImPlot)
 
 # set sources for our gui implementation
 set(mysources
@@ -82,11 +85,15 @@ set(mysources
     src/GuiConsole.cpp
     src/ImGuiExample.cpp
     #src/GuiLog.cpp
+
+    # add implot here for now
+    implot/implot.cpp
+    implot/implot_demo.cpp
+    implot/implot_items.cpp
 )
 
 # make our library (shared or static?)
 add_library(${PROJECT_NAME} SHARED ${mysources})
-
 
 # link them
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -94,8 +101,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
+
     MagnumIntegration::ImGui
-    ImPlot::ImPlot
+    #MagnumIntegration::ImPlot
+    #ImPlot::ImPlot
 )
 
 # Extra packages

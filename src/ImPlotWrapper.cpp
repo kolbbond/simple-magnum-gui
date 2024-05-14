@@ -3,6 +3,8 @@
 
 // include header
 #include "ImPlotWrapper.hh"
+#include "implot.h"
+
 
 // constructor
 ImPlotWrapper::ImPlotWrapper() {}
@@ -10,7 +12,8 @@ ImPlotWrapper::ImPlotWrapper() {}
 int ImPlotWrapper::init(){
     // initialize implot context
   printf("creating ImPlot context\n");
-  ImPlot::CreateContext();
+  // need to initialize with the imgui context
+  //ImPlot::CreateContext();
 
   // success?
   return 1;

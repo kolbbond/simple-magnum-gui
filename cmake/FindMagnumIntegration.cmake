@@ -18,6 +18,7 @@
 #  Eigen                        - Eigen integration library
 #  Glm                          - GLM integration library
 #  ImGui                        - ImGui integration library
+#  ImPlot                       - ImPlot
 #  Ovr                          - Oculus SDK integration library
 #
 # Example usage with specifying additional components is:
@@ -71,6 +72,7 @@
 #
 
 # Magnum library dependencies
+message("find magnum dependencies")
 set(_MAGNUMINTEGRATION_DEPENDENCIES )
 foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
     if(_component STREQUAL Bullet)
@@ -79,11 +81,14 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
         set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES SceneGraph Primitives MeshTools GL)
     elseif(_component STREQUAL ImGui)
         set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES GL Shaders)
+    elseif(_component STREQUAL ImPlot)
+        set(_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES)
     endif()
 
     list(APPEND _MAGNUMINTEGRATION_DEPENDENCIES ${_MAGNUMINTEGRATION_${_component}_MAGNUM_DEPENDENCIES})
     list(APPEND _MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES ${_MAGNUMINTEGRATION_${_component}_MAGNUM_OPTIONAL_DEPENDENCIES})
 endforeach()
+
 find_package(Magnum REQUIRED ${_MAGNUMINTEGRATION_DEPENDENCIES})
 if(_MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES)
     find_package(Magnum OPTIONAL_COMPONENTS ${_MAGNUMINTEGRATION_OPTIONAL_DEPENDENCIES})
@@ -102,7 +107,7 @@ mark_as_advanced(MAGNUMINTEGRATION_INCLUDE_DIR)
 
 # Component distinction (listing them explicitly to avoid mistakes with finding
 # components from other repositories)
-set(_MAGNUMINTEGRATION_LIBRARY_COMPONENTS Bullet Dart Eigen ImGui Glm)
+set(_MAGNUMINTEGRATION_LIBRARY_COMPONENTS Bullet Dart Eigen ImGui ImPlot Glm)
 if(CORRADE_TARGET_WINDOWS)
     list(APPEND _MAGNUMINTEGRATION_LIBRARY_COMPONENTS Ovr)
 endif()
@@ -227,10 +232,17 @@ foreach(_component ${MagnumIntegration_FIND_COMPONENTS})
 
         # ImGui integration library
         elseif(_component STREQUAL ImGui)
-              find_package(ImGui)
-            #find_package(guild)
+            find_package(ImGui)
             set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
                 INTERFACE_LINK_LIBRARIES ImGui::ImGui)
+
+            set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES Integration.h)
+
+        # ImPlot integration library
+        elseif(_component STREQUAL ImPlot)
+            find_package(ImPlot)
+            set_property(TARGET MagnumIntegration::${_component} APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES ImPlot::ImPlot)
 
             set(_MAGNUMINTEGRATION_${_COMPONENT}_INCLUDE_PATH_NAMES Integration.h)
 

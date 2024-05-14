@@ -46,7 +46,7 @@ int ImGuiWrapper::init(ShWindowWrapperPr gui) {
   // IMPLOT
   // implotting here
   printf("creating ImGui context\n");
-  ImPlot::CreateContext();
+  //ImPlot::CreateContext();
 
   // success?
   return 1;
@@ -122,7 +122,7 @@ int ImGuiWrapper::demo_window() {
 
   // implot demo
   ImGui::Begin("implot demo");
-  ImPlot::ShowDemoWindow();
+  //ImPlot::ShowDemoWindow();
   ImGui::End();
 
   // success?
@@ -141,7 +141,7 @@ void ImGuiWrapper::render() {
 
 int ImGuiWrapper::close() {
   printf("annihilate context/window\n");
-  ImPlot::DestroyContext();
+  //ImPlot::DestroyContext();
   //ImGui_ImplOpenGL3_Shutdown();
   //ImGui_ImplSDL2_Shutdown();
   ImGui::DestroyContext();

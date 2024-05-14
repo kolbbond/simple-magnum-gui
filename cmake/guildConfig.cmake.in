@@ -22,6 +22,7 @@ if(NOT TARGET OpenGL)
   set(OpenGL_GL_PREFERENCE "GLVND")
 find_dependency(OpenGL)
 endif()
+
 endif()
 
 # MagnumIntegration
@@ -48,10 +49,11 @@ if(NOT TARGET Magnum)
 endif()
 
 # find implot?
-if(NOT TARGET ImPlot)
-    message(STATUS "ImPlot not target, find dependency")
-    find_dependency(ImPlot)
-endif()
+#if(NOT TARGET ImPlot)
+#message(STATUS "ImPlot not target, find dependency")
+#find_dependency(ImPlot)
+#endif()
+
 
 
 # ImGui

@@ -4,9 +4,10 @@
 
 #include <memory>
 //#include <guild>
-#include "ImPlot/implot.h"
+#include "implot.h"
 #include "cstdio"
 
+//using namespace Magnum;
 typedef std::shared_ptr<class ImPlotWrapper> ShImPlotWrapperPr;
 
 class ImPlotWrapper {
