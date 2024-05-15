@@ -76,6 +76,8 @@ find_package(Magnum REQUIRED Sdl2Application)
 #find_package(ImPlot REQUIRED)
 #find_package(MagnumIntegration REQUIRED ImPlot)
 
+# build implot separately?
+
 # set sources for our gui implementation
 set(mysources
     src/WindowWrapper.cpp
