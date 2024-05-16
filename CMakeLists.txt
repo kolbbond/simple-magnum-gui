@@ -88,6 +88,7 @@ set(mysources
     src/GuiBase.cpp
     src/DrawCallback.cpp
     src/RealtimePlot.cpp
+    src/log.cpp
     #src/GuiLog.cpp
 
     # add implot here for now

@@ -35,6 +35,7 @@ int RealtimePlot::callback(void* data) {
 
 	ImGui::BulletText("Move your mouse to change the data!");
 	ImGui::BulletText("This example assumes 60 FPS. Higher FPS requires larger buffer size.");
+	ImGui::BulletText("realtime data of what ... @hey!");
 
 	static ScrollingBuffer sdata1, sdata2;
 	static RollingBuffer rdata1, rdata2;

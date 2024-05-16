@@ -1,15 +1,43 @@
 #include "GuiBase.hh"
 #include "DrawCallback.hh"
+#include "SDL_video.h"
+#include "imgui.h"
+#include "log.hh"
+#include "typedefs.hh"
+#include <Magnum/Magnum.h>
 
-namespace guild{
+namespace guild {
 GuiBase::GuiBase(const Arguments& arguments)
 	: Platform::Application{arguments,
-							Configuration{}
-								.setTitle("GuiBase")
-								.setWindowFlags(Configuration::WindowFlag::Resizable)} {
+							Configuration{}.setTitle("GuiBase").setWindowFlags(
+								Configuration::WindowFlag::Resizable)} {
+	// create a log?
+	_lg = Log::create();
+
+	// display display stats
+	// check SDL
+	int num_displays = SDL_GetNumVideoDisplays();
+	_lg->msg("number of displays: %s%i%s\n", KRED, num_displays, KNRM);
+	std::vector<SDL_Rect> displayBounds;
+	for(int i = 0; i < num_displays; i++) {
+		displayBounds.push_back(SDL_Rect());
+		SDL_GetDisplayBounds(i, &displayBounds.back());
+		_lg->msg("display %i bounds: %s(%i,%i)%s\n",
+				 i,
+				 KRED,
+				 displayBounds[i].x,
+				 displayBounds[i].y,
+				 KNRM);
+	}
+
+	// get the created window and override the position
+	_window = Platform::Sdl2Application::window();
+	SDL_SetWindowPosition(_window, 0, 0);
 
 	// start an imgui context
 	printf("Creating imgui context\n");
+	Vector2i window_size = windowSize();
+	printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
 
 	_imgui = ImGuiIntegration::Context(
 		Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
@@ -35,8 +63,8 @@ GuiBase::GuiBase(const Arguments& arguments)
 #endif
 }
 
-void GuiBase::drawBegin(){
-    // setup the drawing state
+void GuiBase::drawBegin() {
+	// setup the drawing state
 	// clear buffer
 
 	GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
@@ -60,11 +88,10 @@ void GuiBase::drawBegin(){
 	GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
 	GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 	GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
-
 }
 
-void GuiBase::drawEnd(){
-    // draw, reset, swap
+void GuiBase::drawEnd() {
+	// draw, reset, swap
 
 	// draw the frame to background buffer
 	_imgui.drawFrame();
@@ -79,15 +106,14 @@ void GuiBase::drawEnd(){
 	// swap background buffers and redraw to screen
 	swapBuffers();
 	redraw();
-
 }
 
 void GuiBase::drawEvent() {
 	// main loop
 	// this is called each frame
 
-    // setup the drawing
-    drawBegin();
+	// setup the drawing
+	drawBegin();
 
 	//////////////////////////////////////////////////
 
@@ -95,47 +121,65 @@ void GuiBase::drawEvent() {
 	// @hey, how do we add in custom functions from outside while utilizing
 	// the console api's from here ...
 	// add static function calls from outside???
+    std::pair<int,int> pos = get_window_position();  
+    ImGui::Text("window position: (%i,%i)",pos.first,pos.second);
 
 
-    // call back function?
-    draw_callbacks();
+	// call back function?
+	draw_callbacks();
 
 	//////////////////////////////////////////////////
 
-    // draw and reset
-    drawEnd();
+	// draw and reset
+	drawEnd();
 }
 
-void GuiBase::add_callback(ShDrawCallbackPr callback){
-    // add callback to list
-
-    // append
-    callback_list_.push_back(callback);
-
+void GuiBase::print_window_position(){
+	// debug
+	int x;
+	int y;
+	SDL_GetWindowPosition(_window, &x, &y);
+	_lg->msg("window (x,y): %s(%i,%i)%s\n", KBLU, x, y, KNRM);
 }
 
-void GuiBase::draw_callbacks(){
-    // draw callbacks from list
-
-    // check list not empty
-    assert(!callback_list_.empty());
-
-    //printf("printing callbacks\n");
-
-    // walk callbacks
-    int num_callbacks = callback_list_.size();
-    for (int i=0;i<num_callbacks;i++){
-        // get data pointer
-        ShDrawCallbackPr mycallback = callback_list_[i];
-        //void* mydata = mycallback->get_data();
-
-        int flag = mycallback->call();
-        if(flag) printf("callback error!\n");
-
-    }
+std::pair<int,int> GuiBase::get_window_position(){
+    
+    std::pair<int,int> pos;  
+	SDL_GetWindowPosition(_window, &pos.first, &pos.second);
+    return pos;
 
 }
 
+void GuiBase::add_callback(ShDrawCallbackPr callback) {
+	// add callback to list
+
+	// append
+	callback_list_.push_back(callback);
+}
+
+void GuiBase::draw_callbacks() {
+	// draw callbacks from list
+
+	// check list not empty
+	assert(!callback_list_.empty());
+
+	//printf("printing callbacks\n");
+
+	// walk callbacks
+	int num_callbacks = callback_list_.size();
+	for(int i = 0; i < num_callbacks; i++) {
+
+		// get data pointer
+		ShDrawCallbackPr mycallback = callback_list_[i];
+
+		//void* mydata = mycallback->get_data();
+
+		// call the callback
+		int flag = mycallback->call();
+		if(flag)
+			printf("callback error!\n");
+	}
+}
 
 void GuiBase::keyPressEvent(KeyEvent& event) {
 	if(_imgui.handleKeyPressEvent(event))
@@ -233,4 +277,4 @@ void GuiBase::viewportEvent(ViewportEvent& event) {
 					event.windowSize(),
 					event.framebufferSize());
 }
-}
+} // namespace guild

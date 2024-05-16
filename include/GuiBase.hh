@@ -1,10 +1,12 @@
 // main gui class
 
 // magnum includes
+#include "log.hh"
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
+#include <tuple>
 #include <vector>
 
 #ifdef CORRADE_TARGET_ANDROID
@@ -31,6 +33,12 @@ protected:
 	// our imgui context
 	ImGuiIntegration::Context _imgui{NoCreate};
 
+    // actual window (assume SDL?)
+    SDL_Window* _window;
+
+    // logger
+    ShLogPr _lg = NullLog::create();
+
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;
 	Color4 _clearColor = 0x72909aff_rgbaf;
@@ -44,10 +52,6 @@ public:
     // constructor
 	explicit GuiBase(const Arguments& arguments);
 
-
-    // add custom callbacks
-    void add_callback(ShDrawCallbackPr);
-
     // draw callbacks
     // main draw event loop (called every iteration)
 	void drawEvent() override;
@@ -60,6 +64,15 @@ public:
 	void demo_implot();
 	void demo_test();
 
+    // printers
+    void print_window_position();
+
+    // add custom callbacks
+    void add_callback(ShDrawCallbackPr);
+
+    // getters
+    SDL_Window* get_window();
+    std::pair<int,int> get_window_position();
 
 	// event wrappers
 	void viewportEvent(ViewportEvent& event) override;
