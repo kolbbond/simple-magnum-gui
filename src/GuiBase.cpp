@@ -1,10 +1,4 @@
 #include "GuiBase.hh"
-#include "DrawCallback.hh"
-#include "SDL_video.h"
-#include "imgui.h"
-#include "log.hh"
-#include "typedefs.hh"
-#include <Magnum/Magnum.h>
 
 namespace guild {
 GuiBase::GuiBase(const Arguments& arguments)
@@ -121,9 +115,8 @@ void GuiBase::drawEvent() {
 	// @hey, how do we add in custom functions from outside while utilizing
 	// the console api's from here ...
 	// add static function calls from outside???
-    std::pair<int,int> pos = get_window_position();  
-    ImGui::Text("window position: (%i,%i)",pos.first,pos.second);
-
+	std::pair<int, int> pos = get_window_position();
+	ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
 
 	// call back function?
 	draw_callbacks();
@@ -134,7 +127,7 @@ void GuiBase::drawEvent() {
 	drawEnd();
 }
 
-void GuiBase::print_window_position(){
+void GuiBase::print_window_position() {
 	// debug
 	int x;
 	int y;
@@ -142,12 +135,11 @@ void GuiBase::print_window_position(){
 	_lg->msg("window (x,y): %s(%i,%i)%s\n", KBLU, x, y, KNRM);
 }
 
-std::pair<int,int> GuiBase::get_window_position(){
-    
-    std::pair<int,int> pos;  
-	SDL_GetWindowPosition(_window, &pos.first, &pos.second);
-    return pos;
+std::pair<int, int> GuiBase::get_window_position() {
 
+	std::pair<int, int> pos;
+	SDL_GetWindowPosition(_window, &pos.first, &pos.second);
+	return pos;
 }
 
 void GuiBase::add_callback(ShDrawCallbackPr callback) {
@@ -222,6 +214,7 @@ void GuiBase::textInputEvent(TextInputEvent& event) {
 //////////////////////////////////////////////////
 // demos
 
+// imgui demo for reference
 void GuiBase::demo_imgui() {
 	// reference
 

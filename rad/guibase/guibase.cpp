@@ -11,8 +11,8 @@ class data_ex {
 public:
 	int x;
 	int y;
-    std::array<double,10> xv;
-    std::array<double,10> yv;
+	std::array<double, 10> xv;
+	std::array<double, 10> yv;
 
 	std::string name = "example";
 };
@@ -62,14 +62,13 @@ int main(int argc, char** argv) {
 	// set callback into our gui
 	gui.add_callback(mycb);
 
+	// add a separate callback
+	ShDrawCallbackPr mycb2 = DrawCallback::create();
+	mycb2->set_callback(RealtimePlot::callback);
+	//mycb2->set_data(nullptr);
 
-    // add a separate callback
-    ShDrawCallbackPr mycb2 = DrawCallback::create();
-    mycb2->set_callback(RealtimePlot::callback);
-    //mycb2->set_data(nullptr);
-
-    // add this
-    gui.add_callback(mycb2);
+	// add this
+	gui.add_callback(mycb2);
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws

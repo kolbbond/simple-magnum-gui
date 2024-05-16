@@ -37,9 +37,11 @@ int RealtimePlot::callback(void* data) {
 	ImGui::BulletText("This example assumes 60 FPS. Higher FPS requires larger buffer size.");
 	ImGui::BulletText("realtime data of what ... @hey!");
 
+    // start static buffers
 	static ScrollingBuffer sdata1, sdata2;
 	static RollingBuffer rdata1, rdata2;
 
+    // get mouse and add to data points
 	ImVec2 mouse = ImGui::GetMousePos();
 	static float t = 0;
 
@@ -49,6 +51,7 @@ int RealtimePlot::callback(void* data) {
 	sdata2.AddPoint(t, mouse.y * 0.0005f);
 	rdata2.AddPoint(t, mouse.y * 0.0005f);
 
+    // history slider
 	static float history = 10.0f;
 	ImGui::SliderFloat("History", &history, 1, 30, "%.1f s");
 	rdata1.Span = history;

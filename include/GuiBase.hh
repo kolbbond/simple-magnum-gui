@@ -1,6 +1,13 @@
 // main gui class
 
 // magnum includes
+#ifdef CORRADE_TARGET_ANDROID
+#	include <Magnum/Platform/AndroidApplication.h>
+#elif defined(CORRADE_TARGET_EMSCRIPTEN)
+#	include <Magnum/Platform/EmscriptenApplication.h>
+#else
+#	include <Magnum/Platform/Sdl2Application.h>
+#endif
 #include "log.hh"
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
@@ -9,13 +16,12 @@
 #include <tuple>
 #include <vector>
 
-#ifdef CORRADE_TARGET_ANDROID
-#	include <Magnum/Platform/AndroidApplication.h>
-#elif defined(CORRADE_TARGET_EMSCRIPTEN)
-#	include <Magnum/Platform/EmscriptenApplication.h>
-#else
-#	include <Magnum/Platform/Sdl2Application.h>
-#endif
+#include "DrawCallback.hh"
+#include "SDL_video.h"
+#include "imgui.h"
+#include "log.hh"
+#include "typedefs.hh"
+#include <Magnum/Magnum.h>
 
 // guild includes
 #include "DrawCallback.hh"
@@ -27,6 +33,7 @@ using namespace Math::Literals;
 using namespace guild;
 
 namespace guild {
+    // base gui class, entry point for guis
 class GuiBase : public Platform::Application {
 
 protected:
@@ -61,6 +68,8 @@ public:
 
 	// demo
 	void demo_imgui();
+
+    // implot demo
 	void demo_implot();
 	void demo_test();
 

@@ -64,9 +64,16 @@ message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 # package finding
 find_package(Corrade REQUIRED Main)
-find_package(Magnum REQUIRED GL)
+find_package(Magnum REQUIRED 
+    GL
+    MeshTools
+    Primitives
+    Shaders
+    Trade
+    Sdl2Application
+)
+
 find_package(MagnumIntegration REQUIRED ImGui)
-find_package(Magnum REQUIRED Sdl2Application)
 
 # also provide standard SDL OpenGL option?
 #find_package(SDL2)
@@ -108,6 +115,10 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
     Magnum::Application
     Magnum::GL
     Magnum::Magnum
+    Magnum::MeshTools
+    Magnum::Primitives
+    Magnum::Shaders
+    Magnum::Trade
 
     MagnumIntegration::ImGui
     #MagnumIntegration::ImPlot
