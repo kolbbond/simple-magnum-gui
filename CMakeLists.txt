@@ -86,6 +86,8 @@ set(mysources
     src/GuiMain.cpp
     src/GuiConsole.cpp
     src/GuiBase.cpp
+    src/DrawCallback.cpp
+    src/RealtimePlot.cpp
     #src/GuiLog.cpp
 
     # add implot here for now
@@ -97,6 +99,7 @@ set(mysources
 # make our library (shared or static?)
 add_library(${PROJECT_NAME} SHARED ${mysources})
 add_library(guild::guild ALIAS guild)
+add_library(guild:: ALIAS guild)
 
 # link them
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -223,8 +226,10 @@ endif(ENABLE_TESTING)
 #target_link_libraries(main 
 #guild)
 
+# RAD directories
 # work out of a subdirectory?
 add_subdirectory(rad/implot_ex)
+add_subdirectory(rad/guibase)
 
 # ##############################################################################
 # INSTALLATION if we are installing

@@ -1,18 +1,23 @@
 #include "GuiBase.hh"
+#include "DrawCallback.hh"
 
+namespace guild{
 GuiBase::GuiBase(const Arguments& arguments)
 	: Platform::Application{arguments,
 							Configuration{}
-								.setTitle("Magnum ImGui Example")
+								.setTitle("GuiBase")
 								.setWindowFlags(Configuration::WindowFlag::Resizable)} {
 
 	// start an imgui context
+	printf("Creating imgui context\n");
+
 	_imgui = ImGuiIntegration::Context(
 		Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
 
 	// create a context for implot
 	// might need to connect to imgui but idk
 	//ImPlot::SetImGuiContext(_imgui);
+	printf("Creating implot context\n");
 	ImPlot::CreateContext();
 
 	/* Set up proper blending to be used by ImGui. There's a great chance
@@ -25,18 +30,22 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
 	/* Have some sane speed, please */
+	// this is [ms] per frame?
 	setMinimalLoopPeriod(16);
 #endif
 }
 
-void GuiBase::drawEvent() {
-	// main loop
+void GuiBase::drawBegin(){
+    // setup the drawing state
+	// clear buffer
 
 	GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
 
+	// start a new frame
 	_imgui.newFrame();
 
 	/* Enable text input, if needed */
+	// get the input
 	if(ImGui::GetIO().WantTextInput && !isTextInputActive())
 		startTextInput();
 	else if(!ImGui::GetIO().WantTextInput && isTextInputActive())
@@ -52,6 +61,12 @@ void GuiBase::drawEvent() {
 	GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 	GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
 
+}
+
+void GuiBase::drawEnd(){
+    // draw, reset, swap
+
+	// draw the frame to background buffer
 	_imgui.drawFrame();
 
 	/* Reset state. Only needed if you want to draw something else with
@@ -61,9 +76,107 @@ void GuiBase::drawEvent() {
 	GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
 	GL::Renderer::disable(GL::Renderer::Feature::Blending);
 
+	// swap background buffers and redraw to screen
 	swapBuffers();
 	redraw();
+
 }
+
+void GuiBase::drawEvent() {
+	// main loop
+	// this is called each frame
+
+    // setup the drawing
+    drawBegin();
+
+	//////////////////////////////////////////////////
+
+	// Do your drawing here?
+	// @hey, how do we add in custom functions from outside while utilizing
+	// the console api's from here ...
+	// add static function calls from outside???
+
+
+    // call back function?
+    draw_callbacks();
+
+	//////////////////////////////////////////////////
+
+    // draw and reset
+    drawEnd();
+}
+
+void GuiBase::add_callback(ShDrawCallbackPr callback){
+    // add callback to list
+
+    // append
+    callback_list_.push_back(callback);
+
+}
+
+void GuiBase::draw_callbacks(){
+    // draw callbacks from list
+
+    // check list not empty
+    assert(!callback_list_.empty());
+
+    //printf("printing callbacks\n");
+
+    // walk callbacks
+    int num_callbacks = callback_list_.size();
+    for (int i=0;i<num_callbacks;i++){
+        // get data pointer
+        ShDrawCallbackPr mycallback = callback_list_[i];
+        //void* mydata = mycallback->get_data();
+
+        int flag = mycallback->call();
+        if(flag) printf("callback error!\n");
+
+    }
+
+}
+
+
+void GuiBase::keyPressEvent(KeyEvent& event) {
+	if(_imgui.handleKeyPressEvent(event))
+		return;
+}
+
+void GuiBase::keyReleaseEvent(KeyEvent& event) {
+	if(_imgui.handleKeyReleaseEvent(event))
+		return;
+}
+
+void GuiBase::mousePressEvent(MouseEvent& event) {
+	if(_imgui.handleMousePressEvent(event))
+		return;
+}
+
+void GuiBase::mouseReleaseEvent(MouseEvent& event) {
+	if(_imgui.handleMouseReleaseEvent(event))
+		return;
+}
+
+void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
+	if(_imgui.handleMouseMoveEvent(event))
+		return;
+}
+
+void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {
+	if(_imgui.handleMouseScrollEvent(event)) {
+		/* Prevent scrolling the page */
+		event.setAccepted();
+		return;
+	}
+}
+
+void GuiBase::textInputEvent(TextInputEvent& event) {
+	if(_imgui.handleTextInputEvent(event))
+		return;
+}
+
+//////////////////////////////////////////////////
+// demos
 
 void GuiBase::demo_imgui() {
 	// reference
@@ -109,6 +222,10 @@ void GuiBase::demo_implot() {
 	ImGui::End();
 }
 
+void GuiBase::demo_test() {
+	// test for me???
+}
+
 void GuiBase::viewportEvent(ViewportEvent& event) {
 	GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
 
@@ -116,41 +233,4 @@ void GuiBase::viewportEvent(ViewportEvent& event) {
 					event.windowSize(),
 					event.framebufferSize());
 }
-
-void GuiBase::keyPressEvent(KeyEvent& event) {
-	if(_imgui.handleKeyPressEvent(event))
-		return;
-}
-
-void GuiBase::keyReleaseEvent(KeyEvent& event) {
-	if(_imgui.handleKeyReleaseEvent(event))
-		return;
-}
-
-void GuiBase::mousePressEvent(MouseEvent& event) {
-	if(_imgui.handleMousePressEvent(event))
-		return;
-}
-
-void GuiBase::mouseReleaseEvent(MouseEvent& event) {
-	if(_imgui.handleMouseReleaseEvent(event))
-		return;
-}
-
-void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
-	if(_imgui.handleMouseMoveEvent(event))
-		return;
-}
-
-void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {
-	if(_imgui.handleMouseScrollEvent(event)) {
-		/* Prevent scrolling the page */
-		event.setAccepted();
-		return;
-	}
-}
-
-void GuiBase::textInputEvent(TextInputEvent& event) {
-	if(_imgui.handleTextInputEvent(event))
-		return;
 }

@@ -1,51 +1,74 @@
-#include <Magnum/Math/Color.h>
+// main gui class
+
+// magnum includes
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
-
-#include "implot.h"
+#include <Magnum/Math/Color.h>
+#include <vector>
 
 #ifdef CORRADE_TARGET_ANDROID
-#include <Magnum/Platform/AndroidApplication.h>
+#	include <Magnum/Platform/AndroidApplication.h>
 #elif defined(CORRADE_TARGET_EMSCRIPTEN)
-#include <Magnum/Platform/EmscriptenApplication.h>
+#	include <Magnum/Platform/EmscriptenApplication.h>
 #else
-#include <Magnum/Platform/Sdl2Application.h>
+#	include <Magnum/Platform/Sdl2Application.h>
 #endif
 
+// guild includes
+#include "DrawCallback.hh"
+#include "implot.h"
+#include "common.hh"
 
 using namespace Magnum;
 using namespace Math::Literals;
+using namespace guild;
 
-class GuiBase: public Platform::Application {
-    protected:
+namespace guild {
+class GuiBase : public Platform::Application {
 
-        // our imgui context 
-        ImGuiIntegration::Context _imgui{NoCreate};
+protected:
+	// our imgui context
+	ImGuiIntegration::Context _imgui{NoCreate};
 
-        bool _showDemoWindow = true;
-        bool _showAnotherWindow = false;
-        Color4 _clearColor = 0x72909aff_rgbaf;
-        Float _floatValue = 0.0f;
-        
-    public:
-        explicit GuiBase(const Arguments& arguments);
+	bool _showDemoWindow = true;
+	bool _showAnotherWindow = false;
+	Color4 _clearColor = 0x72909aff_rgbaf;
+	Float _floatValue = 0.0f;
 
-        void demo_imgui();
-        void demo_implot();
+	// list of set callbacks
+	std::vector<ShDrawCallbackPr> callback_list_;
 
-        void drawEvent() override;
+public:
 
-        void viewportEvent(ViewportEvent& event) override;
+    // constructor
+	explicit GuiBase(const Arguments& arguments);
 
-        void keyPressEvent(KeyEvent& event) override;
-        void keyReleaseEvent(KeyEvent& event) override;
 
-        void mousePressEvent(MouseEvent& event) override;
-        void mouseReleaseEvent(MouseEvent& event) override;
-        void mouseMoveEvent(MouseMoveEvent& event) override;
-        void mouseScrollEvent(MouseScrollEvent& event) override;
-        void textInputEvent(TextInputEvent& event) override;
+    // add custom callbacks
+    void add_callback(ShDrawCallbackPr);
 
+    // draw callbacks
+    // main draw event loop (called every iteration)
+	void drawEvent() override;
+    void drawBegin();
+    void drawEnd();
+    void draw_callbacks();
+
+	// demo
+	void demo_imgui();
+	void demo_implot();
+	void demo_test();
+
+
+	// event wrappers
+	void viewportEvent(ViewportEvent& event) override;
+	void keyPressEvent(KeyEvent& event) override;
+	void keyReleaseEvent(KeyEvent& event) override;
+	void mousePressEvent(MouseEvent& event) override;
+	void mouseReleaseEvent(MouseEvent& event) override;
+	void mouseMoveEvent(MouseMoveEvent& event) override;
+	void mouseScrollEvent(MouseScrollEvent& event) override;
+	void textInputEvent(TextInputEvent& event) override;
 };
-
+} // namespace guild

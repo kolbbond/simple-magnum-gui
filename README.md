@@ -2,6 +2,7 @@
 # guild 
 * the name is cute gui (ld) linker?
 1. (i cant spell)
+2. link to this gui (ld) to (gui)
 
 This turned into a straight up GUI library
 The dependent libraries that this is built on are included as sub-dirs

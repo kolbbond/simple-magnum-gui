@@ -4,6 +4,8 @@
 #include <Magnum/ImGuiIntegration/Context.hpp>
 
 #include "implot.h"
+#include "GuiBase.hh"
+
 
 #ifdef CORRADE_TARGET_ANDROID
 #include <Magnum/Platform/AndroidApplication.h>
@@ -13,6 +15,7 @@
 #include <Magnum/Platform/Sdl2Application.h>
 #endif
 
+using namespace guild;
 
 using namespace Magnum;
 using namespace Math::Literals;

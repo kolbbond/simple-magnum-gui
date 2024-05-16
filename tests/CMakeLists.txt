@@ -7,7 +7,8 @@ set(test_list
     test_magnum_sdl2.cpp
     test_magnum_application_main.cpp
     test_magnum_imgui.cpp
-    test_magnum_implot.cpp
+    #test_magnum_implot.cpp
+    test_guibase.cpp
 )
 
 # package specific
