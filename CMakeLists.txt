@@ -85,7 +85,7 @@ set(mysources
     src/ImPlotWrapper.cpp
     src/GuiMain.cpp
     src/GuiConsole.cpp
-    src/ImGuiExample.cpp
+    src/GuiBase.cpp
     #src/GuiLog.cpp
 
     # add implot here for now
@@ -96,6 +96,7 @@ set(mysources
 
 # make our library (shared or static?)
 add_library(${PROJECT_NAME} SHARED ${mysources})
+add_library(guild::guild ALIAS guild)
 
 # link them
 target_link_libraries(${PROJECT_NAME} PUBLIC
@@ -221,6 +222,9 @@ endif(ENABLE_TESTING)
 #add_executable(main tests/test_gui_console.cpp)
 #target_link_libraries(main 
 #guild)
+
+# work out of a subdirectory?
+add_subdirectory(rad/implot_ex)
 
 # ##############################################################################
 # INSTALLATION if we are installing
