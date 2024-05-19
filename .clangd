@@ -1,7 +1,0 @@
-CompileFlags:
-	Add:
-	- "-I/usr/include/SDL2"
-	- "-I/home/kolbbond/programs/cpp/guild/include"
-	- "-I/home/kolbbond/build/MATLAB/2023b/extern/include"
-	- "-I/usr/include/lua5.4"
-	- "-I/usr/local/include/MagnumExternal/ImGui/"

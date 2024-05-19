@@ -27,8 +27,8 @@ class Data_ex {
 public:
 	int x;
 	int y;
-	std::array<double, 10> xv;
-	std::array<double, 10> yv;
+//	std::array<double, 10> xv;
+	//std::array<double, 10> yv;
 
 	std::string name = std::string("example");
 	char myname[50] = "heymom";

@@ -11,8 +11,8 @@ class data_ex {
 public:
 	int x;
 	int y;
-	std::array<double, 10> xv;
-	std::array<double, 10> yv;
+	//std::array<double, 10> xv;
+	//std::array<double, 10> yv;
 
 	std::string name = "example";
 };
