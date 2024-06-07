@@ -14,12 +14,12 @@
 
 // custom runtime_error implementation
 // in order to include filename and line number
-class rat_error: public std::runtime_error{
+class guild_error: public std::runtime_error{
 	private:
 		std::string msg;
 	public:
 		// constructor
-		rat_error(const std::string &arg, const char *file, const char *function, int line) :
+		guild_error(const std::string &arg, const char *file, const char *function, int line) :
 		std::runtime_error(arg) {
 			std::ostringstream o;
 			o << KRED << KBLD << "error: " << KNRM << file << ":" << function << ":" << 
@@ -28,12 +28,12 @@ class rat_error: public std::runtime_error{
 		}
 		
 		// destructor
-		~rat_error() throw() {}
+		~guild_error() throw() {}
 		const char *what() const throw() override{
 			return msg.c_str();
 		}
 };
 
 // macro for error
-#define rat_throw_line(arg) throw rat_error(arg, __FILENAME__, __FUNCTION__, __LINE__);
+#define guild_throw_line(arg) throw guild_error(arg, __FILENAME__, __FUNCTION__, __LINE__);
 

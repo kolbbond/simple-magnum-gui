@@ -44,7 +44,7 @@ protected:
     SDL_Window* _window;
 
     // logger
-    ShLogPr _lg = NullLog::create();
+    ShLogPr _lg;// = NullLog::create();
 
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;

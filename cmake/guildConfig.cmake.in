@@ -43,9 +43,17 @@ endif()
 # Magnum
 if(NOT TARGET Magnum)
     message(STATUS "Magnum is not target")
-    find_dependency(Magnum)
-    find_dependency(Magnum REQUIRED Sdl2Application)
-    find_dependency(Magnum REQUIRED GL)
+    #    find_dependency(Magnum)
+    #find_dependency(Magnum REQUIRED Sdl2Application)
+    #find_dependency(Magnum REQUIRED GL)
+    find_dependency(Magnum REQUIRED 
+        GL
+        MeshTools
+        Primitives
+        Shaders
+        Trade
+        Sdl2Application
+)
 endif()
 
 # find implot?
