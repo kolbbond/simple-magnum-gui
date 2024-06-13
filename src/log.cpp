@@ -10,22 +10,22 @@
 namespace guild{
 
 	// constructor
-	Log::Log(const LogoType logo){
+	Logger::Logger(const LogoType logo){
 		show_logo(logo);
 	}
 
 	// factory
-	ShLogPr Log::create(const LogoType logo){
-		return std::make_shared<Log>(logo);
+	ShLoggerPr Logger::create(const LogoType logo){
+		return std::make_shared<Logger>(logo);
 	}
 
 	// force set increment
-	void Log::set_num_indent(const int num_indent){
+	void Logger::set_num_indent(const int num_indent){
 		num_indent_ = num_indent;
 	}
 
 	// only change indent
-	void Log::msg(const int incr){
+	void Logger::msg(const int incr){
 		// lock for thread safety
 		mtx_.lock();
 
@@ -39,7 +39,7 @@ namespace guild{
 	}
 
 	// new line
-	void Log::newl(){
+	void Logger::newl(){
 		// lock for thread safety
 		mtx_.lock();
 
@@ -51,12 +51,12 @@ namespace guild{
 	}
 
 	// access to indentation
-	int Log::get_num_indent(){
+	int Logger::get_num_indent(){
 		return num_indent_;
 	}
 
 	// horizontal line
-	void Log::hline(const int width, const char ch, const std::string& str1, const std::string& str2){
+	void Logger::hline(const int width, const char ch, const std::string& str1, const std::string& str2){
 		if(width<=0)return;
 		msg("%s%c",str1.c_str(),ch);
 		for(int i=0;i<width-1;i++){
@@ -66,7 +66,7 @@ namespace guild{
 	}
 
 	// show guild logo
-	void Log::show_logo(const LogoType logo){
+	void Logger::show_logo(const LogoType logo){
 		switch(logo){
 			case RAT:{guild_logo(0, 0, 0);break;}
 			case NONE:{break;}
@@ -75,7 +75,7 @@ namespace guild{
 
 	// guild logo in ascii art
 	// geneguilded by: https://cloudapps.herokuapp.com/imagetoascii/
-	void Log::guild_logo(const int vmajor, const int vminor, const int vpatch){
+	void Logger::guild_logo(const int vmajor, const int vminor, const int vpatch){
         (void)vminor;
         (void)vmajor;
         (void)vpatch;

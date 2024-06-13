@@ -1,8 +1,6 @@
 // conversion of the demo app console to a class
 
 #include "GuiConsole.hh"
-#include "GuiMain.hh"
-#include "LuaWrapper.hh"
 
 // Helper to wire demo markers located in code to an interactive browser
 typedef void (*ImGuiConsoleMarkerCallback)(const char *file, int line,

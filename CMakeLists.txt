@@ -90,7 +90,7 @@ set(mysources
     src/WindowWrapper.cpp
     src/ImGuiWrapper.cpp
     src/ImPlotWrapper.cpp
-    src/GuiMain.cpp
+    #src/GuiMain.cpp
     src/GuiConsole.cpp
     src/GuiBase.cpp
     src/DrawCallback.cpp
@@ -194,6 +194,7 @@ target_include_directories(
   ${PROJECT_NAME}
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
          $<BUILD_INTERFACE:${LUA_INCLUDE_DIR}>
  PRIVATE
@@ -240,8 +241,8 @@ endif(ENABLE_TESTING)
 
 # RAD directories
 # work out of a subdirectory?
-add_subdirectory(rad/implot_ex)
-add_subdirectory(rad/guibase)
+#add_subdirectory(rad/implot_ex)
+#add_subdirectory(rad/guibase)
 
 # ##############################################################################
 # INSTALLATION if we are installing
@@ -272,6 +273,11 @@ if(CREATE_INSTALL)
 
   # general header install
   install(FILES ${CMAKE_BINARY_DIR}/include/guild.hh
+          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
+
+  # add implot headers
+  install(FILES 
+      ${CMAKE_SOURCE_DIR}/implot/implot.h
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/guild)
 
     set(_INCLUDE_INSTALL_DIR guild)

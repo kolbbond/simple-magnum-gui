@@ -12,6 +12,7 @@ printf "\t- \"-I/usr/include/SDL2\"\n" >> .clangd
 
 # matlab includes
 printf "\t- \"-I$(pwd)/include\"\n" >> .clangd
+printf "\t- \"-I$(pwd)/implot\"\n" >> .clangd
 printf "\t- \"-I${MATLAB_PATH}/extern/include\"\n" >> .clangd
 
 # lua includes

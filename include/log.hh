@@ -14,17 +14,17 @@
 // code specific to Rat
 namespace guild {
 
-// shared pointer definition for log
-typedef std::shared_ptr<class Log> ShLogPr;
+// shared pointer definition for Logger
+typedef std::shared_ptr<class Logger> ShLoggerPr;
 
 // shared pointer definition for no-output log
-//typedef std::shared_ptr<class NullLog> ShNullLogPr;
+//typedef std::shared_ptr<class NullLogger> ShNullLoggerPr;
 
 // output types
 //enum VerboseType {general,fmm};
 
 // logging to the terminal
-class Log {
+class Logger {
 	// properties
 protected:
 	// number of indentations
@@ -39,13 +39,13 @@ public:
 	enum LogoType { RAT, NONE };
 
 	// constructor
-	explicit Log(LogoType logo = NONE);
+	explicit Logger(LogoType logo = NONE);
 
 	// factory
-	static ShLogPr create(LogoType logo = NONE);
+	static ShLoggerPr create(LogoType logo = NONE);
 
 	// virtual destructor (obligatory)
-	virtual ~Log(){};
+	virtual ~Logger(){};
 
 	// only change indent
 	virtual void msg(const int incr);
@@ -124,15 +124,15 @@ public:
 // null logger (no output)
 // used as a placeholder when no log is present
 /*
-	class NullLog: public Log{
+	class NullLogger: public Logger{
 		// methods
 		public:
 			// constructor
-			NullLog(){};
+			NullLogger(){};
 
 			// factory
-			static ShNullLogPr create(){
-				return std::make_shared<NullLog>();
+			static ShNullLoggerPr create(){
+				return std::make_shared<NullLogger>();
 			}
 
 			// send text to logbook

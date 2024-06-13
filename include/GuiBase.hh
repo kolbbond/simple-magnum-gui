@@ -1,22 +1,16 @@
 // main gui class
 
 // magnum includes
-#ifdef CORRADE_TARGET_ANDROID
-#	include <Magnum/Platform/AndroidApplication.h>
-#elif defined(CORRADE_TARGET_EMSCRIPTEN)
-#	include <Magnum/Platform/EmscriptenApplication.h>
-#else
-#	include <Magnum/Platform/Sdl2Application.h>
-#endif
-#include "log.hh"
+#include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
+
 #include <tuple>
 #include <vector>
+#include "log.hh"
 
-#include "DrawCallback.hh"
 #include "SDL_video.h"
 #include "imgui.h"
 #include "log.hh"
@@ -30,21 +24,22 @@
 
 using namespace Magnum;
 using namespace Math::Literals;
-using namespace guild;
 
 namespace guild {
-    // base gui class, entry point for guis
-class GuiBase : public Platform::Application {
+
+// base gui class, entry point for guis
+
+class GuiBase: public Platform::Application {
 
 protected:
 	// our imgui context
 	ImGuiIntegration::Context _imgui{NoCreate};
 
-    // actual window (assume SDL?)
-    SDL_Window* _window;
+	// actual window (assume SDL?)
+	SDL_Window* _window;
 
-    // logger
-    ShLogPr _lg;// = NullLog::create();
+	// logger
+	ShLoggerPr _lg; // = NullLogger::create();
 
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;
@@ -55,33 +50,34 @@ protected:
 	std::vector<ShDrawCallbackPr> callback_list_;
 
 public:
-
-    // constructor
+	// constructor
 	explicit GuiBase(const Arguments& arguments);
 
-    // draw callbacks
-    // main draw event loop (called every iteration)
+	// draw callbacks
+	// main draw event loop (called every iteration)
 	void drawEvent() override;
-    void drawBegin();
-    void drawEnd();
-    void draw_callbacks();
+	void drawBegin();
+	void drawEnd();
+	void draw_callbacks();
 
 	// demo
 	void demo_imgui();
 
-    // implot demo
+	// implot demo
 	void demo_implot();
 	void demo_test();
 
-    // printers
-    void print_window_position();
+	// printers
+	void print_window_position();
 
-    // add custom callbacks
-    void add_callback(ShDrawCallbackPr);
+	// add custom callbacks
+	void add_callback(ShDrawCallbackPr);
 
-    // getters
-    SDL_Window* get_window();
-    std::pair<int,int> get_window_position();
+	// getters
+	SDL_Window* get_window();
+	std::pair<int, int> get_window_position();
+	void set_window_position(int x, int y);
+	void set_window_size(int x, int y);
 
 	// event wrappers
 	void viewportEvent(ViewportEvent& event) override;

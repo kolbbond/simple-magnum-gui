@@ -3,8 +3,6 @@
 
 // include header
 #include "ImPlotWrapper.hh"
-#include "implot.h"
-
 
 // constructor
 ImPlotWrapper::ImPlotWrapper() {}

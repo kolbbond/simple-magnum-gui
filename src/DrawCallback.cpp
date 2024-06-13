@@ -24,6 +24,13 @@ void DrawCallback::set_callback(draw_callback fn) {
 	callback_ = fn;
 }
 
+/*
+void DrawCallback::add_callback(draw_callback fn) {
+	// add callback function into object
+	callback_ = fn;
+}
+*/
+
 void DrawCallback::set_data(void* data) {
 	data_ = data;
 }

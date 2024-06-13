@@ -7,7 +7,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 		  Configuration{}.setTitle("GuiBase").setWindowFlags(
 			  Configuration::WindowFlag::Resizable)} {
 	// create a log?
-	_lg = Log::create();
+	_lg = Logger::create();
 
 	// display display stats
 	// check SDL
@@ -32,9 +32,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// start an imgui context
 	printf("Creating imgui context\n");
 	Vector2i window_size = windowSize();
-    // override?
-    window_size[0]=1920;
-    window_size[1]=1080;
+	// override?
+	window_size[0] = 1920;
+	window_size[1] = 1080;
 	printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
 
 	_imgui = ImGuiIntegration::Context(
@@ -46,9 +46,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 	printf("Creating implot context\n");
 	ImPlot::CreateContext();
 
-	/* Set up proper blending to be used by ImGui. There's a great chance
- you'll need this exact behavior for the rest of your scene. If not, set
- this only for the drawFrame() call. */
+	// Set up proper blending to be used by ImGui. There's a great chance
+	// you'll need this exact behavior for the rest of your scene. If not, set
+	// this only for the drawFrame() call.
 	GL::Renderer::setBlendEquation(
 		GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
 	GL::Renderer::setBlendFunction(
@@ -175,10 +175,26 @@ void GuiBase::draw_callbacks() {
 			// call the callback
 			int flag = mycallback->call();
 			if(flag) printf("callback error!\n");
+
+			// also call the events
+			// @hey, add events to the callbacks
+			// we will call the events from the callbacks themselves
 		}
 	}
 }
 
+// setters
+void GuiBase::set_window_position(int x, int y) {
+	//
+	SDL_SetWindowPosition(_window, x, y);
+}
+
+void GuiBase::set_window_size(int w, int h) {
+	//
+	SDL_SetWindowSize(_window, w, h);
+}
+
+// event handling for imgui
 void GuiBase::keyPressEvent(KeyEvent& event) {
 	if(_imgui.handleKeyPressEvent(event)) return;
 }
