@@ -6,6 +6,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	: Platform::Application{arguments,
 		  Configuration{}.setTitle("GuiBase").setWindowFlags(
 			  Configuration::WindowFlag::Resizable)} {
+
 	// create a log?
 	_lg = Logger::create();
 
@@ -32,6 +33,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// start an imgui context
 	printf("Creating imgui context\n");
 	Vector2i window_size = windowSize();
+
 	// override?
 	window_size[0] = 1920;
 	window_size[1] = 1080;
@@ -65,7 +67,7 @@ void GuiBase::drawBegin() {
 	// setup the drawing state
 	// clear buffer
 
-	GL::defaultFramebuffer.clear(GL::FramebufferClear::Color);
+	GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
 	// start a new frame
 	_imgui.newFrame();
@@ -96,10 +98,10 @@ void GuiBase::drawEnd() {
 
 	/* Reset state. Only needed if you want to draw something else with
  different state after. */
-	GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
-	GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
-	GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
 	GL::Renderer::disable(GL::Renderer::Feature::Blending);
+	GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+	GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+	GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 
 	// swap background buffers and redraw to screen
 	swapBuffers();
@@ -110,10 +112,9 @@ void GuiBase::drawEvent() {
 	// main loop
 	// this is called each frame
 
+	//////////////////////////////////////////////////
 	// setup the drawing
 	drawBegin();
-
-	//////////////////////////////////////////////////
 
 	// Do your drawing here?
 	// @hey, how do we add in custom functions from outside while utilizing
@@ -150,35 +151,26 @@ void GuiBase::add_callback(ShDrawCallbackPr callback) {
 	// add callback to list
 
 	// append
-	callback_list_.push_back(callback);
+	_callback_list.push_back(callback);
 }
 
 void GuiBase::draw_callbacks() {
 	// draw callbacks from list
 
-	// check list not empty
-	//assert(!callback_list_.empty());
-
-	// printf("printing callbacks\n");
-	if(callback_list_.empty()) {
+	// check if list empty
+	if(_callback_list.empty()) {
 	} else {
 
 		// walk callbacks
-		int num_callbacks = callback_list_.size();
+		int num_callbacks = _callback_list.size();
 		for(int i = 0; i < num_callbacks; i++) {
 
 			// get data pointer
-			ShDrawCallbackPr mycallback = callback_list_[i];
-
-			// void* mydata = mycallback->get_data();
+			ShDrawCallbackPr mycallback = _callback_list[i];
 
 			// call the callback
-			int flag = mycallback->call();
+			int flag = mycallback->draw();
 			if(flag) printf("callback error!\n");
-
-			// also call the events
-			// @hey, add events to the callbacks
-			// we will call the events from the callbacks themselves
 		}
 	}
 }
@@ -212,7 +204,38 @@ void GuiBase::mouseReleaseEvent(MouseEvent& event) {
 }
 
 void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
+	// let imgui handle its own events
 	if(_imgui.handleMouseMoveEvent(event)) return;
+
+	// send event to callbacks
+	//	print_window_position();
+	Vector2 mpos = Vector2{event.relativePosition()};
+	Vector2i me = event.relativePosition();
+	Vector2 delta = 3.0f * Vector2{event.relativePosition()} / Vector2{windowSize()};
+
+	printf("mouse(%i,%i): \n", me[0], me[1]);
+	printf("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
+	//	ImGui::Text("check\n");
+	//	ImGui::Text("mouse(%i,%i): \n", me[0], me[1]);
+	//	ImGui::Text("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
+	//	std::cout << me << std::endl;
+
+	// check if list empty
+	if(_callback_list.empty()) {
+	} else {
+
+		// walk callbacks
+		int num_callbacks = _callback_list.size();
+		for(int i = 0; i < num_callbacks; i++) {
+
+			// get data pointer
+			ShDrawCallbackPr mycallback = _callback_list[i];
+
+			// call the callback
+			mycallback->mouseMoveEvent(event);
+			//if(flag) printf("callback error!\n");
+		}
+	}
 }
 
 void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {

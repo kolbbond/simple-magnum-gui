@@ -47,7 +47,7 @@ protected:
 	Float _floatValue = 0.0f;
 
 	// list of set callbacks
-	std::vector<ShDrawCallbackPr> callback_list_;
+	std::vector<ShDrawCallbackPr> _callback_list;
 
 public:
 	// constructor

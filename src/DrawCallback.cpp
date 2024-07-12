@@ -12,16 +12,28 @@ DrawCallback::DrawCallback() {}
 // destructor
 DrawCallback::~DrawCallback() {}
 
-int DrawCallback::call() {
+int DrawCallback::draw() {
 	// callback with data
-	return callback_(data_);
+	return _callback(_data);
+}
+
+void DrawCallback::mouseMoveEvent(Magnum::Platform::Sdl2Application::MouseMoveEvent& event) {
+	// return callbacks mouse
+	if(_flag_mousemove_event) {
+		_mouse_move_event(_data, event);
+	}
 }
 
 // setters
 
 void DrawCallback::set_callback(draw_callback fn) {
 	// set callback function into object
-	callback_ = fn;
+	_callback = fn;
+}
+
+void DrawCallback::set_mouse_move_event(mouse_move_event mme) {
+	_flag_mousemove_event = true;
+	_mouse_move_event = mme;
 }
 
 /*
@@ -32,13 +44,13 @@ void DrawCallback::add_callback(draw_callback fn) {
 */
 
 void DrawCallback::set_data(void* data) {
-	data_ = data;
+	_data = data;
 }
 
 // getters
 
 void* DrawCallback::get_data() {
-	return data_;
+	return _data;
 }
 
 // static

@@ -28,6 +28,10 @@ option(USE_MATLAB "include matlab scripting engine" OFF)
 option(USE_OCTAVE "include octave scripting engine" OFF)
 option(USE_PYTHON "include PYTHON scripting engine" OFF)
 
+# set export commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/")
+
 # if cmake helpers - for debug
 if(USE_CMAKEHELPERS)
   list(APPEND CMAKE_MODULE_PATH "$ENV{CMAKEHELPERS_DIR}")
