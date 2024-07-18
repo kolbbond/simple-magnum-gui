@@ -19,8 +19,22 @@ int DrawCallback::draw() {
 
 void DrawCallback::mouseMoveEvent(Magnum::Platform::Sdl2Application::MouseMoveEvent& event) {
 	// return callbacks mouse
-	if(_flag_mousemove_event) {
+	if(_flag_mouse_move_event) {
 		_mouse_move_event(_data, event);
+	}
+}
+
+void DrawCallback::mouseScrollEvent(Magnum::Platform::Sdl2Application::MouseScrollEvent& event) {
+	// return callbacks mouse
+	if(_flag_mouse_scroll_event) {
+		_mouse_scroll_event(_data, event);
+	}
+}
+
+void DrawCallback::keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event) {
+	// return callbacks mouse
+	if(_flag_key_press_event) {
+		_key_press_event(_data, event);
 	}
 }
 
@@ -32,8 +46,17 @@ void DrawCallback::set_callback(draw_callback fn) {
 }
 
 void DrawCallback::set_mouse_move_event(mouse_move_event mme) {
-	_flag_mousemove_event = true;
+	_flag_mouse_move_event = true;
 	_mouse_move_event = mme;
+}
+
+void DrawCallback::set_mouse_scroll_event(mouse_scroll_event mme) {
+	_flag_mouse_scroll_event = true;
+	_mouse_scroll_event = mme;
+}
+void DrawCallback::set_key_press_event(key_press_event mme) {
+	_flag_key_press_event = true;
+	_key_press_event = mme;
 }
 
 /*

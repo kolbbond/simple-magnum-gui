@@ -315,6 +315,8 @@ if(CREATE_INSTALL)
   install (FILES
       ${CMAKE_CURRENT_BINARY_DIR}/guildConfig.cmake
       ${CMAKE_CURRENT_BINARY_DIR}/guildConfigVersion.cmake
+      # install dependency modules too?
+      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindImGui.cmake
       DESTINATION ${INSTALL_CONFIGDIR}
       )
 

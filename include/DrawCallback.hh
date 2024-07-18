@@ -13,6 +13,8 @@ typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 // @hey, what else does user need to integrate?
 typedef int (*draw_callback)(void*);
 typedef int (*mouse_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
+typedef int (*mouse_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );
+typedef int (*key_press_event)(void*, Magnum::Platform::Sdl2Application::KeyEvent& );
 
 using namespace Magnum;
 
@@ -21,18 +23,20 @@ protected:
 	// draw callback function
 	draw_callback _callback;
 	mouse_move_event _mouse_move_event;
+	mouse_scroll_event _mouse_scroll_event;
+	key_press_event _key_press_event;
 
 	// user data pointer
 	void* _data = nullptr;
 
 	// flags for the supported events
 	bool _flag_viewport_event = false;
-	bool _flag_mousemove_event = false;
-	bool _flag_keypress_event = false;
-	bool _flag_keyrelease_event = false;
-	bool _flag_mousepress_event = false;
-	bool _flag_mousescroll_event = false;
-	bool _flag_textinput_event = false;
+	bool _flag_mouse_move_event = false;
+	bool _flag_key_press_event = false;
+	bool _flag_key_release_event = false;
+	bool _flag_mouse_press_event = false;
+	bool _flag_mouse_scroll_event = false;
+	bool _flag_text_input_event = false;
 
 public:
 	// constructor
@@ -51,6 +55,8 @@ public:
 	void set_callback(draw_callback);
 	void set_data(void*);
 	void set_mouse_move_event(mouse_move_event mme);
+	void set_mouse_scroll_event(mouse_scroll_event mme);
+	void set_key_press_event(key_press_event mme);
 
 	void viewportEvent(Magnum::Platform::Sdl2Application::ViewportEvent& event);
 	void keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event);

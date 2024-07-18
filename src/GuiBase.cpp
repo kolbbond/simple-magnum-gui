@@ -4,8 +4,9 @@ namespace guild {
 
 GuiBase::GuiBase(const Arguments& arguments)
 	: Platform::Application{arguments,
-		  Configuration{}.setTitle("GuiBase").setWindowFlags(
-			  Configuration::WindowFlag::Resizable)} {
+		  Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable)} {
+
+	setWindowTitle("test");
 
 	// create a log?
 	_lg = Logger::create();
@@ -18,12 +19,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	for(int i = 0; i < num_displays; i++) {
 		displayBounds.push_back(SDL_Rect());
 		SDL_GetDisplayBounds(i, &displayBounds.back());
-		_lg->msg("display %i bounds: %s(%i,%i)%s\n",
-			i,
-			KRED,
-			displayBounds[i].x,
-			displayBounds[i].y,
-			KNRM);
+		_lg->msg("display %i bounds: %s(%i,%i)%s\n", i, KRED, displayBounds[i].x, displayBounds[i].y, KNRM);
 	}
 
 	// get the created window and override the position
@@ -39,8 +35,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	window_size[1] = 1080;
 	printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
 
-	_imgui = ImGuiIntegration::Context(
-		Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
+	_imgui = ImGuiIntegration::Context(Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
 
 	// create a context for implot
 	// might need to connect to imgui but idk
@@ -48,13 +43,6 @@ GuiBase::GuiBase(const Arguments& arguments)
 	printf("Creating implot context\n");
 	ImPlot::CreateContext();
 
-	// Set up proper blending to be used by ImGui. There's a great chance
-	// you'll need this exact behavior for the rest of your scene. If not, set
-	// this only for the drawFrame() call.
-	GL::Renderer::setBlendEquation(
-		GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
-	GL::Renderer::setBlendFunction(
-		GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
 	/* Have some sane speed, please */
@@ -81,6 +69,11 @@ void GuiBase::drawBegin() {
 
 	/* Update application cursor */
 	_imgui.updateApplicationCursor(*this);
+}
+
+void GuiBase::drawEnd() {
+	// draw, reset, swap
+
 
 	/* Set appropriate states. If you only draw ImGui, it is sufficient to
  just enable blending and scissor test in the constructor. */
@@ -88,10 +81,14 @@ void GuiBase::drawBegin() {
 	GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
 	GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
 	GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
-}
 
-void GuiBase::drawEnd() {
-	// draw, reset, swap
+	// Set up proper blending to be used by ImGui. There's a great chance
+	// you'll need this exact behavior for the rest of your scene. If not, set
+	// this only for the drawFrame() call.
+	GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
+	GL::Renderer::setBlendFunction(
+		GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+
 
 	// draw the frame to background buffer
 	_imgui.drawFrame();
@@ -114,7 +111,9 @@ void GuiBase::drawEvent() {
 
 	//////////////////////////////////////////////////
 	// setup the drawing
+	// draws an imgui frame
 	drawBegin();
+
 
 	// Do your drawing here?
 	// @hey, how do we add in custom functions from outside while utilizing
@@ -123,12 +122,13 @@ void GuiBase::drawEvent() {
 	std::pair<int, int> pos = get_window_position();
 	ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
 
+	//////////////////////////////////////////////////
 	// call back function?
+	// draws everything we need
 	draw_callbacks();
 
-	//////////////////////////////////////////////////
-
 	// draw and reset
+	// swaps buffer to screen
 	drawEnd();
 }
 
@@ -189,6 +189,22 @@ void GuiBase::set_window_size(int w, int h) {
 // event handling for imgui
 void GuiBase::keyPressEvent(KeyEvent& event) {
 	if(_imgui.handleKeyPressEvent(event)) return;
+
+	// check if list empty
+	if(_callback_list.empty()) {
+	} else {
+
+		// walk callbacks
+		int num_callbacks = _callback_list.size();
+		for(int i = 0; i < num_callbacks; i++) {
+
+			// get data pointer
+			ShDrawCallbackPr mycallback = _callback_list[i];
+
+			// call the callback
+			mycallback->keyPressEvent(event);
+		}
+	}
 }
 
 void GuiBase::keyReleaseEvent(KeyEvent& event) {
@@ -209,12 +225,12 @@ void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
 
 	// send event to callbacks
 	//	print_window_position();
-	Vector2 mpos = Vector2{event.relativePosition()};
-	Vector2i me = event.relativePosition();
-	Vector2 delta = 3.0f * Vector2{event.relativePosition()} / Vector2{windowSize()};
+	//Vector2 mpos = Vector2{event.relativePosition()};
+	//Vector2i me = event.relativePosition();
+	//Vector2 delta = 3.0f * Vector2{event.relativePosition()} / Vector2{windowSize()};
 
-	printf("mouse(%i,%i): \n", me[0], me[1]);
-	printf("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
+	//	printf("mouse(%i,%i): \n", me[0], me[1]);
+	//	printf("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
 	//	ImGui::Text("check\n");
 	//	ImGui::Text("mouse(%i,%i): \n", me[0], me[1]);
 	//	ImGui::Text("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
@@ -244,6 +260,23 @@ void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {
 		event.setAccepted();
 		return;
 	}
+
+	// check if list empty
+	if(_callback_list.empty()) {
+	} else {
+
+		// walk callbacks
+		int num_callbacks = _callback_list.size();
+		for(int i = 0; i < num_callbacks; i++) {
+
+			// get data pointer
+			ShDrawCallbackPr mycallback = _callback_list[i];
+
+			// call the callback
+			mycallback->mouseScrollEvent(event);
+			//if(flag) printf("callback error!\n");
+		}
+	}
 }
 
 void GuiBase::textInputEvent(TextInputEvent& event) {
@@ -263,8 +296,7 @@ void GuiBase::demo_imgui() {
 	{
 		ImGui::Text("Hello, world!");
 		ImGui::SliderFloat("Float", &_floatValue, 0.0f, 1.0f);
-		if(ImGui::ColorEdit3("Clear Color", _clearColor.data()))
-			GL::Renderer::setClearColor(_clearColor);
+		if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
 		if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
 		if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
@@ -303,8 +335,6 @@ void GuiBase::demo_test() {
 void GuiBase::viewportEvent(ViewportEvent& event) {
 	GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
 
-	_imgui.relayout(Vector2{event.windowSize()} / event.dpiScaling(),
-		event.windowSize(),
-		event.framebufferSize());
+	_imgui.relayout(Vector2{event.windowSize()} / event.dpiScaling(), event.windowSize(), event.framebufferSize());
 }
 } // namespace guild

@@ -25,6 +25,8 @@ int callback_fun(void* data) {
 	// cast our data to be meaningful
 	data_ex mydata = *reinterpret_cast<data_ex*>(data);
 
+    printf("debug callback\n");
+
 	ImGui::Begin("hey mom");
 	ImGui::Text("Hello, world!");
 	if(ImGui::Button("Test Window")) {
@@ -63,12 +65,11 @@ int main(int argc, char** argv) {
 	gui.add_callback(mycb);
 
 	// add a separate callback
-	ShDrawCallbackPr mycb2 = DrawCallback::create();
-	mycb2->set_callback(RealtimePlot::callback);
-	//mycb2->set_data(nullptr);
+	//ShDrawCallbackPr mycb2 = DrawCallback::create();
+	//mycb2->set_callback(RealtimePlot::callback);
 
 	// add this
-	gui.add_callback(mycb2);
+	//gui.add_callback(mycb2);
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws
@@ -76,7 +77,9 @@ int main(int argc, char** argv) {
 	//std::cin >> input;
 	bool done = false;
 	while(!done) {
+        printf("loop iteration\n");
 		done = !gui.mainLoopIteration();
+
         // done is true for the test
         done=true;
 	}
