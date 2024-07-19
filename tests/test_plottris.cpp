@@ -1,8 +1,5 @@
 
-// test plotting quads
-// for our network mesh we are primarily using quads
-// we want colored quads and wireframe
-
+// test plotting tris
 
 #include "GuiBase.hh"
 
@@ -96,4 +93,3 @@ int main(int argc, char** argv) {
 	// exit
 	gui.exit();
 }
-

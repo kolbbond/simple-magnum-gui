@@ -9,6 +9,9 @@ set(test_list
     test_magnum_imgui.cpp
     #test_magnum_implot.cpp
     test_guibase.cpp
+    test_loadimage.cpp
+    test_plottris.cpp
+    test_maptotexture.cpp
 )
 
 # package specific

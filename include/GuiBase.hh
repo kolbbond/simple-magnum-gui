@@ -6,6 +6,7 @@
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Shaders/VertexColorGL.h>
 
 #include <tuple>
 #include <vector>
