@@ -1,54 +1,47 @@
 # Encapsulated build of gui parts
 # guild 
-* the name is cute gui (ld) linker?
-1. (i cant spell)
-2. link to this gui (ld) to (gui)
+
+gui linker -> guild
 
 This turned into a straight up GUI library
 The dependent libraries that this is built on are included as sub-dirs
-so you can clone/fork those repos yourself
-1. Now we have scripting languages
+
+1. Optional scripting languages
     * Lua
     * Matlab
     * (Python?)
 
 ### Dependencies
 
+This utilizes Dear ImGui, Magnum, ImPlot.
+* First build Magnum
+    * [Corrade](github.com/mosra/corrade)
+    * [Magnum](github.com/mosra/magnum)
+        * make sure to build with SDL2
 
-My attempt at a build system for a combined gui library. 
-These are amazing gui libraries to utilize but 
-* These guys did not supply a build system <br />
- so here it is.
- 1. imgui: awesome lightweight immediate mode gui, for the window 
- 2. implot: to aid in plotting, for science mostly
- 3. magnum: graphics for 3D
- 4. magnum-integration: magnum with imgui
- 5 ...?
+* We forked magnum-integration and added ImGui
+    *    [magnum-integration](https://github.com/kolbbond/magnum-integration)
+        * clone the ImGui repo within the src/MagnumExternal directory
+        (see the clone_repos.sh script)
 
- The dependencies, git clone into the sub directories
- 1. imgui: 'git@github.com:ocornut/imgui.git'
- 1. implot: 'git@github.com:epezent/implot.git'
- 1. corrade: `git@github.com:mosra/corrade.git`
- 1. magnum: 'git@github.com:mosra/magnum.git'
- 1. magnum-integration: 'git@github.com:mosra/magnum-integration.git'
+* Clone implot within this directory (we might change to include in magnum-integration)
+    *     [implot](github.com/epezent/implot)
 
  ## This is getting complicated!
+ then build with the usual cmake process.
 
- * install corrade
- * install magnum
-    * make sure to build with SDL2
- * clone magnum-integration
-    * set cmake to build with imgui
-    * cd into src/MagnumExternal
-    * git clone imgui here, and rename > ImGui
-        * optional: git clone implot and `cp implot/implot* Imgui/. `
-    *   * if implot also add > implot.h and implot_external.h to cmakelists `
-    * go to modules/FindImGui.cmake and add the  
-    > implot implot_items implot_demo 
-    to the foreach at line 156..?
-    * this should be enough to install
+ ## utilizing the library
+  see the tests but general idea is
+ * Start the gui window with GuiBase
+ * create a DrawCallback
+    * set your static callback function with prototype 
+        ` int callback_function(void* data); `
+    * set any events (mouse move, mouse scroll, key press) with the relevant prototypes
+    * set your data
+* add the callback to your guibase object
+* run your game loop and call the gui function `mainLoopIteration`
 
-* make guild?
+
 
 
 
