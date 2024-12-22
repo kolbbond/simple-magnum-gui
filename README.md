@@ -1,15 +1,8 @@
 # Encapsulated build of gui parts
-# guild 
-
-gui linker -> guild
+# Simple-magnum-gui (SMG) (also a gun)
 
 This turned into a straight up GUI library
 The dependent libraries that this is built on are included as sub-dirs
-
-1. Optional scripting languages
-    * Lua
-    * Matlab
-    * (Python?)
 
 ### Dependencies
 
@@ -26,9 +19,6 @@ This utilizes Dear ImGui, Magnum, ImPlot.
 
 * Clone implot within this directory (we might change to include in magnum-integration)
     *     [implot](github.com/epezent/implot)
-
- ## This is getting complicated!
- then build with the usual cmake process.
 
  ## utilizing the library
   see the tests but general idea is

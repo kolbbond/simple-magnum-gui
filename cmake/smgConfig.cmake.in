@@ -1,0 +1,69 @@
+get_filename_component(smg_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+message(STATUS "SMG CONFIG")
+
+# add path
+list(APPEND CMAKE_MODULE_PATH ${smg_CMAKE_DIR})
+list(REMOVE_AT CMAKE_MODULE_PATH -1)
+
+# SDL (should be included through magnum)
+if(OFF)
+find_dependency(SDL2)
+if(NOT TARGET SDL2)
+    message(STATUS "SDL2 is not target")
+endif()
+
+# OpenGL
+if(NOT TARGET OpenGL)
+    message(STATUS "OpenGL is not target")
+  set(OpenGL_GL_PREFERENCE "GLVND")
+find_dependency(OpenGL)
+endif()
+
+endif()
+
+# MagnumIntegration
+if(NOT TARGET MagnumIntegration)
+    message(STATUS "MagnumIntegration is not target")
+    find_dependency(MagnumIntegration)
+    find_dependency(MagnumIntegration REQUIRED ImGui)
+endif()
+
+# Corrade
+if(NOT TARGET Corrade)
+    message(STATUS "Corrade is not target")
+    find_dependency(Corrade)
+    find_dependency(Corrade REQUIRED Main)
+endif()
+
+# Magnum
+if(NOT TARGET Magnum)
+    message(STATUS "Magnum is not target")
+    find_dependency(Magnum REQUIRED 
+        GL
+        MeshTools
+        Primitives
+        Shaders
+        Trade
+        Sdl2Application
+)
+endif()
+
+# find implot?
+#if(NOT TARGET ImPlot)
+#message(STATUS "ImPlot not target, find dependency")
+#find_dependency(ImPlot)
+#endif()
+
+# if we are not smg include smg!
+if(NOT TARGET smg)
+    message(STATUS "smg is not target")
+    message(STATUS "ADD SMG TARGETS")
+
+    # include definitions
+    include("${smg_CMAKE_DIR}/smgTargets.cmake")
+
+endif()
+set(smg_LIBRARIES smg)
+

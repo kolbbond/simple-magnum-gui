@@ -1,3 +1,0 @@
-/home/kolbbond/programs/cpp/guild/testing/gui_console/build/CMakeFiles/gui_console.dir
-/home/kolbbond/programs/cpp/guild/testing/gui_console/build/CMakeFiles/edit_cache.dir
-/home/kolbbond/programs/cpp/guild/testing/gui_console/build/CMakeFiles/rebuild_cache.dir
