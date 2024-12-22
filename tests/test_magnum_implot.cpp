@@ -15,7 +15,7 @@
 #include <Magnum/Platform/Sdl2Application.h>
 #endif
 
-using namespace guild;
+using namespace smg;
 
 using namespace Magnum;
 using namespace Math::Literals;

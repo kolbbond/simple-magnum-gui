@@ -1,15 +1,15 @@
 #include "GuiBase.hh"
 
-namespace guild {
+namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
 	: Platform::Application{arguments,
 		  Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable)} {
 
-	setWindowTitle("test");
+	setWindowTitle("GuiBase");
 
 	// create a log?
-	_lg = Logger::create();
+	_lg = Log::create();
 
 	// display display stats
 	// check SDL
@@ -223,19 +223,6 @@ void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
 	// let imgui handle its own events
 	if(_imgui.handleMouseMoveEvent(event)) return;
 
-	// send event to callbacks
-	//	print_window_position();
-	//Vector2 mpos = Vector2{event.relativePosition()};
-	//Vector2i me = event.relativePosition();
-	//Vector2 delta = 3.0f * Vector2{event.relativePosition()} / Vector2{windowSize()};
-
-	//	printf("mouse(%i,%i): \n", me[0], me[1]);
-	//	printf("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
-	//	ImGui::Text("check\n");
-	//	ImGui::Text("mouse(%i,%i): \n", me[0], me[1]);
-	//	ImGui::Text("delta(%0.3f,%0.3f): \n", delta[0], delta[1]);
-	//	std::cout << me << std::endl;
-
 	// check if list empty
 	if(_callback_list.empty()) {
 	} else {
@@ -249,7 +236,6 @@ void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
 
 			// call the callback
 			mycallback->mouseMoveEvent(event);
-			//if(flag) printf("callback error!\n");
 		}
 	}
 }
@@ -337,4 +323,4 @@ void GuiBase::viewportEvent(ViewportEvent& event) {
 
 	_imgui.relayout(Vector2{event.windowSize()} / event.dpiScaling(), event.windowSize(), event.framebufferSize());
 }
-} // namespace guild
+} // namespace smg

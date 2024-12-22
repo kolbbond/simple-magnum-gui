@@ -1,5 +1,5 @@
-#pragma once
 // picked up from Van Nugterens project-rat
+#pragma once
 
 // general headers
 #include <cassert>
@@ -7,6 +7,11 @@
 #include <stdio.h>
 #include <stdarg.h> /* va_list, va_start, va_arg, va_end */
 #include <mutex>
+#include <cstdio>
+#include <string>
+
+// specific headers
+//#include "error.hh"
 
 // Terminal color definitions
 // color definitions
@@ -20,23 +25,19 @@
 #define KCYN "\x1B[36m"
 #define KWHT "\x1B[37m"
 
-// specific headers
-#include "typedefs.hh"
-#include "error.hh"
+namespace smg {
 
-namespace guild {
-
-// shared pointer definition for Logger
-typedef std::shared_ptr<class Logger> ShLoggerPr;
+// shared pointer definition for Log
+typedef std::shared_ptr<class Log> ShLogPr;
 
 // shared pointer definition for no-output log
-//typedef std::shared_ptr<class NullLogger> ShNullLoggerPr;
+//typedef std::shared_ptr<class NullLog> ShNullLogPr;
 
 // output types
 //enum VerboseType {general,fmm};
 
 // logging to the terminal
-class Logger {
+class Log {
 	// properties
 protected:
 	// number of indentations
@@ -47,17 +48,15 @@ protected:
 
 	// methods
 public:
-	// logo options
-	enum LogoType { RAT, NONE };
 
 	// constructor
-	explicit Logger(LogoType logo = NONE);
+	explicit Log();
 
 	// factory
-	static ShLoggerPr create(LogoType logo = NONE);
+	static ShLogPr create();
 
 	// virtual destructor (obligatory)
-	virtual ~Logger(){};
+	virtual ~Log(){};
 
 	// only change indent
 	virtual void msg(const int incr);
@@ -82,12 +81,6 @@ public:
 		return false;
 	}
 
-	// logo
-	void show_logo(LogoType logo);
-
-	// guild logo in ascii art
-	// geneguilded by: https://cloudapps.herokuapp.com/imagetoascii/
-	void guild_logo(const int vmajor, const int vminor, const int vpatch);
 
 	// send text to logbook
 	virtual void msg(const char* fmt, ...) {
@@ -135,16 +128,15 @@ public:
 
 // null logger (no output)
 // used as a placeholder when no log is present
-/*
-	class NullLogger: public Logger{
+	class NullLog: public Log{
 		// methods
 		public:
 			// constructor
-			NullLogger(){};
+			NullLog(){};
 
 			// factory
-			static ShNullLoggerPr create(){
-				return std::make_shared<NullLogger>();
+			static ShLogPr create(){
+				return std::make_shared<NullLog>();
 			}
 
 			// send text to logbook
@@ -162,6 +154,5 @@ public:
 			// access to indentation
 			int get_num_indent()override final{return 0;}
 	};
-    */
 
-} // namespace guild
+} // namespace smg

@@ -1,10 +1,7 @@
-// DrawCallback.cpp
-// ###### -
-
 // include header
 #include "DrawCallback.hh"
 
-namespace guild {
+namespace smg {
 
 // constructor
 DrawCallback::DrawCallback() {}
@@ -59,13 +56,6 @@ void DrawCallback::set_key_press_event(key_press_event mme) {
 	_key_press_event = mme;
 }
 
-/*
-void DrawCallback::add_callback(draw_callback fn) {
-	// add callback function into object
-	callback_ = fn;
-}
-*/
-
 void DrawCallback::set_data(void* data) {
 	_data = data;
 }
@@ -83,4 +73,4 @@ ShDrawCallbackPr DrawCallback::create() {
 	return std::make_shared<DrawCallback>();
 }
 
-} // namespace guild
+} // namespace smg

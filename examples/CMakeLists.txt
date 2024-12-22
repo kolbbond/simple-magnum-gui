@@ -1,8 +1,8 @@
-project(implot_ex)
+project(examples)
 
-add_executable(${PROJECT_NAME} implot_ex.cpp)
+add_executable(implot_ex implot_ex.cpp)
 
-target_link_libraries(${PROJECT_NAME}
-    guild::guild
+target_link_libraries(implot_ex
+    smg::smg
     )
 

@@ -15,7 +15,6 @@
 
 #include "GuiBase.hh"
 #include "DrawCallback.hh"
-#include "RealtimePlot.hh"
 #include "imgui.h"
 
 #include <iostream>
@@ -31,7 +30,7 @@ struct data_ex {
 	Containers::Optional<Trade::ImageData2D> image;
 };
 
-using namespace guild;
+using namespace smg;
 
 int callback_fun(void* data) {
 	// example callback fun
@@ -100,7 +99,7 @@ int main(int argc, char** argv) {
 	// load image
 	PluginManager::Manager<Trade::AbstractImporter> manager;
 	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-	if(!importer || !importer->openFile("/home/kolbbond/programs/cpp/guild/tests/cute_goose.jpg")) assert(0);
+	if(!importer || !importer->openFile("/home/kolbbond/programs/cpp/smg/tests/cute_goose.jpg")) assert(0);
 
 	// set into data
 	mydata.image = importer->image2D(0);

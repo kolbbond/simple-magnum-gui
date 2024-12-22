@@ -45,7 +45,7 @@ int callback_fun(void* data) {
 	return 0;
 }
 
-using namespace guild;
+using namespace smg;
 int main(int argc, char** argv) {
 
 	// make our application class

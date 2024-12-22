@@ -64,26 +64,15 @@ find_package(Magnum REQUIRED
 
 find_package(MagnumIntegration REQUIRED ImGui)
 
-# also provide standard SDL OpenGL option?
-#find_package(SDL2)
-#find_package(OpenGL)
-
 # build implot separately?
 
 # either include implot or build here
 #find_package(ImPlot REQUIRED)
-#find_package(MagnumIntegration REQUIRED ImPlot)
-
 
 # set sources for our gui implementation
 set(mysources
-    src/WindowWrapper.cpp
-    src/ImGuiWrapper.cpp
-    src/ImPlotWrapper.cpp
-    src/GuiConsole.cpp
     src/GuiBase.cpp
     src/DrawCallback.cpp
-    src/RealtimePlot.cpp
     src/log.cpp
 
     # add implot here for now
@@ -93,12 +82,12 @@ set(mysources
 )
 
 # make our library (shared or static?)
-add_library(${PROJECT_NAME} SHARED ${mysources})
+add_library(smg SHARED ${mysources})
 add_library(smg::smg ALIAS smg)
 add_library(smg:: ALIAS smg)
 
 # link them
-target_link_libraries(${PROJECT_NAME} PUBLIC
+target_link_libraries(smg PUBLIC
     Corrade::Main
     Magnum::Application
     Magnum::GL
@@ -114,13 +103,13 @@ target_link_libraries(${PROJECT_NAME} PUBLIC
 
 
 # add additional sources
-target_sources(${PROJECT_NAME} PRIVATE ${mysources})
+target_sources(smg PRIVATE ${mysources})
 
 # at this point we can build everything
 # include directories we are making an interface for projects that link to THIS
 # library (includes all dependencies in our lib)
 target_include_directories(
-  ${PROJECT_NAME}
+  smg
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
@@ -133,7 +122,7 @@ target_include_directories(
 
 message(STATUS "compiler id: " ${CXX_COMPILER_ID})
 target_compile_options(
-  ${PROJECT_NAME}
+  smg
   PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
     -Wpedantic
@@ -209,7 +198,7 @@ if(CREATE_INSTALL)
   include(CMakePackageConfigHelpers)
   write_basic_package_version_file(
       ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
-      VERSION ${PROJECT_VERSION}
+      VERSION smg
       COMPATIBILITY AnyNewerVersion
   )
 

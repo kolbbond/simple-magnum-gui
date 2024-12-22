@@ -17,7 +17,7 @@ public:
 	std::string name = "example";
 };
 
-using namespace guild;
+using namespace smg;
 
 int callback_fun(void* data) {
 	// example callback fun

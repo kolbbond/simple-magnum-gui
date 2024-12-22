@@ -1,7 +1,6 @@
 // implot testing
 #include "GuiBase.hh"
 #include "DrawCallback.hh"
-#include "RealtimePlot.hh"
 #include "imgui.h"
 
 #include <iostream>
@@ -11,13 +10,11 @@ class data_ex {
 public:
 	int x;
 	int y;
-	//std::array<double, 10> xv;
-	//std::array<double, 10> yv;
 
 	std::string name = "example";
 };
 
-using namespace guild;
+using namespace smg;
 
 int callback_fun(void* data) {
 	// example callback fun
@@ -63,13 +60,6 @@ int main(int argc, char** argv) {
 
 	// set callback into our gui
 	gui.add_callback(mycb);
-
-	// add a separate callback
-	//ShDrawCallbackPr mycb2 = DrawCallback::create();
-	//mycb2->set_callback(RealtimePlot::callback);
-
-	// add this
-	//gui.add_callback(mycb2);
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws

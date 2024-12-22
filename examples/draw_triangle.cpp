@@ -13,7 +13,7 @@
 #include "log.hh"
 #include "typedefs.hh"
 
-using namespace guild;
+using namespace smg;
 using namespace Magnum;
 
 // type of geometry

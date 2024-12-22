@@ -15,18 +15,16 @@
 #include "SDL_video.h"
 #include "imgui.h"
 #include "log.hh"
-#include "typedefs.hh"
 #include <Magnum/Magnum.h>
 
-// guild includes
+// smg includes
 #include "DrawCallback.hh"
 #include "implot.h"
-#include "common.hh"
 
 using namespace Magnum;
 using namespace Math::Literals;
 
-namespace guild {
+namespace smg {
 
 // base gui class, entry point for guis
 
@@ -40,7 +38,7 @@ protected:
 	SDL_Window* _window;
 
 	// logger
-	ShLoggerPr _lg; // = NullLogger::create();
+	ShLogPr _lg; // = NullLog::create();
 
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;
@@ -90,4 +88,4 @@ public:
 	void mouseScrollEvent(MouseScrollEvent& event) override;
 	void textInputEvent(TextInputEvent& event) override;
 };
-} // namespace guild
+} // namespace smg

@@ -5,12 +5,12 @@
 #include <Magnum/ImGuiIntegration/Integration.h>
 #include <Magnum/Platform/Sdl2Application.h>
 
-namespace guild {
+namespace smg {
 
 typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 
 // for users to implement callbacks
-// @hey, what else does user need to integrate?
+// @hey: what else does user need to integrate?
 typedef int (*draw_callback)(void*);
 typedef int (*mouse_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
 typedef int (*mouse_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );
@@ -67,4 +67,4 @@ public:
 	void mouseScrollEvent(Magnum::Platform::Sdl2Application::MouseScrollEvent& event);
 	void textInputEvent(Magnum::Platform::Sdl2Application::TextInputEvent& event);
 };
-} // namespace guild
+} // namespace smg

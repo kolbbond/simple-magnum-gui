@@ -20,7 +20,7 @@
 #include "RealtimePlot.hh"
 #include "log.hh"
 
-using namespace guild;
+using namespace smg;
 using namespace Magnum;
 
 // use data as void pointer in callback
