@@ -10,6 +10,7 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
 option(ENABLE_TESTING "build unit/system tests" ON)
+option(ENABLE_EXAMPLES "build examples" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
@@ -147,6 +148,11 @@ if(ENABLE_TESTING)
   enable_testing()
   add_subdirectory(tests)
 endif(ENABLE_TESTING)
+
+if(ENABLE_EXAMPLES)
+    message(STATUS "build examples")
+    add_subdirectory(examples)
+endif()
 
 # ##############################################################################
 # INSTALLATION if we are installing

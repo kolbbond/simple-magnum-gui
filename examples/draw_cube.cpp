@@ -17,7 +17,6 @@
 
 #include "DrawCallback.hh"
 #include "GuiBase.hh"
-#include "RealtimePlot.hh"
 #include "log.hh"
 
 using namespace smg;
@@ -137,14 +136,6 @@ int main(int argc, char** argv) {
 
 	// set callback into our gui
 	gui.add_callback(mycb);
-
-	// add a separate callback
-	ShDrawCallbackPr mycb2 = DrawCallback::create();
-	mycb2->set_callback(RealtimePlot::callback);
-	//mycb2->set_data(nullptr);
-
-	// add this
-	gui.add_callback(mycb2);
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws

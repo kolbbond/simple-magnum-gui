@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
 		// done is true for the test
         // just to confirm the process works
         // turn off if you want to actually see the test
-		//done = true;
+		done = true;
 	}
 
 	// exit
