@@ -13,11 +13,10 @@ Make sure to clone the submodules too.
 ### Dependencies
 
 This utilizes Dear ImGui, Magnum, ImPlot.
-     [Corrade](github.com/mosra/corrade)
-     [Magnum](github.com/mosra/magnum)
-     [magnum-integration](https://github.com/mosra/magnum-integration)
-     [imgui](https://github.com/ocornut/imgui)
-        * cloned into src/MagnumExternal/ImGui directory
+[Corrade](github.com/mosra/corrade)  
+[Magnum](github.com/mosra/magnum)  
+[magnum-integration](https://github.com/mosra/magnum-integration)  
+[imgui](https://github.com/ocornut/imgui)  * cloned into src/MagnumExternal/ImGui directory
 
 These are encapsulated into the dependencies directory
 The cmake commands are implemented in shell script wrapper
