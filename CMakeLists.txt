@@ -115,10 +115,8 @@ target_include_directories(
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
-         $<BUILD_INTERFACE:${LUA_INCLUDE_DIR}>
  PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${LUA_INCLUDE_DIR}
 )
 
 message(STATUS "compiler id: " ${CXX_COMPILER_ID})
