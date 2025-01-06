@@ -12,7 +12,7 @@ Make sure to clone the submodules too.
 
 ### Dependencies
 
-This utilizes Dear ImGui, Magnum, ImPlot.
+This utilizes Dear ImGui, Magnum, ImPlot.  
 [Corrade](github.com/mosra/corrade)  
 [Magnum](github.com/mosra/magnum)  
 [magnum-integration](https://github.com/mosra/magnum-integration)  
