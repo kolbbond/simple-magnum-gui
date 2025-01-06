@@ -1,8 +1,9 @@
 # Encapsulated build of gui parts
-# Simple-magnum-gui (SMG) (also a gun)
+# Simple-magnum-gui (SMG)
 
-This turned into a straight up GUI library
-The dependent libraries that this is built on are included as sub-dirs
+A simple gui to generate a window and allow plotting.
+Great for quick debugging and drawing of data. 
+Magnum gives easy opengl support.
 
 ### Dependencies
 
@@ -17,11 +18,8 @@ This utilizes Dear ImGui, Magnum, ImPlot.
         * clone the ImGui repo within the src/MagnumExternal directory
         (see the clone_repos.sh script)
 
-* Clone implot within this directory (we might change to include in magnum-integration)
-    *     [implot](github.com/epezent/implot)
-
  ## utilizing the library
-  see the tests but general idea is
+  See the examples
  * Start the gui window with GuiBase
  * create a DrawCallback
     * set your static callback function with prototype 
