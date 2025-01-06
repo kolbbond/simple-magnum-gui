@@ -18,16 +18,17 @@ This utilizes Dear ImGui, Magnum, ImPlot.
 [magnum-integration](https://github.com/mosra/magnum-integration)  
 [imgui](https://github.com/ocornut/imgui)  * cloned into src/MagnumExternal/ImGui directory
 
-These are encapsulated into the dependencies directory
-The cmake commands are implemented in shell script wrapper
+These are encapsulated into the dependencies directory.  
+The cmake commands are implemented in shell script wrapper.  
 FYI both of the above scripts install to `~/.local`. 
 
 You can run `./configure.sh` to build and install dependencies.
 
-then build smg `./build.sh`
-and install `./build.sh install`
+then build smg `./build.sh`  
+and install `./build.sh install`  
 
-There are a few tests throught `./build.sh test`
+There are a few tests for basic functionality  
+`./build.sh test`
 
  ## utilizing the library
 Gui uses a naive callback system to enable different systems.
