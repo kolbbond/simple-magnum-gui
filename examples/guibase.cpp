@@ -1,7 +1,6 @@
 // implot testing
 #include "GuiBase.hh"
 #include "DrawCallback.hh"
-#include "RealtimePlot.hh"
 #include "imgui.h"
 
 #include <iostream>
@@ -11,8 +10,6 @@ class data_ex {
 public:
 	int x;
 	int y;
-	//std::array<double, 10> xv;
-	//std::array<double, 10> yv;
 
 	std::string name = "example";
 };
@@ -32,8 +29,8 @@ int callback_fun(void* data) {
 	if(ImGui::Button("Another Window")) {
 	}
 	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-				1000.0 / Double(ImGui::GetIO().Framerate),
-				Double(ImGui::GetIO().Framerate));
+		1000.0 / Double(ImGui::GetIO().Framerate),
+		Double(ImGui::GetIO().Framerate));
 	ImGui::End();
 
 	// 0 means success
@@ -62,18 +59,9 @@ int main(int argc, char** argv) {
 	// set callback into our gui
 	gui.add_callback(mycb);
 
-	// add a separate callback
-	ShDrawCallbackPr mycb2 = DrawCallback::create();
-	mycb2->set_callback(RealtimePlot::callback);
-	//mycb2->set_data(nullptr);
-
-	// add this
-	gui.add_callback(mycb2);
-
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws
 	std::string input;
-	//std::cin >> input;
 	bool done = false;
 	while(!done) {
 		done = !gui.mainLoopIteration();

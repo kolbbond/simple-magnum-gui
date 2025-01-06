@@ -1,5 +1,4 @@
 // GuiMain.cpp
-// 240420 -
 
 // include header
 #include "GuiMain.hh"

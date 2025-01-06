@@ -38,30 +38,15 @@ public:
 };
 typedef std::shared_ptr<class Data_ex> ShDataPr;
 
-/*
-class Data_ex {
-public:
-	Shaders::VertexColorGL2D shader;
-
-	std::string name = "example";
-};
-*/
-
 int callback_fun(void* indata) {
 	// example callback fun
 
 	// cast our data to be meaningful
 	// deference a cast to our shared pointer ...
-	//ShDataPr mydata = reinterpret_cast<ShDataPr>(indata);
-	//ShDataPr* tempdata = static_cast<ShDataPr*>(indata);
-	//ShDataPr mydata = (*tempdata);
-
-	//printf("start callback\n");
 	ShDataPr mydata = *static_cast<ShDataPr*>(indata);
 
 	static bool hidden = false;
 
-	//printf("imgui start\n");
 	ImGui::Begin("hey mom");
 	ImGui::Text("my message is: %s", mydata->name.c_str());
 
@@ -75,7 +60,6 @@ int callback_fun(void* indata) {
 
 	// hidden triangle
 	if(hidden) {
-		//printf("hidden triangle\n");
 
 		GL::defaultFramebuffer.clear(GL::FramebufferClear::Depth);
 		mydata->_shader.setLightPositions({{1.4f, 1.0f, 0.75f, 0.0f}});

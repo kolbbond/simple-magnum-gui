@@ -1,5 +1,4 @@
 // WindowWrapper.cpp
-// 240219 -
 
 // include header
 #include "WindowWrapper.hh"

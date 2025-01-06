@@ -9,9 +9,7 @@
 
 #include "DrawCallback.hh"
 #include "GuiBase.hh"
-#include "RealtimePlot.hh"
 #include "log.hh"
-#include "typedefs.hh"
 
 using namespace smg;
 using namespace Magnum;
@@ -27,8 +25,6 @@ class Data_ex {
 public:
 	int x;
 	int y;
-//	std::array<double, 10> xv;
-	//std::array<double, 10> yv;
 
 	std::string name = std::string("example");
 	char myname[50] = "heymom";
@@ -43,30 +39,14 @@ public:
 };
 typedef std::shared_ptr<class Data_ex> ShDataPr;
 
-/*
-class Data_ex {
-public:
-	Shaders::VertexColorGL2D shader;
-
-	std::string name = "example";
-};
-*/
-
 int callback_fun(void* indata) {
 	// example callback fun
 
-	// cast our data to be meaningful
-	// deference a cast to our shared pointer ...
-	//ShDataPr mydata = reinterpret_cast<ShDataPr>(indata);
-	//ShDataPr* tempdata = static_cast<ShDataPr*>(indata);
-	//ShDataPr mydata = (*tempdata);
-
-	//printf("start callback\n");
+    // cast our void pointer to relevant data
 	ShDataPr mydata = *static_cast<ShDataPr*>(indata);
 
 	static bool hidden = false;
 
-	//printf("imgui start\n");
 	ImGui::Begin("hey mom");
 	ImGui::Text("my message is: %s", mydata->name.c_str());
 
@@ -80,7 +60,6 @@ int callback_fun(void* indata) {
 
 	// hidden triangle
 	if(hidden) {
-		//printf("hidden triangle\n");
 
 		mydata->mesh.setCount(Containers::arraySize(mydata->vertices))
 			.addVertexBuffer(GL::Buffer{mydata->vertices},
@@ -125,14 +104,6 @@ int main(int argc, char** argv) {
 
 	// set callback into our gui
 	gui.add_callback(mycb);
-
-	// add a separate callback
-	ShDrawCallbackPr mycb2 = DrawCallback::create();
-	mycb2->set_callback(RealtimePlot::callback);
-	//mycb2->set_data(nullptr);
-
-	// add this
-	gui.add_callback(mycb2);
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws

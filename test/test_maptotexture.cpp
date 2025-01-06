@@ -1,5 +1,4 @@
 // implot testing
-
 #include <Corrade/Containers/Optional.h>
 #include <Corrade/Containers/StringView.h>
 #include <Magnum/Trade/Trade.h>

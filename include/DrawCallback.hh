@@ -11,6 +11,7 @@ typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 
 // for users to implement callbacks
 // @hey: what else does user need to integrate?
+// @hey: also these are deprecated
 typedef int (*draw_callback)(void*);
 typedef int (*mouse_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
 typedef int (*mouse_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );

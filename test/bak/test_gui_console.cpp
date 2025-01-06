@@ -1,5 +1,4 @@
 // test for gui console 
-// 240429 -
 
 // #include <array>
 #include <future>

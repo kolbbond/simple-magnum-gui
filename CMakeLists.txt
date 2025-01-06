@@ -150,7 +150,7 @@ configure_file(
 if(ENABLE_TESTING)
   message(STATUS "setup tests")
   enable_testing()
-  add_subdirectory(tests)
+  add_subdirectory(test)
 endif(ENABLE_TESTING)
 
 if(ENABLE_EXAMPLES)

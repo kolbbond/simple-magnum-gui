@@ -26,7 +26,9 @@ FYI both of the above scripts install to `~/.local`.
 You can run `./configure.sh` to build and install dependencies.
 
 then build smg `./build.sh`
-and install `./install.sh`
+and install `./build.sh install`
+
+There are a few tests throught `./build.sh test`
 
  ## utilizing the library
 Gui uses a naive callback system to enable different systems.

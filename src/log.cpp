@@ -3,7 +3,7 @@
 // include header file
 #include "log.hh"
 
-// code specific to Rat
+// code specific to (Rat) smg
 namespace smg{
 
 	// constructor

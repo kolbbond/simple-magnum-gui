@@ -1,9 +1,5 @@
-
 // test plotting quads
-// for our network mesh we are primarily using quads
 // we want colored quads and wireframe
-
-
 #include "GuiBase.hh"
 
 // example data to pass into callback
@@ -55,6 +51,7 @@ int main(int argc, char** argv) {
 	gui.setWindowTitle("test_loadimage");
 
 	// setup triangle example
+    // this is not a quad!
 	struct TriangleVertex {
 		Vector2 position;
 		Color3 color;
@@ -90,7 +87,7 @@ int main(int argc, char** argv) {
 		// done is true for the test
         // just to confirm the process works
         // turn off if you want to actually see the test
-		//done = true;
+		done = true;
 	}
 
 	// exit

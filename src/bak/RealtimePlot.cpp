@@ -4,7 +4,7 @@
 // include header
 #include "RealtimePlot.hh"
 
-namespace guild {
+namespace smg {
 
 // constructor
 RealtimePlot::RealtimePlot() {}
@@ -108,4 +108,4 @@ int RealtimePlot::callback(void* data) {
 	return 0;
 }
 
-} // namespace guild
+} // namespace smg

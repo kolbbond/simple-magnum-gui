@@ -1,4 +1,4 @@
-// taken from Van Nugterens projet-rat
+// taken from Van Nugterens project-rat
 #pragma once
 
 // general headers
