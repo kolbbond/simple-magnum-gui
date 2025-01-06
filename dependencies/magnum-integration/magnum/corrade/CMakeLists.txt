@@ -3,9 +3,6 @@ cmake_minimum_required(VERSION 3.1)
 project(external-corrade)
 include(ExternalProject)
 
-# hardcode local install path
-set(CMAKE_INSTALL_PREFIX "~/.local")
-
 list(APPEND CMAKE_ARGS
     "-DCMAKE_PREFIX_PATH:PATH=${CMAKE_PREFIX_PATH}"
     "-DCMAKE_INSTALL_PREFIX:PATH=${CMAKE_INSTALL_PREFIX}"
@@ -32,5 +29,7 @@ ExternalProject_Add(
     corrade
     GIT_REPOSITORY https://github.com/mosra/corrade.git
     PREFIX corrade 
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/src/corrade # Clone directory
+    BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/build/corrade # Build directory 
     CMAKE_ARGS "${CMAKE_ARGS}"
     )

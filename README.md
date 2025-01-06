@@ -1,8 +1,8 @@
-# Encapsulated build of gui parts
-# Simple-magnum-gui (SMG)
+# Simple-Magnum-Gui (SMG)
 
 A simple gui to generate a window and allow plotting.
 Great for quick debugging and drawing of data. 
+
 Magnum gives easy opengl support.
 
 Make sure to clone the submodules too.
@@ -13,18 +13,24 @@ Make sure to clone the submodules too.
 ### Dependencies
 
 This utilizes Dear ImGui, Magnum, ImPlot.
-* First build Magnum
     * [Corrade](github.com/mosra/corrade)
     * [Magnum](github.com/mosra/magnum)
-        * make sure to build with SDL2
+    * [magnum-integration](https://github.com/mosra/magnum-integration)
+    * [imgui](https://github.com/ocornut/imgui)
+        * cloneed into src/MagnumExternal/ImGui directory
 
-* We forked magnum-integration and added ImGui
-    *    [magnum-integration](https://github.com/kolbbond/magnum-integration)
-        * clone the ImGui repo within the src/MagnumExternal directory
-        (see the clone_repos.sh script)
+These are encapsulated into the dependencies directory
+
+You can run `configure.sh` to build and install dependencies (in ~/.local)
+
+then build
+
+`cmake -B build`
+`cmake --build build --parallel`
 
  ## utilizing the library
-  See the examples
+Gui uses a naive callback system to enable different systems.
+See the examples
  * Start the gui window with GuiBase
  * create a DrawCallback
     * set your static callback function with prototype 

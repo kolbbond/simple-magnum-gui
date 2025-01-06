@@ -1,5 +1,5 @@
 # build imgui with implot
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.11)
 
 project(
   simple-magnum-gui 
@@ -9,16 +9,18 @@ project(
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
+option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
-# pick either SDL and OpenGL or Magnum
 # we are going to transition to just using Magnum
+# right now just magnum works
+option(USE_MAGNUM "use magnum and magnum integration libraries" ON)
+option(USE_X "use X for window" OFF)
 option(USE_SDL "use SDL for window" OFF)
 option(USE_OPENGL "use OpenGL for rendering" OFF)
-option(USE_MAGNUM "use magnum and magnum integration libraries" ON)
 
 # set export commands
 set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/")
@@ -52,6 +54,11 @@ endif()
 
 message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
+# add dependencies
+if(BUILD_DEPENDENCIES)
+    add_subdirectory(dependencies)
+endif()
+
 # package finding
 find_package(Corrade REQUIRED Main)
 find_package(Magnum REQUIRED 
@@ -65,7 +72,6 @@ find_package(Magnum REQUIRED
 
 find_package(MagnumIntegration REQUIRED ImGui)
 
-# build implot separately?
 
 # either include implot or build here
 #find_package(ImPlot REQUIRED)

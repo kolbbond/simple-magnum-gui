@@ -10,6 +10,7 @@ list(APPEND CMAKE_ARGS
     "-DCMAKE_POSITION_INDEPENDENT_CODE=ON"
     "-DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}"
     "-DBUILD_SHARED_LIBS=OFF"
+    "-DMAGNUM_WITH_IMGUI=ON"
     )
 
 if(IOS)
@@ -25,10 +26,31 @@ foreach(CMAKE_ARG ${CMAKE_ARGS})
     message(STATUS "-- ${CMAKE_ARG}")
 endforeach()
 
-ExternalProject_Add(
-    magnum-integration
+
+# download magnum-integration and imgui
+include(FetchContent)
+
+FetchContent_Declare(magnum-integration
     GIT_REPOSITORY https://github.com/mosra/magnum-integration.git
-    PREFIX magnum-integration 
+    GIT_TAG master
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/src/magnum-integration/"
+)
+
+FetchContent_Declare(imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG master
+    SOURCE_DIR "${CMAKE_BINARY_DIR}/_deps/src/magnum-integration/src/MagnumExternal/ImGui"
+)
+set(FETCHCONTENT_BASE_DIR ${imgui_DownloadDir})
+
+# Ensure the content is downloaded and available
+FetchContent_MakeAvailable(magnum-integration)
+FetchContent_MakeAvailable(imgui)
+
+ExternalProject_Add( magnum-integration
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/src/magnum-integration# Clone directory
+    PREFIX magnum-integration
+    BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/build/magnum-integration # Build directory 
     CMAKE_ARGS "${CMAKE_ARGS}"
     )
 

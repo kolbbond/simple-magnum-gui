@@ -29,6 +29,8 @@ ExternalProject_Add(
     magnum
     GIT_REPOSITORY https://github.com/mosra/magnum.git
     PREFIX magnum 
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/src/magnum # Clone directory
+    BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/build/magnum # Build directory 
     CMAKE_ARGS "${CMAKE_ARGS}"
     )
 
@@ -37,3 +39,5 @@ add_subdirectory(corrade)
 add_dependencies(magnum
     corrade
 )
+
+# 
