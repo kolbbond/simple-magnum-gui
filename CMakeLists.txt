@@ -23,7 +23,7 @@ option(USE_SDL "use SDL for window" OFF)
 option(USE_OPENGL "use OpenGL for rendering" OFF)
 
 # set export commands
-set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/")
+#set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" 

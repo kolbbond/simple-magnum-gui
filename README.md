@@ -20,13 +20,13 @@ This utilizes Dear ImGui, Magnum, ImPlot.
         * cloneed into src/MagnumExternal/ImGui directory
 
 These are encapsulated into the dependencies directory
+The cmake commands are implemented in shell script wrapper
+FYI both of the above scripts install to `~/.local`. 
 
-You can run `configure.sh` to build and install dependencies (in ~/.local)
+You can run `./configure.sh` to build and install dependencies.
 
-then build
-
-`cmake -B build`
-`cmake --build build --parallel`
+then build smg `./build.sh`
+and install `./install.sh`
 
  ## utilizing the library
 Gui uses a naive callback system to enable different systems.
