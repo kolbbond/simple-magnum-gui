@@ -40,11 +40,13 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 	const Vector2 size = Vector2{windowSize()} / dpiScaling();
 
+    
 	/* Add a font that actually looks acceptable on HiDPI screens. ImGui by
        default takes ownership of the passed data pointer and then frees it
        (using what? free()?), that's why the non-const pointer. We have to
        explicitly tell it to *not* do that, since the resources are always in
        memory and on a static place. */
+    /*
 	{
 
 		// we need a font config for each font
@@ -74,6 +76,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 		// loaded fonts
 	}
+    */
 
 
 	_imgui = ImGuiIntegration::Context(Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
