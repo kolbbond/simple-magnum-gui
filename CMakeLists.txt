@@ -95,13 +95,16 @@ set(mysources
     src/GuiBase.cpp
     src/DrawCallback.cpp
     src/log.cpp
-    src/Plotter.cpp
     src/Statics.cpp
+
+    # if we have armadillo
+    src/Plotter.cpp
 
     # add implot here for now
     implot/implot.cpp
     implot/implot_demo.cpp
     implot/implot_items.cpp
+
 )
 
 # make our library (shared or static?)
@@ -140,6 +143,7 @@ target_include_directories(
   PUBLIC $<INSTALL_INTERFACE:include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
          $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
+         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/ImGuiFileDialog>
          $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
  PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include

@@ -1,12 +1,7 @@
-#ifndef SMG_HH_
-#define SMG_HH_
+#pragma once
 
 // our wrappers
-/*
-#include "WindowWrapper.hh"
-#include "ImGuiWrapper.hh"
-//#include "ImPlotWrapper.hh"
-#include "GuiMain.hh"
-*/
+#include "GuiBase.hh"
+#include "Plotter.hh"
+#include "Statics.hh"
 
-#endif

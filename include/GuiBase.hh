@@ -1,4 +1,5 @@
 // main gui class
+#pragma once
 
 // magnum includes
 #include <Magnum/Platform/Sdl2Application.h>

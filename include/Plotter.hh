@@ -1,5 +1,4 @@
 // plotter.hh header
-
 #pragma once
 
 #include "implot.h"

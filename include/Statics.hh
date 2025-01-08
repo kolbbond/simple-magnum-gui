@@ -1,5 +1,4 @@
 // static helper functions
-
 #pragma once
 
 #include <memory>
