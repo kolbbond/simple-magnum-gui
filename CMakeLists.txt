@@ -69,10 +69,10 @@ find_package(Magnum REQUIRED
     Shaders
     Trade
     Sdl2Application
+    MagnumFont
 )
 
 find_package(MagnumIntegration REQUIRED ImGui)
-
 
 if(ENABLE_ARMADILLO)
 # find armadillo library
@@ -110,7 +110,7 @@ set(mysources
 corrade_add_resource(smg_RESOURCES "assets/resources.conf")
 
 # make our library (shared or static?)
-add_library(smg SHARED ${mysources})
+add_library(smg SHARED ${mysources} ${smg_RESOURCES})
 add_library(smg::smg ALIAS smg)
 add_library(smg:: ALIAS smg)
 
