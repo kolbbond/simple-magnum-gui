@@ -13,8 +13,11 @@ typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 // @hey: what else does user need to integrate?
 // @hey: also these are deprecated
 typedef int (*draw_callback)(void*);
-typedef int (*mouse_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
-typedef int (*mouse_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );
+//typedef int (*pointer_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
+//typedef int (*pointer_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );
+//typedef int (*key_press_event)(void*, Magnum::Platform::Sdl2Application::KeyEvent& );
+typedef int (*pointer_move_event)(void*, Magnum::Platform::Sdl2Application::PointerMoveEvent& );
+typedef int (*scroll_event)(void*, Magnum::Platform::Sdl2Application::ScrollEvent& );
 typedef int (*key_press_event)(void*, Magnum::Platform::Sdl2Application::KeyEvent& );
 
 using namespace Magnum;
@@ -23,8 +26,8 @@ class DrawCallback {
 protected:
 	// draw callback function
 	draw_callback _callback;
-	mouse_move_event _mouse_move_event;
-	mouse_scroll_event _mouse_scroll_event;
+	pointer_move_event _pointer_move_event;
+	scroll_event _scroll_event;
 	key_press_event _key_press_event;
 
 	// user data pointer
@@ -32,11 +35,11 @@ protected:
 
 	// flags for the supported events
 	bool _flag_viewport_event = false;
-	bool _flag_mouse_move_event = false;
+	bool _flag_pointer_move_event = false;
 	bool _flag_key_press_event = false;
 	bool _flag_key_release_event = false;
-	bool _flag_mouse_press_event = false;
-	bool _flag_mouse_scroll_event = false;
+	bool _flag_pointer_press_event = false;
+	bool _flag_scroll_event = false;
 	bool _flag_text_input_event = false;
 
 public:
@@ -55,17 +58,17 @@ public:
 	void* get_data();
 	void set_callback(draw_callback);
 	void set_data(void*);
-	void set_mouse_move_event(mouse_move_event mme);
-	void set_mouse_scroll_event(mouse_scroll_event mme);
+	void set_pointer_move_event(pointer_move_event mme);
+	void set_scroll_event(scroll_event mme);
 	void set_key_press_event(key_press_event mme);
 
 	void viewportEvent(Magnum::Platform::Sdl2Application::ViewportEvent& event);
 	void keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event);
 	void keyReleaseEvent(Magnum::Platform::Sdl2Application::KeyEvent& event);
-	void mousePressEvent(Magnum::Platform::Sdl2Application::MouseEvent& event);
-	void mouseReleaseEvent(Magnum::Platform::Sdl2Application::MouseEvent& event);
-	void mouseMoveEvent(Magnum::Platform::Sdl2Application::MouseMoveEvent& event);
-	void mouseScrollEvent(Magnum::Platform::Sdl2Application::MouseScrollEvent& event);
+	void pointerPressEvent(Magnum::Platform::Sdl2Application::PointerEvent& event);
+	void pointerReleaseEvent(Magnum::Platform::Sdl2Application::PointerEvent& event);
+	void pointerMoveEvent(Magnum::Platform::Sdl2Application::PointerMoveEvent& event);
+	void ScrollEvent(Magnum::Platform::Sdl2Application::ScrollEvent& event);
 	void textInputEvent(Magnum::Platform::Sdl2Application::TextInputEvent& event);
 };
 } // namespace smg

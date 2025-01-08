@@ -14,22 +14,22 @@ int DrawCallback::draw() {
 	return _callback(_data);
 }
 
-void DrawCallback::mouseMoveEvent(Magnum::Platform::Sdl2Application::MouseMoveEvent& event) {
-	// return callbacks mouse
-	if(_flag_mouse_move_event) {
-		_mouse_move_event(_data, event);
+void DrawCallback::pointerMoveEvent(Magnum::Platform::Sdl2Application::PointerMoveEvent& event) {
+	// return callbacks pointer
+	if(_flag_pointer_move_event) {
+		_pointer_move_event(_data, event);
 	}
 }
 
-void DrawCallback::mouseScrollEvent(Magnum::Platform::Sdl2Application::MouseScrollEvent& event) {
-	// return callbacks mouse
-	if(_flag_mouse_scroll_event) {
-		_mouse_scroll_event(_data, event);
+void DrawCallback::ScrollEvent(Magnum::Platform::Sdl2Application::ScrollEvent& event) {
+	// return callbacks pointer
+	if(_flag_scroll_event) {
+		_scroll_event(_data, event);
 	}
 }
 
 void DrawCallback::keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event) {
-	// return callbacks mouse
+	// return callbacks pointer
 	if(_flag_key_press_event) {
 		_key_press_event(_data, event);
 	}
@@ -42,14 +42,14 @@ void DrawCallback::set_callback(draw_callback fn) {
 	_callback = fn;
 }
 
-void DrawCallback::set_mouse_move_event(mouse_move_event mme) {
-	_flag_mouse_move_event = true;
-	_mouse_move_event = mme;
+void DrawCallback::set_pointer_move_event(pointer_move_event mme) {
+	_flag_pointer_move_event = true;
+	_pointer_move_event = mme;
 }
 
-void DrawCallback::set_mouse_scroll_event(mouse_scroll_event mme) {
-	_flag_mouse_scroll_event = true;
-	_mouse_scroll_event = mme;
+void DrawCallback::set_scroll_event(scroll_event mme) {
+	_flag_scroll_event = true;
+	_scroll_event = mme;
 }
 void DrawCallback::set_key_press_event(key_press_event mme) {
 	_flag_key_press_event = true;

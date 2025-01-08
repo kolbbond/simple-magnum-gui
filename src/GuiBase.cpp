@@ -1,4 +1,5 @@
 #include "GuiBase.hh"
+#include "Magnum/Math/Time.h"
 
 namespace smg {
 
@@ -47,7 +48,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
 	/* Have some sane speed, please */
 	// this is [ms] per frame?
-	setMinimalLoopPeriod(16);
+	//setMinimalLoopPeriod(16);
+	Nanoseconds nspf = 16.0_msec;
+	setMinimalLoopPeriod(nspf);
 #endif
 }
 
@@ -211,17 +214,17 @@ void GuiBase::keyReleaseEvent(KeyEvent& event) {
 	if(_imgui.handleKeyReleaseEvent(event)) return;
 }
 
-void GuiBase::mousePressEvent(MouseEvent& event) {
-	if(_imgui.handleMousePressEvent(event)) return;
+void GuiBase::pointerPressEvent(PointerEvent& event) {
+	if(_imgui.handlePointerPressEvent(event)) return;
 }
 
-void GuiBase::mouseReleaseEvent(MouseEvent& event) {
-	if(_imgui.handleMouseReleaseEvent(event)) return;
+void GuiBase::pointerReleaseEvent(PointerEvent& event) {
+	if(_imgui.handlePointerReleaseEvent(event)) return;
 }
 
-void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
+void GuiBase::pointerMoveEvent(PointerMoveEvent& event) {
 	// let imgui handle its own events
-	if(_imgui.handleMouseMoveEvent(event)) return;
+	if(_imgui.handlePointerMoveEvent(event)) return;
 
 	// check if list empty
 	if(_callback_list.empty()) {
@@ -235,13 +238,13 @@ void GuiBase::mouseMoveEvent(MouseMoveEvent& event) {
 			ShDrawCallbackPr mycallback = _callback_list[i];
 
 			// call the callback
-			mycallback->mouseMoveEvent(event);
+			mycallback->pointerMoveEvent(event);
 		}
 	}
 }
 
-void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {
-	if(_imgui.handleMouseScrollEvent(event)) {
+void GuiBase::scrollEvent(ScrollEvent& event) {
+	if(_imgui.handleScrollEvent(event)) {
 		/* Prevent scrolling the page */
 		event.setAccepted();
 		return;
@@ -259,7 +262,7 @@ void GuiBase::mouseScrollEvent(MouseScrollEvent& event) {
 			ShDrawCallbackPr mycallback = _callback_list[i];
 
 			// call the callback
-			mycallback->mouseScrollEvent(event);
+			mycallback->ScrollEvent(event);
 			//if(flag) printf("callback error!\n");
 		}
 	}

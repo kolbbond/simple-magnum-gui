@@ -26,6 +26,15 @@ foreach(CMAKE_ARG ${CMAKE_ARGS})
     message(STATUS "-- ${CMAKE_ARG}")
 endforeach()
 
+# add magnum-integration dependencies
+set(MAGNUM_WITH_SDL2APPLICATION ON)
+set(MAGNUM_WITH_ANYIMAGEIMPORTER ON)
+set(MAGNUM_WITH_ANYIMAGECONVERTER ON)
+set(MAGNUM_WITH_ANYSCENECONVERTER ON)
+set(MAGNUM_WITH_ANYSCENEIMPORTER ON)
+set(MAGNUM_WITH_OBJIMPORTER ON)
+
+add_subdirectory(magnum)
 
 # download magnum-integration and imgui
 include(FetchContent)
@@ -54,8 +63,25 @@ ExternalProject_Add( magnum-integration
     CMAKE_ARGS "${CMAKE_ARGS}"
     )
 
-# add magnum-integration dependencies
-add_subdirectory(magnum)
+set(MAGNUM_WITH_DRWAVIMPORTER ON)
+set(MAGNUM_WITH_JPEGIMPORTER ON)
+set(MAGNUM_WITH_PNGIMPORTER ON)
+set(MAGNUM_WITH_FREETYPEFONT ON)
+set(MAGNUM_WITH_PNGIMAGECONVERTER ON)
+
+ExternalProject_Add(
+    magnum-plugins
+    GIT_REPOSITORY https://github.com/mosra/magnum-plugins.git
+    PREFIX magnum-plugins
+    SOURCE_DIR ${CMAKE_BINARY_DIR}/_deps/src/magnum-plugins # Clone directory
+    BINARY_DIR ${CMAKE_BINARY_DIR}/_deps/build/magnum-plugins # Build directory 
+    CMAKE_ARGS "${CMAKE_ARGS}"
+    )
+
+# add dependencies forces magnum to build here
 add_dependencies(magnum-integration
+    magnum
+)
+add_dependencies(magnum-plugins
     magnum
 )

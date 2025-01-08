@@ -10,6 +10,7 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
 option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
+option(ENABLE_ARMADILLO "build with armadillo" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
@@ -73,6 +74,19 @@ find_package(Magnum REQUIRED
 find_package(MagnumIntegration REQUIRED ImGui)
 
 
+if(ENABLE_ARMADILLO)
+# find armadillo library
+    find_package(Armadillo 14.0.0 REQUIRED)
+    if(NOT TARGET Arma::Armadillo)
+        # create target
+        add_library(Arma::Armadillo INTERFACE IMPORTED)
+        set_target_properties(Arma::Armadillo PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARY}")
+    endif()
+
+endif()
+
 # either include implot or build here
 #find_package(ImPlot REQUIRED)
 
@@ -81,6 +95,8 @@ set(mysources
     src/GuiBase.cpp
     src/DrawCallback.cpp
     src/log.cpp
+    src/Plotter.cpp
+    src/Statics.cpp
 
     # add implot here for now
     implot/implot.cpp
@@ -108,6 +124,10 @@ target_link_libraries(smg PUBLIC
     #ImPlot::ImPlot
 )
 
+if(ENABLE_ARMADILLO)
+    target_link_libraries(smg PUBLIC
+        armadillo)
+endif()
 
 # add additional sources
 target_sources(smg PRIVATE ${mysources})

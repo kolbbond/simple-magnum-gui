@@ -82,10 +82,10 @@ public:
 	void viewportEvent(ViewportEvent& event) override;
 	void keyPressEvent(KeyEvent& event) override;
 	void keyReleaseEvent(KeyEvent& event) override;
-	void mousePressEvent(MouseEvent& event) override;
-	void mouseReleaseEvent(MouseEvent& event) override;
-	void mouseMoveEvent(MouseMoveEvent& event) override;
-	void mouseScrollEvent(MouseScrollEvent& event) override;
+	void pointerPressEvent(PointerEvent& event) override;
+	void pointerReleaseEvent(PointerEvent& event) override;
+	void pointerMoveEvent(PointerMoveEvent& event) override;
+	void scrollEvent(ScrollEvent& event) override;
 	void textInputEvent(TextInputEvent& event) override;
 };
 } // namespace smg
