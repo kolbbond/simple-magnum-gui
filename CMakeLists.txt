@@ -107,6 +107,8 @@ set(mysources
 
 )
 
+corrade_add_resource(smg_RESOURCES "assets/resources.conf")
+
 # make our library (shared or static?)
 add_library(smg SHARED ${mysources})
 add_library(smg::smg ALIAS smg)
