@@ -162,7 +162,7 @@ target_compile_options(
 
 # general header
 configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/smg.hh.in
+    ${PROJECT_SOURCE_DIR}/cmake/smg.hh.in
     ${CMAKE_BINARY_DIR}/include/smg.hh
     )
 

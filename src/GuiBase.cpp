@@ -46,35 +46,33 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// (using what? free()?), that's why the non-const pointer. We have to
 	// explicitly tell it to *not* do that, since the resources are always in
 	//       memory and on a static place.
-	{
 
-		// we need a font config for each font
-		// @hey: add more font options so we can switch?
-		//       add additional pixels
-		//      add additional fonts (nerdfonts)? JetBrainsMono atleast
-		Containers::ArrayView<const char> font;
-		double num_pixels = 14.0f;
+	printf("-- ADD FONTS ---\n");
 
-		std::vector<std::string> font_names = {"Roboto-Medium.ttf",
-			"SourceSansPro-Regular.ttf",
-			"DroidSans.ttf",
-			"Cousine-Regular.ttf",
-			"Karla-Regular.ttf"};
+	// we need a font config for each font
+	// @hey: add more font options so we can switch?
+	//       add additional pixels
+	//      add additional fonts (nerdfonts)? JetBrainsMono atleast
+	Containers::ArrayView<const char> font;
+	double num_pixels = 14.0f;
+
+	std::vector<std::string> font_names = {
+		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"};
 
 
-		// each font
-		for(size_t i = 0; i < font_names.size(); i++) {
-			ImFontConfig font_cfg;
-			font_cfg.FontDataOwnedByAtlas = false;
-			font = Utility::Resource{"font"}.getRaw(font_names[i].c_str());
-			snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
-			ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
-				const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
-		}
-
-
-		// loaded fonts
+	// each font
+	printf("adding fonts\n");
+	for(size_t i = 0; i < font_names.size(); i++) {
+		ImFontConfig font_cfg;
+		font_cfg.FontDataOwnedByAtlas = false;
+		font = Utility::Resource{"font"}.getRaw(font_names[i].c_str());
+		snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
+		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
+			const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
 	}
+
+
+	// loaded fonts
 
 
 	_imgui = ImGuiIntegration::Context(Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());

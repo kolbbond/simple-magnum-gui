@@ -6,7 +6,7 @@ set(test_list
     test_magnum_sdl2.cpp
     test_magnum_application_main.cpp
     test_magnum_imgui.cpp
-    test_guibase.cpp
+    test_smg_guibase.cpp
     test_plottris.cpp
     test_plotquads.cpp
     test_magnum_implot.cpp
