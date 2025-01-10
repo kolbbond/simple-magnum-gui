@@ -162,7 +162,11 @@ void GuiBase::drawEvent() {
 	// the console api's from here ...
 	// add static function calls from outside???
 	std::pair<int, int> pos = get_window_position();
+	Vector2i window_size = windowSize();
 	ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
+	ImGui::Text("window size: (%i,%i)", window_size.x(), window_size.y());
+	ImGui::Text("fps: %0.3f\n", Magnum::Double(ImGui::GetIO().Framerate));
+	ImGui::Text("ms/frame: %0.3f\n", 1000.0 / Magnum::Double(ImGui::GetIO().Framerate));
 
 	//////////////////////////////////////////////////
 	// call back function?
