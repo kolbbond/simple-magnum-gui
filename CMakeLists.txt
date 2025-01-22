@@ -131,7 +131,7 @@ target_link_libraries(smg PUBLIC
 
 if(ENABLE_ARMADILLO)
     target_link_libraries(smg PUBLIC
-        armadillo)
+        Arma::Armadillo)
 endif()
 
 # add additional sources
