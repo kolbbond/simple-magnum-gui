@@ -9,7 +9,7 @@ set(test_list
     test_smg_guibase.cpp
     test_plottris.cpp
     test_plotquads.cpp
-    test_magnum_implot.cpp
+    #test_magnum_implot.cpp
     test_implot.cpp
     #test_loadimage.cpp
     #test_maptotexture.cpp

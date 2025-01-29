@@ -5,33 +5,28 @@
 #include <Magnum/ImGuiIntegration/Integration.h>
 #include <Magnum/Platform/Sdl2Application.h>
 
+#include "Events.hpp"
+
 namespace smg {
 
 typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 
 // for users to implement callbacks
 // @hey: what else does user need to integrate?
-// @hey: also these are deprecated
 typedef int (*draw_callback)(void*);
-//typedef int (*pointer_move_event)(void*, Magnum::Platform::Sdl2Application::MouseMoveEvent& );
-//typedef int (*pointer_scroll_event)(void*, Magnum::Platform::Sdl2Application::MouseScrollEvent& );
-//typedef int (*key_press_event)(void*, Magnum::Platform::Sdl2Application::KeyEvent& );
-typedef int (*pointer_move_event)(void*, Magnum::Platform::Sdl2Application::PointerMoveEvent& );
-typedef int (*scroll_event)(void*, Magnum::Platform::Sdl2Application::ScrollEvent& );
-typedef int (*key_press_event)(void*, Magnum::Platform::Sdl2Application::KeyEvent& );
 
 using namespace Magnum;
 
 class DrawCallback {
 protected:
 	// draw callback function
-	draw_callback _callback;
-	pointer_move_event _pointer_move_event;
+	draw_callback _callback; // callback function
+
+    // @hey: refactor into one event holder?
+    pointer_move_event _pointer_move_event;
 	scroll_event _scroll_event;
 	key_press_event _key_press_event;
-
-	// user data pointer
-	void* _data = nullptr;
+	void* _data = nullptr; // user data pointer
 
 	// flags for the supported events
 	bool _flag_viewport_event = false;
@@ -45,6 +40,8 @@ protected:
 public:
 	// constructor
 	DrawCallback();
+	DrawCallback(draw_callback callback);
+	DrawCallback(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se);
 
 	// destructor
 	~DrawCallback();
@@ -54,6 +51,8 @@ public:
 
 	// factory
 	static ShDrawCallbackPr create();
+	static ShDrawCallbackPr create(draw_callback callback);
+	static ShDrawCallbackPr create(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se);
 
 	void* get_data();
 	void set_callback(draw_callback);
