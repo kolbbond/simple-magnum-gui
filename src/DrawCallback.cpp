@@ -5,7 +5,31 @@ namespace smg {
 
 // constructor
 DrawCallback::DrawCallback() {}
+DrawCallback::DrawCallback(draw_callback callback) {
+	set_callback(callback);
+}
 
+// overloaded constructor with all necessary inputs
+DrawCallback::DrawCallback(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se) {
+	set_callback(callback);
+	set_data(data);
+	set_key_press_event(kpe);
+	set_pointer_move_event(pme);
+	set_scroll_event(se);
+}
+
+// factory
+ShDrawCallbackPr DrawCallback::create() {
+	return std::make_shared<DrawCallback>();
+}
+
+ShDrawCallbackPr DrawCallback::create(draw_callback callback) {
+	return std::make_shared<DrawCallback>(callback);
+}
+
+ShDrawCallbackPr DrawCallback::create(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se) {
+	return std::make_shared<DrawCallback>(callback, data, kpe, pme, se);
+}
 // destructor
 DrawCallback::~DrawCallback() {}
 
@@ -68,9 +92,5 @@ void* DrawCallback::get_data() {
 
 // static
 
-// factory
-ShDrawCallbackPr DrawCallback::create() {
-	return std::make_shared<DrawCallback>();
-}
 
 } // namespace smg

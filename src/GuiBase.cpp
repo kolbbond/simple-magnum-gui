@@ -54,11 +54,13 @@ GuiBase::GuiBase(const Arguments& arguments)
 	//       add additional pixels
 	//      add additional fonts (nerdfonts)? JetBrainsMono atleast
 	Containers::ArrayView<const char> font;
+
+   // Containers::Pointer<Text::AbstractFont> _font;
+
 	double num_pixels = 14.0f;
 
 	std::vector<std::string> font_names = {
 		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"};
-
 
 	// each font
 	printf("adding fonts\n");
@@ -70,7 +72,6 @@ GuiBase::GuiBase(const Arguments& arguments)
 		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
 			const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
 	}
-
 
 	// loaded fonts
 

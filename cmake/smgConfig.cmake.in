@@ -47,6 +47,8 @@ if(NOT TARGET Magnum)
         Shaders
         Trade
         Sdl2Application
+        Text
+        MagnumFont
 )
 endif()
 

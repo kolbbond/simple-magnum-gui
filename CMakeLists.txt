@@ -6,6 +6,9 @@ project(
   VERSION 0.1
   LANGUAGES C CXX)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
@@ -70,6 +73,7 @@ find_package(Magnum REQUIRED
     Trade
     Sdl2Application
     MagnumFont
+    Text
 )
 
 find_package(MagnumIntegration REQUIRED ImGui)
@@ -124,6 +128,7 @@ target_link_libraries(smg PUBLIC
     Magnum::Primitives
     Magnum::Shaders
     Magnum::Trade
+    Magnum::Text
 
     MagnumIntegration::ImGui
     #ImPlot::ImPlot
