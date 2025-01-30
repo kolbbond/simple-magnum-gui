@@ -16,11 +16,9 @@ echo "download magnum-integration"
 git clone git@github.com:mosra/magnum-integration.git dependencies/magnum-integration
 
 echo "download ImGui into magnum-integration"
-cd dependencies/magnum-integration/src/MagnumExternal
-git clone git@github.com:ocornut/imgui.git ImGui
+git clone git@github.com:ocornut/imgui.git dependencies/magnum-integration/src/MagnumExternal/ImGui
 
-cd ../../../../
-echo "download lib directories"
+#echo "download lib directories"
 
 #mkdir lib
 #echo "download implot"
