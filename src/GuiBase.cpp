@@ -4,8 +4,7 @@
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
-	: Platform::Application{arguments,
-		  Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable)} {
+	: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
 
 	setWindowTitle("GuiBase");
 
@@ -38,7 +37,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 	ImGui::CreateContext();
 
-	const Vector2 size = Vector2{windowSize()} / dpiScaling();
+	const Vector2 size = Vector2{ windowSize() } / dpiScaling();
 
 
 	// Add a font that actually looks acceptable on HiDPI screens. ImGui by
@@ -47,7 +46,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// explicitly tell it to *not* do that, since the resources are always in
 	//       memory and on a static place.
 
-	printf("-- ADD FONTS ---\n");
+	printf("%s --- SMG: ADD FONTS ---%s\n", KBLU, KNRM);
 
 	// we need a font config for each font
 	// @hey: add more font options so we can switch?
@@ -55,19 +54,20 @@ GuiBase::GuiBase(const Arguments& arguments)
 	//      add additional fonts (nerdfonts)? JetBrainsMono atleast
 	Containers::ArrayView<const char> font;
 
-   // Containers::Pointer<Text::AbstractFont> _font;
+	// Containers::Pointer<Text::AbstractFont> _font;
 
 	double num_pixels = 14.0f;
 
 	std::vector<std::string> font_names = {
-		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"};
+		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"
+	};
 
 	// each font
 	printf("adding fonts\n");
 	for(size_t i = 0; i < font_names.size(); i++) {
 		ImFontConfig font_cfg;
 		font_cfg.FontDataOwnedByAtlas = false;
-		font = Utility::Resource{"font"}.getRaw(font_names[i].c_str());
+		font = Utility::Resource{ "font" }.getRaw(font_names[i].c_str());
 		snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
 		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
 			const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
@@ -76,12 +76,12 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// loaded fonts
 
 
-	_imgui = ImGuiIntegration::Context(Vector2{windowSize()} / dpiScaling(), windowSize(), framebufferSize());
+	_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
 	// create a context for implot
 	// might need to connect to imgui but idk
 	// ImPlot::SetImGuiContext(_imgui);
-	printf("Creating implot context\n");
+	printf("%s--- SMG: Creating implot context ---%s\n", KBLU, KNRM);
 	ImPlot::CreateContext();
 
 
@@ -129,8 +129,7 @@ void GuiBase::drawEnd() {
 	// you'll need this exact behavior for the rest of your scene. If not, set
 	// this only for the drawFrame() call.
 	GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
-	GL::Renderer::setBlendFunction(
-		GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+	GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
 
 	// draw the frame to background buffer
@@ -332,9 +331,8 @@ void GuiBase::demo_imgui() {
 		if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
 		if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
 		if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
-		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-			1000.0 / Double(ImGui::GetIO().Framerate),
-			Double(ImGui::GetIO().Framerate));
+		ImGui::Text(
+			"Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
 	}
 
 	/* 2. Show another simple window, now using an explicit Begin/End pair */
@@ -366,8 +364,8 @@ void GuiBase::demo_test() {
 }
 
 void GuiBase::viewportEvent(ViewportEvent& event) {
-	GL::defaultFramebuffer.setViewport({{}, event.framebufferSize()});
+	GL::defaultFramebuffer.setViewport({ {}, event.framebufferSize() });
 
-	_imgui.relayout(Vector2{event.windowSize()} / event.dpiScaling(), event.windowSize(), event.framebufferSize());
+	_imgui.relayout(Vector2{ event.windowSize() } / event.dpiScaling(), event.windowSize(), event.framebufferSize());
 }
 } // namespace smg

@@ -31,7 +31,9 @@ ShDrawCallbackPr DrawCallback::create(draw_callback callback, void* data, key_pr
 	return std::make_shared<DrawCallback>(callback, data, kpe, pme, se);
 }
 // destructor
-DrawCallback::~DrawCallback() {}
+DrawCallback::~DrawCallback() {
+	std::printf("[X] DrawCallback destructor\n");
+}
 
 int DrawCallback::draw() {
 	// callback with data

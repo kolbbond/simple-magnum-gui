@@ -33,7 +33,7 @@ class GuiBase: public Platform::Application {
 
 protected:
 	// our imgui context
-	ImGuiIntegration::Context _imgui{NoCreate};
+	ImGuiIntegration::Context _imgui{ NoCreate };
 
 	// actual window (assume SDL?)
 	SDL_Window* _window;
@@ -52,6 +52,11 @@ protected:
 public:
 	// constructor
 	explicit GuiBase(const Arguments& arguments);
+
+	~GuiBase() {
+		std::printf("[X] GuiBase destructor [X]\n");
+		this->exit();
+	};
 
 	// draw callbacks
 	// main draw event loop (called every iteration)
