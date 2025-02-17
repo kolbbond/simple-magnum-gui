@@ -14,7 +14,7 @@
 #include "log.hh"
 
 #include "SDL_video.h"
-#include "imgui.h"
+#include "Magnum/Integration/ImGuiIntegration.h"
 #include "log.hh"
 #include <Magnum/Magnum.h>
 

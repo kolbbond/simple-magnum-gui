@@ -4,8 +4,8 @@
 #include <memory>
 #include <armadillo>
 
-#include "MagnumExternal/ImGui/imgui.h"
 #include "Magnum/ImGuiIntegration/Context.h"
+#include "Magnum/ImGuiIntegration/Integration.h"
 
 #include "typedefs.hh"
 
