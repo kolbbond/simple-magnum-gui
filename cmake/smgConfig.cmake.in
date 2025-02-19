@@ -55,6 +55,7 @@ endif()
 # armadillo 
 find_dependency(Armadillo CONFIG REQUIRED)
 if(NOT TARGET Arma::Armadillo)
+    find_depency(superlu REQUIRED);
 	add_library(Arma::Armadillo INTERFACE IMPORTED)
 	set_target_properties(Arma::Armadillo PROPERTIES
 		INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
@@ -80,7 +81,6 @@ if(NOT TARGET Arma::Armadillo)
 
 	# disable superlu if not available
     #find_dependency(superlu)
-    #set(ENABLE_SUPERLU ON)
     if(NOT SUPERLU_FOUND)
 		message(STATUS "Disabling Armadillo SuperLU")
         target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)

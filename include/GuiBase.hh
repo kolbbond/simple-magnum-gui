@@ -14,7 +14,7 @@
 #include "log.hh"
 
 #include "SDL_video.h"
-#include "Magnum/Integration/ImGuiIntegration.h"
+#include "Magnum/ImGuiIntegration/Integration.h"
 #include "log.hh"
 #include <Magnum/Magnum.h>
 
@@ -33,7 +33,7 @@ class GuiBase: public Platform::Application {
 
 protected:
 	// our imgui context
-	ImGuiIntegration::Context _imgui{NoCreate};
+	ImGuiIntegration::Context _imgui{ NoCreate };
 
 	// actual window (assume SDL?)
 	SDL_Window* _window;

@@ -20,6 +20,7 @@ public:
 
 	// static defaults
 	static int pointer_move_event_default(void* data, Magnum::Platform::Sdl2Application::PointerMoveEvent& event) {
+		(void)data;
 
 		using namespace Magnum::Math::Literals;
 
@@ -53,6 +54,7 @@ public:
 
 	static int scroll_event_default(void* data, Magnum::Platform::Sdl2Application::ScrollEvent& event) {
 		(void)data;
+		(void)event;
 
 		return 0;
 	}

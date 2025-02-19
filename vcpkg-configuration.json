@@ -13,7 +13,8 @@
                 "magnum",
                 "magnum-integration",
                 "superlu",
-                "armadillo"
+                "armadillo",
+                "lapack"
             ]
         },
         {
