@@ -1,0 +1,54 @@
+{
+    "dependencies": [
+        "openblas",
+        "armadillo",
+        "lapack",
+        {
+            "name": "corrade",
+            "version>=": "2025.00"
+        },
+        {
+            "name": "magnum",
+            "default-features": false,
+            "features": [
+                "anyimageconverter",
+                "anyimageimporter",
+                "anysceneconverter",
+                "anysceneimporter",
+                "debugtools",
+                "gl",
+                "magnumfont",
+                "meshtools",
+                "primitives",
+                "scenegraph",
+                "sdl2application",
+                "shaders",
+                "text",
+                "texturetools",
+                "tgaimporter",
+                "trade"
+            ]
+        },
+        {
+            "name": "magnum-integration",
+            "features": [
+                "imgui"
+            ]
+        },
+        "superlu"
+    ],
+    "overrides": [
+        {
+            "name": "corrade",
+            "version": "2025.00"
+        },
+        {
+            "name": "magnum-integration",
+            "version": "2025.00"
+        },
+        {
+            "name": "superlu",
+            "version": "5.3.0"
+        }
+    ]
+}

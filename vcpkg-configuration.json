@@ -1,0 +1,29 @@
+{
+    "default-registry": {
+        "kind": "git",
+        "baseline": "be1ae8e5c5bc79aac1b8f593f5554aee1cfde54f",
+        "repository": "https://github.com/microsoft/vcpkg"
+    },
+    "registries": [
+        {
+            "kind": "filesystem",
+            "path": "../vcpkg-registry",
+            "packages": [
+                "corrade",
+                "magnum",
+                "magnum-integration",
+                "superlu",
+                "armadillo"
+            ]
+        },
+        {
+            "kind": "git",
+            "repository": "https://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@github.com/kolbbond/vcpkg-registry.git",
+            "baseline": "5a9fa19dae7d60a3ab95f6a21f8537be66d40f44",
+            "packages": []
+        }
+    ],
+    "overlay-triplets": [
+        "./cmake"
+    ]
+}
