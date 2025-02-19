@@ -18,7 +18,7 @@
         },
         {
             "kind": "git",
-            "repository": "https://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@github.com/kolbbond/vcpkg-registry.git",
+            "repository": "https://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@github.com/kolbbond/vcpkg-registry.git",
             "baseline": "5a9fa19dae7d60a3ab95f6a21f8537be66d40f44",
             "packages": []
         }
