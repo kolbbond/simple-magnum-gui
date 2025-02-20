@@ -14,6 +14,7 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 # switchboard
 option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
 option(ENABLE_ARMADILLO "build with armadillo" ON)
+option(ENABLE_ARMADILLO_SUPERLU "build with armadillo superlu" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
@@ -80,6 +81,9 @@ find_package(MagnumIntegration REQUIRED ImGui)
 
 if(ENABLE_ARMADILLO)
 # find armadillo library
+    if(ENABLE_ARMADILLO_SUPERLU)
+        find_package(superlu 5.3.0 REQUIRED)
+    endif()
     find_package(Armadillo 14.0.0 REQUIRED)
     if(NOT TARGET Arma::Armadillo)
         # create target
@@ -87,6 +91,13 @@ if(ENABLE_ARMADILLO)
         set_target_properties(Arma::Armadillo PROPERTIES
             INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
             INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARY}")
+        if(superlu_FOUND)
+            message(STATUS "Enabling Armadillo SuperLU")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
+        else()
+            message(STATUS "Disabling Armadillo SuperLU")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
+        endif()
     endif()
 
 endif()
@@ -137,6 +148,11 @@ target_link_libraries(smg PUBLIC
 if(ENABLE_ARMADILLO)
     target_link_libraries(smg PUBLIC
         Arma::Armadillo)
+
+    if(superlu_FOUND)
+        target_link_libraries(smg PUBLIC
+            superlu)
+    endif()
 endif()
 
 # add additional sources
