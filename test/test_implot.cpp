@@ -73,7 +73,7 @@ int main(int argc, char** argv) {
 		done = !gui.mainLoopIteration();
 
 		// done is true for the test
-		//done = true;
+		done = true;
 	}
 
 	// exit
