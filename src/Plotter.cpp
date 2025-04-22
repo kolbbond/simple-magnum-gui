@@ -24,6 +24,8 @@ void Plotter::plot_scatter(std::string str, arma::Col<double> x, arma::Col<doubl
 	ImPlot::PlotScatter(str.c_str(), xv.data(), yv.data(), yv.size());
 }
 
+// override for single point
+void Plotter::plot_scatter(double x, double y) { plot_scatter(arma::Col<double>({ x }), arma::Col<double>({ y })); }
 void Plotter::plot_scatter(arma::Col<double> x, arma::Col<double> y) {
 	// wrap to general
 	plot_scatter("Points", x, y);

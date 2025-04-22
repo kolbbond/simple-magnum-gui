@@ -1,4 +1,4 @@
-# build imgui with implot
+# build imgui with magnum
 cmake_minimum_required(VERSION 3.11)
 
 project(
@@ -16,6 +16,7 @@ option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
 option(ENABLE_ARMADILLO "build with armadillo" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
+option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
@@ -108,8 +109,17 @@ set(mysources
     implot/implot.cpp
     implot/implot_demo.cpp
     implot/implot_items.cpp
-
 )
+
+# for implot3d
+if(ENABLE_IMPLOT3D)
+    list(APPEND mysources
+        implot3d/implot3d.cpp
+        implot3d/implot3d_items.cpp
+        implot3d/implot3d_demo.cpp
+        implot3d/implot3d_meshes.cpp
+    )
+endif()
 
 corrade_add_resource(smg_RESOURCES "assets/resources.conf")
 
@@ -155,6 +165,13 @@ target_include_directories(
  PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
+
+if(ENABLE_IMPLOT3D)
+target_include_directories(
+    smg PUBLIC
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot3d>
+ )
+ endif()
 
 message(STATUS "compiler id: " ${CXX_COMPILER_ID})
 target_compile_options(
@@ -224,6 +241,13 @@ if(CREATE_INSTALL)
   install(FILES 
       ${CMAKE_SOURCE_DIR}/implot/implot.h
           DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+
+      # add implot3d headers
+    if(ENABLE_IMPLOT3D)
+      install(FILES 
+          ${CMAKE_SOURCE_DIR}/implot3d/implot3d.h
+              DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+      endif()
 
     set(_INCLUDE_INSTALL_DIR smg)
 

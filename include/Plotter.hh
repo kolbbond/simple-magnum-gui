@@ -24,6 +24,7 @@ public:
 
 	static void plot_scatter(std::string str, arma::Col<double> x, arma::Col<double> y);
 	static void plot_scatter(arma::Col<double> x, arma::Col<double> y);
+	static void plot_scatter(double x, double y);
 };
 
 } // namespace smg
