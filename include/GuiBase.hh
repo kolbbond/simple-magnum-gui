@@ -23,7 +23,7 @@
 #include "implot.h"
 
 using namespace Magnum;
-using namespace Math::Literals;
+using namespace Magnum::Math::Literals;
 
 namespace smg {
 
@@ -54,7 +54,7 @@ public:
 	explicit GuiBase(const Arguments& arguments);
 
 	~GuiBase() {
-	//	std::printf(" [X] GuiBase destructor [X] \n");
+		//	std::printf(" [X] GuiBase destructor [X] \n");
 		this->exit();
 	};
 
