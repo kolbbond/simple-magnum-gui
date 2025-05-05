@@ -1,10 +1,10 @@
 #include "GuiBase.hh"
 #include "Magnum/Math/Time.h"
+#include "implot3d.h"
 
 namespace smg {
 
-GuiBase::GuiBase(const Arguments& arguments)
-	: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
+GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
 
 	setWindowTitle("GuiBase");
 
@@ -58,9 +58,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 	double num_pixels = 14.0f;
 
-	std::vector<std::string> font_names = {
-		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"
-	};
+	std::vector<std::string> font_names = { "Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf" };
 
 	// each font
 	printf("adding fonts\n");
@@ -69,8 +67,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 		font_cfg.FontDataOwnedByAtlas = false;
 		font = Utility::Resource{ "font" }.getRaw(font_names[i].c_str());
 		snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
-		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(
-			const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
+		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(const_cast<char*>(font.data()), font.size(), num_pixels * framebufferSize().x() / size.x(), &font_cfg);
 	}
 
 	// loaded fonts
@@ -83,6 +80,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// ImPlot::SetImGuiContext(_imgui);
 	printf("%s--- SMG: Creating implot context ---%s\n", KBLU, KNRM);
 	ImPlot::CreateContext();
+
+	printf("%s--- SMG: Creating implot3d context ---%s\n", KBLU, KNRM);
+	ImPlot3D::CreateContext();
 
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
@@ -331,8 +331,7 @@ void GuiBase::demo_imgui() {
 		if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
 		if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
 		if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
-		ImGui::Text(
-			"Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
+		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
 	}
 
 	/* 2. Show another simple window, now using an explicit Begin/End pair */
@@ -356,6 +355,7 @@ void GuiBase::demo_implot() {
 	/* 4. Show ImPlot Demo */
 	ImGui::Begin("ImPlot Demo");
 	ImPlot::ShowDemoWindow();
+	ImPlot3D::ShowDemoWindow();
 	ImGui::End();
 }
 

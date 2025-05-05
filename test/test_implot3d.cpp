@@ -4,6 +4,8 @@
 #include "imgui.h"
 #include "Plotter.hh"
 
+#include "implot3d.h"
+
 #include <iostream>
 
 // example data to pass into callback
@@ -11,6 +13,7 @@ class data_ex {
 public:
 	arma::Col<double> x;
 	arma::Col<double> y;
+	arma::Col<double> z;
 
 	std::string name = "example";
 };
@@ -28,9 +31,17 @@ int callback_fun(void* data) {
 	static bool show_plot;
 	if(ImGui::Button("Test Window")) show_plot ^= true;
 	if(show_plot) {
-		if(ImPlot::BeginPlot("test")) {
-			Plotter::plot_line(mydata.x, mydata.y);
-			ImPlot::EndPlot();
+		if(ImPlot3D::BeginPlot("test")) {
+			//Plotter::plot_line(mydata.x, mydata.y);
+			std::vector<double> xv = arma::conv_to<std::vector<double>>::from(mydata.x);
+			std::vector<double> yv = arma::conv_to<std::vector<double>>::from(mydata.y);
+			std::vector<double> zv = arma::conv_to<std::vector<double>>::from(mydata.z);
+			assert(xv.size() == yv.size());
+			assert(xv.size() == zv.size());
+
+			// map to vector
+			ImPlot3D::PlotScatter("test", xv.data(), yv.data(), zv.data(), xv.size());
+			ImPlot3D::EndPlot();
 		}
 	}
 
@@ -45,12 +56,16 @@ int main(int argc, char** argv) {
 
 	// make our application class
 	printf("make guibase application\n");
-	GuiBase gui({argc, argv});
+	GuiBase gui({ argc, argv });
 
 	// example data
+	arma::Col<double> t = arma::linspace(0, 1, 1000);
+	double R = 0.6; // [m]
+	double pitch = 30e-3; // [m]
 	data_ex mydata = data_ex();
-	mydata.x = arma::linspace(0, 1, 1000);
-	mydata.y = arma::linspace(0, 1, 1000);
+	mydata.x = R * arma::cos(2 * M_PI * t);
+	mydata.y = R * arma::sin(2 * M_PI * t);
+	mydata.z = pitch * t;
 	mydata.name = "heymom";
 
 	// make our call back

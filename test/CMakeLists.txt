@@ -11,6 +11,7 @@ set(test_list
     test_plotquads.cpp
     #test_magnum_implot.cpp
     test_implot.cpp
+    test_implot3d.cpp
     test_mesh_destruction.cpp
     #test_loadimage.cpp
     #test_maptotexture.cpp
@@ -20,7 +21,7 @@ set(test_list
 foreach(srcfile ${test_list})
   string(REPLACE ".cpp" "" name ${srcfile})
   add_executable(${name} ${srcfile})
-  target_link_libraries(${name} smg)
+  target_link_libraries(${name} smg::smg)
 
   add_test(${name} ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${name})
 endforeach()
