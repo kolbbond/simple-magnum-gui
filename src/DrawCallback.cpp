@@ -32,7 +32,7 @@ ShDrawCallbackPr DrawCallback::create(draw_callback callback, void* data, key_pr
 }
 // destructor
 DrawCallback::~DrawCallback() {
-	std::printf("[X] DrawCallback destructor\n");
+	//std::printf("[X] DrawCallback destructor\n");
 }
 
 int DrawCallback::draw() {

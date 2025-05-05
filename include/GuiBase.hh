@@ -54,7 +54,7 @@ public:
 	explicit GuiBase(const Arguments& arguments);
 
 	~GuiBase() {
-		std::printf(" [X] GuiBase destructor [X] \n");
+	//	std::printf(" [X] GuiBase destructor [X] \n");
 		this->exit();
 	};
 
