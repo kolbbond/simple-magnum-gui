@@ -65,7 +65,7 @@ if(BUILD_DEPENDENCIES)
 endif()
 
 # package finding
-find_package(Corrade REQUIRED Main)
+find_package(Corrade REQUIRED Main Utility)
 find_package(Magnum REQUIRED 
     GL
     MeshTools
