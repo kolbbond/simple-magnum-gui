@@ -3,4 +3,4 @@
 	url = git@github.com:epezent/implot.git
 [submodule "implot3d"]
 	path = implot3d
-	url = https://github.com/brenocq/implot3d.git
+	url = git@github.com:brenocq/implot3d.git
