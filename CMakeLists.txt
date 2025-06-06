@@ -133,6 +133,7 @@ target_link_libraries(smg PUBLIC
     Corrade::Main
     Magnum::Application
     Magnum::GL
+    Corrade::Utility
     Magnum::Magnum
     Magnum::MeshTools
     Magnum::Primitives

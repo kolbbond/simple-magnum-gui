@@ -17,6 +17,7 @@ git clone git@github.com:mosra/magnum-integration.git dependencies/magnum-integr
 
 echo "download ImGui into magnum-integration"
 cd dependencies/magnum-integration/src/MagnumExternal
+mkdir -p ImGui
 git clone git@github.com:ocornut/imgui.git ImGui
 
 cd ../../../../
