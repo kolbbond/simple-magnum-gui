@@ -14,9 +14,9 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 # switchboard
 option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
 option(ENABLE_ARMADILLO "build with armadillo" ON)
-option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
+option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
 
@@ -167,10 +167,10 @@ target_include_directories(
 )
 
 if(ENABLE_IMPLOT3D)
-    target_include_directories(
-        smg PUBLIC
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot3d>
-     )
+target_include_directories(
+    smg PUBLIC
+     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot3d>
+ )
  endif()
 
 message(STATUS "compiler id: " ${CXX_COMPILER_ID})
