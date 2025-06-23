@@ -2,7 +2,6 @@
 #pragma once
 
 #include "implot.h"
-#include "implot3d.h"
 
 // @hey: need to define this out?
 #include <armadillo>

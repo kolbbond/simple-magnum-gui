@@ -7,6 +7,7 @@ cd dependencies/corrade
 mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=${HOME}/.local
+
 make -j8
 make install
 
@@ -22,7 +23,9 @@ cmake .. -DCMAKE_INSTALL_PREFIX=${HOME}/.local \
     -DMAGNUM_WITH_ANYSCENEIMPORTER=ON \
     -DMAGNUM_WITH_OBJIMPORTER=ON \
     -DMAGNUM_WITH_MAGNUMFONT=ON \
-    -DMAGNUM_WITH_AUDIO=ON
+    -DMAGNUM_WITH_AUDIO=OFF \
+    -DMAGNUM_BUILD_STATIC=OFF 
+
 make -j8
 make install
 
@@ -46,6 +49,7 @@ mkdir build
 cd build
 cmake .. -DCMAKE_INSTALL_PREFIX=${HOME}/.local \
     -DMAGNUM_WITH_IMGUI=ON;
+
 make -j8
 make install
 
