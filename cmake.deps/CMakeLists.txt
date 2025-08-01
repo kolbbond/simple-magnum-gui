@@ -1,0 +1,80 @@
+# This is not meant to be included by the top-level.
+cmake_minimum_required(VERSION 3.16)
+project(SMG_DEPS C)
+
+if(POLICY CMP0135)
+  cmake_policy(SET CMP0135 NEW)
+endif()
+
+# Point CMake at any custom modules we may ship
+list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${PROJECT_SOURCE_DIR}/../cmake")
+
+# Prefer our bundled versions of dependencies.
+if(DEFINED ENV{DEPS_BUILD_DIR})
+  set(DEPS_PREFIX "$ENV{DEPS_BUILD_DIR}/../usr" CACHE PATH "Path prefix for finding dependencies")
+else()
+  set(DEPS_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/../.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+endif()
+
+include(CheckCCompilerFlag)
+include(ExternalProject)
+include(FindPackageHandleStandardArgs)
+
+# neovim utility functions
+include(Deps)
+
+
+# additional prefix paths
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}")
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/bin/")
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/include/")
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/lib/")
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/share/")
+list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/share/cmake/Corrade")
+
+#-------------------------------------------------------------------------------
+# User settings
+#-------------------------------------------------------------------------------
+
+set(DEPS_IGNORE_SHA FALSE)
+
+# Options
+option(USE_BUNDLED "Use bundled dependencies." ON)
+option(BUILD_GUI "build the gui library" ${USE_BUNDLED})
+option(USE_BUNDLED_SMG "Use the bundled smg." ${USE_BUNDLED})
+
+# @hey: get this working on windows
+if(USE_BUNDLED AND MSVC)
+    #option(USE_BUNDLED_GETTEXT "Use the bundled version of gettext." ON)
+else()
+    #option(USE_BUNDLED_GETTEXT "Use the bundled version of gettext." OFF)
+endif()
+
+# build dependencies
+option(USE_BUNDLED_SUPERLU "use bundled superlu" ${USE_BUNDLED}) # superlu is not needed
+option(USE_BUNDLED_ARMADILLO "use bundled armadillo" ${USE_BUNDLED})
+
+# build superlu
+if(USE_BUNDLED_SUPERLU)
+    include(Buildsuperlu)
+endif()
+
+# build armadillo
+if(USE_BUNDLED_ARMADILLO)
+    include(BuildArmadillo)
+endif()
+
+# build jsoncpp
+include(Buildjsoncpp)
+
+# for gui
+if(USE_BUNDLED_SMG)
+    message(STATUS "prefix path: ${CMAKE_PREFIX_PATH}")
+    add_subdirectory(smg)
+endif()
+
+# if using python
+if(USE_BUNDLED_PYBIND11)
+    include(Buildpybind11)
+endif()
+
