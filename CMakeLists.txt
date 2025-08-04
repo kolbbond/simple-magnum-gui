@@ -27,12 +27,29 @@ option(USE_X "use X for window" OFF)
 option(USE_SDL "use SDL for window" OFF)
 option(USE_OPENGL "use OpenGL for rendering" OFF)
 
-# set export commands
-#set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local/")
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
+# modules
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" 
     ${CMAKE_MODULE_PATH})
+
+# set export commands for clangd and color
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_COLOR_DIAGNOSTICS ON)
+
+# if using bundled dependencies
+# additional prefix paths
+if(DEFINED ENV{SMG_BUILD_DIR})
+  set(SMG_PREFIX "$ENV{SMG_BUILD_DIR}/usr" CACHE PATH "Path prefix for finding dependencies")
+else()
+  set(SMG_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+endif()
+
+#list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
+list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
+list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}")
+list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/bin/")
+list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/include/")
+
+message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
 # system detection
 if(WIN32)
@@ -79,6 +96,7 @@ find_package(Magnum REQUIRED
 
 find_package(MagnumIntegration REQUIRED ImGui)
 
+# @hey: armadillo is required but this is an option
 if(ENABLE_ARMADILLO)
 # find armadillo library
     find_package(Armadillo 14.0.0 REQUIRED)
@@ -92,8 +110,7 @@ if(ENABLE_ARMADILLO)
 
 endif()
 
-# either include implot or build here
-#find_package(ImPlot REQUIRED)
+# @hey: add a implot library build instead of including source files
 
 # set sources for our gui implementation
 set(mysources
@@ -121,6 +138,7 @@ if(ENABLE_IMPLOT3D)
     )
 endif()
 
+# fonts 
 corrade_add_resource(smg_RESOURCES "assets/resources.conf")
 
 # make our library (shared or static?)
@@ -297,6 +315,7 @@ if(CREATE_INSTALL)
 
   # set rpaths
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+  list(APPEND CMAKE_INSTALL_RPATH "${SMG_PREFIX}/.deps/usr/lib") # for dependencies
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
 
   # create debian package?

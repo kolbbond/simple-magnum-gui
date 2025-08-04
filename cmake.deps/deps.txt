@@ -1,5 +1,5 @@
 ARMADILLO_URL https://gitlab.com/conradsnicta/armadillo-code/-/archive/14.4.x/armadillo-code-14.4.x.tar.gz
-ARMADILLO_SHA256 afdc5ec52e8a1817a0ec61b38d298f02de070baf103ca7ca6bf88050d98b16a6 
+ARMADILLO_SHA256 648de3b2e6f53d3d641d081afd4698c50bbb91b2e77883fb2e29e8da1c4bbdeb 
 
 SUPERLU_URL https://github.com/xiaoyeli/superlu/archive/refs/tags/v5.3.0.zip
 SUPERLU_SHA256 76aa425af2ffc763bf48fdd2a73f84762748f37901cb84d312bf03b8b54e9b72 

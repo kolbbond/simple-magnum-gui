@@ -15,7 +15,7 @@ set(smg_CMAKE_ARGS
     -D CMAKE_PREFIX_PATH=${_smg_prefix_path_fixed}
   )
 
-#message(WARNING "prefix path: ${CMAKE_PREFIX_PATH}")
+message(WARNING "prefix path: ${CMAKE_PREFIX_PATH}")
 #message(FATAL_ERROR "prefix path: ${CMAKE_PREFIX_PATH}")
 
 # build rat dependencies

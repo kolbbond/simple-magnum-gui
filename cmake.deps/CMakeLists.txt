@@ -23,8 +23,8 @@ include(FindPackageHandleStandardArgs)
 # neovim utility functions
 include(Deps)
 
-
 # additional prefix paths
+list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}")
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/bin/")
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/include/")
