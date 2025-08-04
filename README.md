@@ -19,6 +19,13 @@ This utilizes Dear ImGui, Magnum, ImPlot.
 [imgui](https://github.com/ocornut/imgui)  * cloned into src/MagnumExternal/ImGui directory
 add implot and implot3
 
+### Linux dependencies
+Build with the `make deps`
+and `make`
+make sure to add a LD_LIBRARY_PATH
+`export LD_LIBRARY_PATH=/home/you/programs/simple-magnum-gui/.deps/usr/lib:${LD_LIBRARY_PATH}`
+to find the libraries
+
 #### Windows dependencies
 Use vpckg to install other dependencies.
 [vcpkg](https://github.com/microsoft/vcpkg)

@@ -240,6 +240,12 @@ if(ENABLE_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
+# rpath for build
+list(APPEND CMAKE_BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
+list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../../.deps/usr/lib") # for dependencies
+message(STATUS "CMAKE_BUILD_RPATH: ${CMAKE_BUILD_RPATH}")
+set_property(TARGET smg PROPERTY BUILD_RPATH "${CMAKE_BUILD_RPATH}")
+
 # ##############################################################################
 # INSTALLATION if we are installing
 if(CREATE_INSTALL)
@@ -330,14 +336,16 @@ if(CREATE_INSTALL)
 
   # set rpaths
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  list(APPEND CMAKE_INSTALL_RPATH "${SMG_PREFIX}/.deps/usr/lib") # for dependencies
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
+  list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+  message(STATUS "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
+  set_property(TARGET smg PROPERTY INSTALL_RPATH "${CMAKE_INSTALL_RPATH}")
 
   # create debian package?
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
 
 endif(CREATE_INSTALL)
-
 
 # cmake summary
 message("\n"
