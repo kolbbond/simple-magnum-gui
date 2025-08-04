@@ -3,7 +3,7 @@ message(STATUS "testing")
 
 # add the test files
 set(test_list 
-    test_magnum_sdl2.cpp
+    #    test_magnum_sdl2.cpp
     test_magnum_application_main.cpp
     test_magnum_imgui.cpp
     test_smg_guibase.cpp

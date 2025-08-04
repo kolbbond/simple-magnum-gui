@@ -6,6 +6,9 @@ if(POLICY CMP0135)
   cmake_policy(SET CMP0135 NEW)
 endif()
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # Point CMake at any custom modules we may ship
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${PROJECT_SOURCE_DIR}/../cmake")
 
@@ -24,7 +27,30 @@ include(FindPackageHandleStandardArgs)
 include(Deps)
 
 # additional prefix paths
-list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
+# @hey: check for MSVC
+# system detection
+if(WIN32)
+    message(STATUS "this is a Windows machine")
+
+    # need to add the Visual Studio environment variables
+    #& 'C:\Program Files\Microsoft Visual Studio\[VS_VERSION]\VC\Auxiliary\Build\vcvarsall.bat' [ARCHITECTURE]
+    #& 'C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvarsall.bat' x64
+    # @hey: hardcoded vcpkg 
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake/SDL2")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/include/")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/")
+
+    # @hey: add a runtime output for all libraries
+    #list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" "${PROJECT_SOURCE_DIR}/../cmake")
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin CACHE PATH "" FORCE)
+
+endif(WIN32)
+if(UNIX)
+  message(STATUS "this is a linux machine")
+    list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
+endif(UNIX)
+
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}")
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/bin/")
 list(INSERT CMAKE_PREFIX_PATH 0 "${DEPS_PREFIX}/include/")
@@ -51,13 +77,13 @@ else()
 endif()
 
 # build dependencies
-option(USE_BUNDLED_SUPERLU "use bundled superlu" ${USE_BUNDLED}) # superlu is not needed
+#option(USE_BUNDLED_SUPERLU "use bundled superlu" ${USE_BUNDLED}) # superlu is not needed
 option(USE_BUNDLED_ARMADILLO "use bundled armadillo" ${USE_BUNDLED})
 
 # build superlu
-if(USE_BUNDLED_SUPERLU)
-    include(Buildsuperlu)
-endif()
+#if(USE_BUNDLED_SUPERLU)
+#include(Buildsuperlu)
+#endif()
 
 # build armadillo
 if(USE_BUNDLED_ARMADILLO)

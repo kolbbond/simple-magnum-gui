@@ -17,7 +17,25 @@ This utilizes Dear ImGui, Magnum, ImPlot.
 [Magnum](github.com/mosra/magnum)  
 [magnum-integration](https://github.com/mosra/magnum-integration)  
 [imgui](https://github.com/ocornut/imgui)  * cloned into src/MagnumExternal/ImGui directory
+add implot and implot3
 
+#### Windows dependencies
+Use vpckg to install other dependencies.
+[vcpkg](https://github.com/microsoft/vcpkg)
+
+Make sure you are in classic mode and install 
+
+1. SDL2
+2. Freetype
+3. libjpeg-turbo
+
+
+# make sure to add the dll libraries to path 
+$env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
+
+and SDL2 from vcpkg
+
+## legacy dependencies
 These are encapsulated into the dependencies directory.  
 The cmake commands are implemented in shell script wrappers in the
 `scripts` directory. 

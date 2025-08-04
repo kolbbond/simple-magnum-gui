@@ -12,7 +12,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
-option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
+#option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
 option(ENABLE_ARMADILLO "build with armadillo" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
@@ -54,6 +54,16 @@ message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 # system detection
 if(WIN32)
     message(STATUS "this is a Windows machine")
+
+    # add vcpkg paths
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake/SDL2")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/include/")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/")
+# windows specific
+    if(WIN32)
+    set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
+    endif()
 endif(WIN32)
 if(UNIX)
   message(STATUS "this is a linux machine")
@@ -74,6 +84,10 @@ if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_LIBRARY_OUTP
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
 endif()
 
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin CACHE PATH "" FORCE)
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
+
 message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
 # add dependencies
@@ -82,7 +96,8 @@ if(BUILD_DEPENDENCIES)
 endif()
 
 # package finding
-find_package(Corrade REQUIRED Main Utility)
+#find_package(Corrade REQUIRED Main Utility)
+find_package(Corrade REQUIRED Utility)
 find_package(Magnum REQUIRED 
     GL
     MeshTools
@@ -148,7 +163,7 @@ add_library(smg:: ALIAS smg)
 
 # link them
 target_link_libraries(smg PUBLIC
-    Corrade::Main
+    #Corrade::Main
     Magnum::Application
     Magnum::GL
     Corrade::Utility

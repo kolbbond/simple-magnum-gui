@@ -120,7 +120,6 @@ int callback_fun(void *data) {
 
 // main
 int main(int argc, char **argv) {
-
   // make our application class
   printf("make guibase application\n");
   GuiBase gui({argc, argv});
@@ -174,4 +173,7 @@ int main(int argc, char **argv) {
   if (!Magnum::GL::Context::hasCurrent()) {
     Debug{} << "No OpenGL context available! Mesh destruction aborted.";
   }
+
+  return 0;
+
 }

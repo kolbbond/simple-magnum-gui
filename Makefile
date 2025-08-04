@@ -14,7 +14,7 @@ ifeq ($(UNIX_LIKE),FALSE)
   MKDIR := @$$null = new-item -itemtype directory -force
   TOUCH := @$$null = new-item -force
   RM := remove-item -force
-  CMAKE := cmake
+  CMAKE := cmake  
   CMAKE_GENERATOR := Ninja
   #CMAKE_GENERATOR := Unix Makefiles
   define rmdir
@@ -75,7 +75,7 @@ checkprefix: ;
 endif
 
 DEPS_BUILD_DIR ?= ".deps"
-smg_BUILD_DIR ?= ".smg"
+smg_BUILD_DIR ?= "build"
 BUILD_DIR ?= "build"
 
 ifneq (1,$(words [$(DEPS_BUILD_DIR)]))
@@ -106,6 +106,9 @@ main: $(BUILD_DIR)
 	$(CMAKE) --build build $(PARALLEL)
 
 $(BUILD_DIR):
+ifeq ($(UNIX_LIKE),FALSE)
+	$(CMAKE) -S $(MAKEFILE_DIR)/cmake.deps -B $(smg_BUILD_DIR) -G $(CMAKE_GENERATOR) $(BUNDLED_CMAKE_FLAG) $(BUNDLED_LUA_CMAKE_FLAG) $(smg_CMAKE_FLAGS) ; 
+else
 	@echo "Checking if build directory '$(BUILD_DIR)' exists..."
 	@if [ ! -d "$(BUILD_DIR)" ]; then \
 		echo "Build directory not found. Running CMake configure..."; \
@@ -113,6 +116,7 @@ $(BUILD_DIR):
 	else \
 		echo "Build directory '$(BUILD_DIR)' already exists. Skipping CMake configure."; \
 	fi
+endif
 
 libsmg: build/.ran-cmake cmake.deps
 	$(CMAKE) --build build --target libsmg
@@ -146,15 +150,19 @@ smg: $(smg_BUILD_DIR)
 	$(CMAKE) --build $(smg_BUILD_DIR) $(PARALLEL)
 
 $(smg_BUILD_DIR):
+ifeq ($(UNIX_LIKE),FALSE)
+		$(CMAKE) -S $(MAKEFILE_DIR)/. -B $(smg_BUILD_DIR) -G $(CMAKE_GENERATOR) $(BUNDLED_CMAKE_FLAG) $(BUNDLED_LUA_CMAKE_FLAG) $(smg_CMAKE_FLAGS) ; 
+else
 		@echo "Checking if build directory '$(smg_BUILD_DIR)' exists..."
 		@if [ ! -d "$(smg_BUILD_DIR)" ]; then \
 			echo "Build directory not found. Running CMake configure..."; \
 	#		$(CMAKE) -B $(smg_BUILD_DIR) -G "$(CMAKE_GENERATOR)" $(CMAKE_FLAGS) $(CMAKE_EXTRA_FLAGS) $(MAKEFILE_DIR); \
-			$(CMAKE) -S $(MAKEFILE_DIR)/cmake.smg -B $(smg_smg_BUILD_DIR) -G $(CMAKE_GENERATOR) $(BUNDLED_CMAKE_FLAG) $(BUNDLED_LUA_CMAKE_FLAG) $(smg_CMAKE_FLAGS); \
+			$(CMAKE) -S $(MAKEFILE_DIR)/cmake.deps -B $(smg_BUILD_DIR) -G $(CMAKE_GENERATOR) $(BUNDLED_CMAKE_FLAG) $(BUNDLED_LUA_CMAKE_FLAG) $(smg_CMAKE_FLAGS); \
 		else \
 			echo "Build directory '$(smg_BUILD_DIR)' already exists. Skipping CMake configure."; \
 		fi
 	# done!
+endif
 
 # TODO: cmake 3.2+ add_custom_target() has a USES_TERMINAL flag.
 oldtest: | smg
