@@ -349,3 +349,12 @@ message("\n"
     "* Build tests                  : ${ENABLE_TESTING}\n"
     "* Magnum                       : ${USE_MAGNUM}\n"
 )
+
+# copy of SDL2
+if (WIN32)
+    add_custom_command(
+        TARGET smg POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:smg>"
+        VERBATIM
+    )
+endif()

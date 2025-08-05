@@ -1,22 +1,35 @@
 project(examples)
 
-add_executable(implot_ex implot_ex.cpp)
-target_link_libraries(implot_ex
-    smg::smg
-    )
+# testing
+message(STATUS "compile examples")
 
-add_executable(draw_cube draw_cube.cpp)
-target_link_libraries(draw_cube
-    smg::smg
-    )
+# add the test files
+set(example_list 
+    implot_ex.cpp
+    draw_cube.cpp
+    draw_triangle.cpp
+    guibase.cpp
+)
 
-add_executable(draw_triangle draw_triangle.cpp)
-target_link_libraries(draw_triangle
-    smg::smg
-    )
+# walk over source files
+foreach(srcfile ${example_list})
+  string(REPLACE ".cpp" "" name ${srcfile})
 
-add_executable(guibase guibase.cpp)
-target_link_libraries(guibase
-    smg::smg
-    )
+# create the executable
+    add_executable(${name} ${srcfile})
+    target_link_libraries(${name} smg)
+
+  # add icon
+    set(icon_conf "${CMAKE_CURRENT_SOURCE_DIR}/../assets/icon.rc")
+    set(icon_file "${CMAKE_CURRENT_SOURCE_DIR}/../assets/smg.ico")
+
+    if(WIN32)
+        #  set_property(TARGET ${name} PROPERTY WIN32_EXECUTABLE TRUE)
+        target_sources(${name} PRIVATE ${icon_conf})
+        set_property(TARGET ${name} PROPERTY WIN32_EXECUTABLE_ICON ${icon_file})
+    endif()
+
+endforeach()
+
+message(STATUS "end of example creation")
 

@@ -35,6 +35,8 @@ $env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
 
 and SDL2 from vcpkg
 
+$env:PATH="C:\Users\you\programs\vcpkg\installed\x64-windows\bin;$env:PATH"
+
 ## legacy dependencies
 These are encapsulated into the dependencies directory.  
 The cmake commands are implemented in shell script wrappers in the
