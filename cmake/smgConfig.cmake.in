@@ -7,6 +7,9 @@ message(STATUS "SMG CONFIG")
 list(APPEND CMAKE_MODULE_PATH ${smg_CMAKE_DIR})
 list(REMOVE_AT CMAKE_MODULE_PATH -1)
 
+# if not building armadillo
+find_dependency(Armadillo)
+
 # SDL (should be included through magnum)
 if(OFF)
 find_dependency(SDL2)
