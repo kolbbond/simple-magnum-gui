@@ -209,14 +209,20 @@ set(mysources
     src/log.cpp
     src/Statics.cpp
 
-    # if we have armadillo
-    src/Plotter.cpp
-
     # add implot here for now
     implot/implot.cpp
     implot/implot_demo.cpp
     implot/implot_items.cpp
 )
+
+# if we have armadillo
+if(ENABLE_ARMADILLO)
+
+    set(mysources ${mysources}
+    src/Plotter.cpp
+    )
+
+endif()
 
 # for implot3d
 if(ENABLE_IMPLOT3D)
@@ -431,6 +437,7 @@ message("\n"
     "* Build static libs            : ${BUILD_STATIC_LIBS}\n"
     "* Build tests                  : ${ENABLE_TESTING}\n"
     "* Magnum                       : ${USE_MAGNUM}\n"
+    "* Armadillo                    : ${ENABLE_ARMADILLO}\n"
 )
 
 # copy of SDL2
