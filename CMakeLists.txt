@@ -164,9 +164,10 @@ add_library(smg:: ALIAS smg)
 # link them
 target_link_libraries(smg PUBLIC
     #Corrade::Main
+    OpenGL::GLX
+    Corrade::Utility
     Magnum::Application
     Magnum::GL
-    Corrade::Utility
     Magnum::Magnum
     Magnum::MeshTools
     Magnum::Primitives

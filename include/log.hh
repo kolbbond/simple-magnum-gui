@@ -48,7 +48,6 @@ protected:
 
 	// methods
 public:
-
 	// constructor
 	explicit Log();
 
@@ -56,7 +55,7 @@ public:
 	static ShLogPr create();
 
 	// virtual destructor (obligatory)
-	virtual ~Log(){};
+	virtual ~Log() {};
 
 	// only change indent
 	virtual void msg(const int incr);
@@ -65,10 +64,12 @@ public:
 	virtual void newl();
 
 	// horizontal line
+	/*
 	virtual void hline(const int width,
 		const char ch = '=',
 		const std::string& str1 = {},
 		const std::string& str2 = {});
+        */
 
 	// access to indentation
 	virtual int get_num_indent();
@@ -77,9 +78,7 @@ public:
 	virtual void set_num_indent(const int num_indent);
 
 	// cancelled flag
-	virtual bool is_cancelled() const {
-		return false;
-	}
+	virtual bool is_cancelled() const { return false; }
 
 
 	// send text to logbook
@@ -88,8 +87,7 @@ public:
 		mtx_.lock();
 
 		// create indentation
-		for(int i = 0; i < num_indent_; i++)
-			std::printf(" ");
+		for(int i = 0; i < num_indent_; i++) std::printf(" ");
 
 		// process arguments and output
 		va_list arg;
@@ -108,8 +106,7 @@ public:
 
 		// create indentation
 		if(incr != 0)
-			for(int i = 0; i < num_indent_; i++)
-				std::printf(" ");
+			for(int i = 0; i < num_indent_; i++) std::printf(" ");
 
 		// process arguments and output
 		va_list arg;
@@ -128,31 +125,29 @@ public:
 
 // null logger (no output)
 // used as a placeholder when no log is present
-	class NullLog: public Log{
-		// methods
-		public:
-			// constructor
-			NullLog(){};
+class NullLog: public Log {
+	// methods
+public:
+	// constructor
+	NullLog() {};
 
-			// factory
-			static ShLogPr create(){
-				return std::make_shared<NullLog>();
-			}
+	// factory
+	static ShLogPr create() { return std::make_shared<NullLog>(); }
 
-			// send text to logbook
-			void msg(const char*, ...)override final{} 
+	// send text to logbook
+	void msg(const char*, ...) override final {}
 
-			// send text to logbook and change indentation afterwards
-			void msg(const int, const char*, ...)override final{}
+	// send text to logbook and change indentation afterwards
+	void msg(const int, const char*, ...) override final {}
 
-			// only change indent
-			void msg(const int)override final{}
+	// only change indent
+	void msg(const int) override final {}
 
-			// new line
-			void newl()override final{}
+	// new line
+	void newl() override final {}
 
-			// access to indentation
-			int get_num_indent()override final{return 0;}
-	};
+	// access to indentation
+	int get_num_indent() override final { return 0; }
+};
 
 } // namespace smg
