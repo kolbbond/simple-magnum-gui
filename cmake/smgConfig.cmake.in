@@ -94,41 +94,6 @@ if(@ENABLE_ARMADILLO@)
     endif()
 endif()
 
-# armadillo itself
-if(NOT TARGET Arma::Armadillo)
-	add_library(Arma::Armadillo INTERFACE IMPORTED)
-	set_target_properties(Arma::Armadillo PROPERTIES
-		INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
-		INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARY}")
-
-	# disable opernmp acceleration
-	# target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
-
-	# set (n)debug flags for Armadilo
-	if(CMAKE_BUILD_TYPE STREQUAL Release)
-		message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
-		target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
-	else()
-		message(STATUS "Using Armadillo in debug mode")
-	endif()
-
-	# disable armadillo wrapper (for using custom BLAS)
-    #	if(BLAS_FOUND AND LAPACK_FOUND)
-    #		# report to user
-    #		message(STATUS "Disabling Armadillo BLAS wrapper.")
-    #		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
-    #	endif()
-    #
-    #	# disable superlu if not available
-    #    if(ENABLE_SUPERLU)
-    #        message(STATUS "Enabling Armadillo Superlu")
-    #		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
-    #    else()
-    #		message(STATUS "Disabling Armadillo SuperLU")
-    #        target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
-    #	endif()
-endif()
-
 # SDL (should be included through magnum)
 if(OFF)
 find_dependency(SDL2)

@@ -243,10 +243,10 @@ add_library(smg:: ALIAS smg)
 
 # link them
 target_link_libraries(smg PUBLIC
-    #Corrade::Main
-    OpenGL::GLX
+    #Corrade::Main # causes problem on win32 with entry points
     Corrade::Utility
     Magnum::Application
+    Magnum::Magnum
     Magnum::GL
     Magnum::Magnum
     Magnum::MeshTools
@@ -258,6 +258,13 @@ target_link_libraries(smg PUBLIC
     MagnumIntegration::ImGui
     #ImPlot::ImPlot
 )
+
+if(WIN32)
+else()
+    target_link_libraries(smg PUBLIC
+        OpenGL::GLX
+    )
+endif()
 
 if(ENABLE_ARMADILLO)
     target_link_libraries(smg PUBLIC
@@ -417,11 +424,12 @@ if(CREATE_INSTALL)
 
   # set rpaths
   set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-  list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
+  #set(CMAKE_BUILD_WITH_INSTALL_RPATH TRUE)
+  #list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
   list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
+  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
   message(STATUS "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
-  set_property(TARGET smg PROPERTY INSTALL_RPATH "${CMAKE_INSTALL_RPATH}")
+  #set_property(TARGET smg PROPERTY INSTALL_RPATH "${CMAKE_INSTALL_RPATH}")
 
   # create debian package?
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
