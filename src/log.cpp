@@ -52,14 +52,14 @@ namespace smg{
 	}
 
 	// horizontal line
-	void Log::hline(const int width, const char ch, const std::string& str1, const std::string& str2){
-		if(width<=0)return;
-		msg("%s%c",str1.c_str(),ch);
-		for(int i=0;i<width-1;i++){
-			msg(0,"%c",ch);
-		}
-		msg(0,"%s\n",str2.c_str());
-	}
-
+//	void Log::hline(const int width, const char ch, const std::string& str1, const std::string& str2){
+//		if(width<=0)return;
+//		msg("%s%c",str1.c_str(),ch);
+//		for(int i=0;i<width-1;i++){
+//			msg(0,"%c",ch);
+//		}
+//		msg(0,"%s\n",str2.c_str());
+//	}
+//
 
 }

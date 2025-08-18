@@ -122,80 +122,80 @@ find_package(MagnumIntegration REQUIRED ImGui)
 if(ENABLE_ARMADILLO)
 
 # find armadillo 
-find_package(Armadillo 12.8.0 CONFIG REQUIRED)
+    find_package(Armadillo 12.8.0 CONFIG REQUIRED)
 
 # On some systems superlu needs to be explcitly linked against
-if(ENABLE_SUPERLU)
-		if(Armadillo_VERSION VERSION_GREATER_EQUAL 14.4.0)
-				find_package(superlu)
-		else()
-				find_package(superlu EXACT 5.3.0) # before armadillo 14.4.0
-		endif()
-endif()
+    if(ENABLE_SUPERLU)
+            if(Armadillo_VERSION VERSION_GREATER_EQUAL 14.4.0)
+                    find_package(superlu)
+            else()
+                    find_package(superlu EXACT 5.3.0) # before armadillo 14.4.0
+            endif()
+    endif()
 
 # check if optimized BLAS enabled
-if(ENABLE_BLAS)
-	find_package(LAPACK REQUIRED)
-	if (NOT BLAS_FOUND)
-		find_package(BLAS REQUIRED)
-	endif()
+    if(ENABLE_BLAS)
+        find_package(LAPACK REQUIRED)
+        if (NOT BLAS_FOUND)
+            find_package(BLAS REQUIRED)
+        endif()
 
-	# create an interface for BLAS
-	if(BLAS_FOUND)
-		# message(STATUS "using blas: ${BLAS_LIBRARIES}")
-		if(NOT TARGET BLAS::BLAS)
-			add_library(BLAS::BLAS INTERFACE IMPORTED)
-			set_target_properties(BLAS::BLAS PROPERTIES
-				INTERFACE "${BLAS_LIBRARIES}")
-		endif()
-	endif()
+        # create an interface for BLAS
+        if(BLAS_FOUND)
+            # message(STATUS "using blas: ${BLAS_LIBRARIES}")
+            if(NOT TARGET BLAS::BLAS)
+                add_library(BLAS::BLAS INTERFACE IMPORTED)
+                set_target_properties(BLAS::BLAS PROPERTIES
+                    INTERFACE "${BLAS_LIBRARIES}")
+            endif()
+        endif()
 
-	# create an interface for LAPACK
-	if(LAPACK_FOUND)
-		if(NOT TARGET LAPACK::LAPACK)
-			add_library(LAPACK::LAPACK INTERFACE IMPORTED)
-			set_target_properties(LAPACK::LAPACK PROPERTIES
-				INTERFACE "${LAPACK_LIBRARIES}")
-		endif()
-	endif()
-endif()
+        # create an interface for LAPACK
+        if(LAPACK_FOUND)
+            if(NOT TARGET LAPACK::LAPACK)
+                add_library(LAPACK::LAPACK INTERFACE IMPORTED)
+                set_target_properties(LAPACK::LAPACK PROPERTIES
+                    INTERFACE "${LAPACK_LIBRARIES}")
+            endif()
+        endif()
+    endif()
 
 # find armadillo library
-if(NOT TARGET Arma::Armadillo)
-	# create target
-	add_library(Arma::Armadillo INTERFACE IMPORTED)
-	set_target_properties(Arma::Armadillo PROPERTIES
-		INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
-		INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
+    if(NOT TARGET Arma::Armadillo)
+        # create target
+        add_library(Arma::Armadillo INTERFACE IMPORTED)
+        set_target_properties(Arma::Armadillo PROPERTIES
+            INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
+            INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
 
-	# disable opernmp acceleration
-	# target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
-	# target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_HDF5)
+        # disable opernmp acceleration
+        # target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
+        # target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_HDF5)
 
-	# set (n)debug flags for Armadilo
-	if(CMAKE_BUILD_TYPE STREQUAL Release)
-		message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
-		target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
-	else()
-		message(STATUS "Using Armadillo in debug mode")
-	endif()
+        # set (n)debug flags for Armadilo
+        if(CMAKE_BUILD_TYPE STREQUAL Release)
+            message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
+        else()
+            message(STATUS "Using Armadillo in debug mode")
+        endif()
 
-	# disable armadillo wrapper (for using custom BLAS)
-	if(BLAS_FOUND AND LAPACK_FOUND)
-		# report to user
-		message(STATUS "Disabling Armadillo blas wrapper")
-		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
-	endif()
+        # disable armadillo wrapper (for using custom BLAS)
+        if(BLAS_FOUND AND LAPACK_FOUND)
+            # report to user
+            message(STATUS "Disabling Armadillo blas wrapper")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
+        endif()
 
-	# disable superlu if not available
-	if(superlu_FOUND)
-		message(STATUS "Enabling Superlu")
-		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
-	else()
-		message(STATUS "Disabling Armadillo SuperLU")
-		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
-	endif()
-endif()
+        # disable superlu if not available
+        if(superlu_FOUND)
+            message(STATUS "Enabling Superlu")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
+        else()
+            message(STATUS "Disabling Armadillo SuperLU")
+            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
+        endif()
+    endif()
 
 endif()
 
