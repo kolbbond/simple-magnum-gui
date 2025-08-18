@@ -13,12 +13,15 @@ message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
 #option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
+option(ENABLE_BLAS "build with optimized BLAS library" ON)
+option(ENABLE_SUPERLU "link with superlu" ON)
 option(ENABLE_ARMADILLO "build with armadillo" ON)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
 option(CREATE_INSTALL "install into general system dir" ON)
 option(FLAG_DEBUG "include debug scripts" OFF)
+
 
 # we are going to transition to just using Magnum
 # right now just magnum works
@@ -34,6 +37,11 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake"
 # set export commands for clangd and color
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
+
+# Set the default build type if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+endif()
 
 # if using bundled dependencies
 # additional prefix paths
@@ -113,15 +121,82 @@ find_package(MagnumIntegration REQUIRED ImGui)
 
 # @hey: armadillo is required but this is an option
 if(ENABLE_ARMADILLO)
+
+# find armadillo 
+find_package(Armadillo 12.8.0 CONFIG REQUIRED)
+
+# On some systems superlu needs to be explcitly linked against
+if(ENABLE_SUPERLU)
+		if(Armadillo_VERSION VERSION_GREATER_EQUAL 14.4.0)
+				find_package(superlu)
+		else()
+				find_package(superlu EXACT 5.3.0) # before armadillo 14.4.0
+		endif()
+endif()
+
+# check if optimized BLAS enabled
+if(ENABLE_BLAS)
+	find_package(LAPACK REQUIRED)
+	if (NOT BLAS_FOUND)
+		find_package(BLAS REQUIRED)
+	endif()
+
+	# create an interface for BLAS
+	if(BLAS_FOUND)
+		# message(STATUS "using blas: ${BLAS_LIBRARIES}")
+		if(NOT TARGET BLAS::BLAS)
+			add_library(BLAS::BLAS INTERFACE IMPORTED)
+			set_target_properties(BLAS::BLAS PROPERTIES
+				INTERFACE "${BLAS_LIBRARIES}")
+		endif()
+	endif()
+
+	# create an interface for LAPACK
+	if(LAPACK_FOUND)
+		if(NOT TARGET LAPACK::LAPACK)
+			add_library(LAPACK::LAPACK INTERFACE IMPORTED)
+			set_target_properties(LAPACK::LAPACK PROPERTIES
+				INTERFACE "${LAPACK_LIBRARIES}")
+		endif()
+	endif()
+endif()
+
 # find armadillo library
-    find_package(Armadillo 14.0.0 REQUIRED)
-    if(NOT TARGET Arma::Armadillo)
-        # create target
-        add_library(Arma::Armadillo INTERFACE IMPORTED)
-        set_target_properties(Arma::Armadillo PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
-            INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARY}")
-    endif()
+if(NOT TARGET Arma::Armadillo)
+	# create target
+	add_library(Arma::Armadillo INTERFACE IMPORTED)
+	set_target_properties(Arma::Armadillo PROPERTIES
+		INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
+		INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
+
+	# disable opernmp acceleration
+	# target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
+	# target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_HDF5)
+
+	# set (n)debug flags for Armadilo
+	if(CMAKE_BUILD_TYPE STREQUAL Release)
+		message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
+		target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
+	else()
+		message(STATUS "Using Armadillo in debug mode")
+	endif()
+
+	# disable armadillo wrapper (for using custom BLAS)
+	if(BLAS_FOUND AND LAPACK_FOUND)
+		# report to user
+		message(STATUS "Disabling Armadillo blas wrapper")
+		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
+	endif()
+
+	# disable superlu if not available
+	if(superlu_FOUND)
+		message(STATUS "Enabling Superlu")
+		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
+	else()
+		message(STATUS "Disabling Armadillo SuperLU")
+		target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
+	endif()
+endif()
 
 endif()
 
@@ -134,14 +209,20 @@ set(mysources
     src/log.cpp
     src/Statics.cpp
 
-    # if we have armadillo
-    src/Plotter.cpp
-
     # add implot here for now
     implot/implot.cpp
     implot/implot_demo.cpp
     implot/implot_items.cpp
 )
+
+# if we have armadillo
+if(ENABLE_ARMADILLO)
+
+    set(mysources ${mysources}
+    src/Plotter.cpp
+    )
+
+endif()
 
 # for implot3d
 if(ENABLE_IMPLOT3D)
@@ -357,6 +438,7 @@ message("\n"
     "* Build static libs            : ${BUILD_STATIC_LIBS}\n"
     "* Build tests                  : ${ENABLE_TESTING}\n"
     "* Magnum                       : ${USE_MAGNUM}\n"
+    "* Armadillo                    : ${ENABLE_ARMADILLO}\n"
 )
 
 # copy of SDL2
