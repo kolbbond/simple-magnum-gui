@@ -4,9 +4,41 @@
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
-	: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
+	//: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
+	: Platform::Application{ arguments, NoCreate } {
 
+
+	// configuration for multisampling
+	Configuration conf;
+	conf.setWindowFlags(Configuration::WindowFlag::Resizable);
+	conf.setTitle("GuiBase");
 	setWindowTitle("GuiBase");
+	GLConfiguration glConf;
+	glConf.setSampleCount(4); // 4x MSAA
+
+	// create window here
+	if(!tryCreate(conf, glConf)) {
+		std::cerr << "Failed to create window with MSAA!" << std::endl;
+
+		// fallback
+		if(!tryCreate(conf, glConf.setSampleCount(0))) {
+			std::cerr << "Failed to create window without MSAA!" << std::endl;
+			std::exit(1);
+		}
+	}
+
+	// check properties
+	GLint glSampleBuffers = 0, glSamples = 0, glMaxSamples = 0;
+	glGetIntegerv(GL_SAMPLE_BUFFERS, &glSampleBuffers); // 1 means MSAA buffer exists
+	glGetIntegerv(GL_SAMPLES, &glSamples); // sample count (e.g., 2 or 4)
+	glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound
+
+	Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples << "GL_MAX_SAMPLES =" << glMaxSamples;
+
+	int sdlBuf = 0, sdlSamp = 0;
+	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &sdlBuf);
+	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &sdlSamp);
+	std::printf("SDL: MULTISAMPLEBUFFERS=%d MULTISAMPLESAMPLES=%d\n", sdlBuf, sdlSamp);
 
 	// create a log?
 	_lg = Log::create();

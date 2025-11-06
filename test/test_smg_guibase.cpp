@@ -70,8 +70,12 @@ int main(int argc, char** argv) {
         printf("loop iteration\n");
 		done = !gui.mainLoopIteration();
 
-        // done is true for the test
-        done=true;
+		// check for gui to allow manual override
+		if(argc == 2 && strcmp(argv[1], "-g") == 0) {
+			done = false;
+		} else {
+			done = true;
+		}
 	}
 
 	// exit
