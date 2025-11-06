@@ -16,8 +16,8 @@ MAGNUM_SHA256 873e28fb4b6327e57c318ce2263d4e530338e25a417b2ff0a8d14dda918ea994
 MAGNUMPLUGINS_URL https://github.com/mosra/magnum-plugins/archive/cdc7b46923a2217b7941df257a077497cd9c36b2.zip 
 MAGNUMPLUGINS_SHA256 8c6977a2efe982e7b008b1597f0e152f8ae732ee9b1172b8fb482ecfd4dd84d5 
 
-MAGNUMINTEGRATION_URL https://github.com/mosra/magnum-integration/archive/4a3733e1473c4b53688d044cd1ba26b50154388e.zip 
-MAGNUMINTEGRATION_SHA256 eabef36d7698a383e8221bb5832b496ce7008bc3d53f2ecf605261fdfda0a754 
+MAGNUMINTEGRATION_URL https://github.com/mosra/magnum-integration/archive/30d179f341eafb2b69d9c29d9b7af2b736122786.zip 
+MAGNUMINTEGRATION_SHA256 a45e129ec2c9c77198bab8a9beaaa8812a67cb5dfe58c3cc85d24433c55f8a67 
 
 IMGUI_URL https://github.com/ocornut/imgui/archive/refs/tags/v1.91.9.zip 
 IMGUI_SHA256 873e28fb4b6327e57c318ce2263d4e530338e25a417b2ff0a8d14dda918ea994 

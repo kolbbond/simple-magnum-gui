@@ -12,10 +12,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 message(STATUS "starting cmake generation: " ${PROJECT_NAME})
 
 # switchboard
-#option(BUILD_DEPENDENCIES "build dependencies and install" OFF)
+option(USE_BUNDLED_DEPS "use bundled dependencies from cmake.deps" ON)
 option(ENABLE_BLAS "build with optimized BLAS library" ON)
 option(ENABLE_SUPERLU "link with superlu" ON)
-option(ENABLE_ARMADILLO "build with armadillo" ON)
+option(ENABLE_ARMADILLO "build with armadillo" OFF)
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
@@ -45,17 +45,19 @@ endif()
 
 # if using bundled dependencies
 # additional prefix paths
-if(DEFINED ENV{SMG_BUILD_DIR})
-  set(SMG_PREFIX "$ENV{SMG_BUILD_DIR}/usr" CACHE PATH "Path prefix for finding dependencies")
-else()
-  set(SMG_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+if(USE_BUNDLED_DEPS)
+    if(DEFINED ENV{SMG_BUILD_DIR})
+      set(SMG_PREFIX "$ENV{SMG_BUILD_DIR}/usr" CACHE PATH "Path prefix for finding dependencies")
+    else()
+      set(SMG_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
+    endif()
+#list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
+    list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
+    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/bin/")
+    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/include/")
 endif()
 
-#list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
-list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
-list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}")
-list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/bin/")
-list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/include/")
 
 message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
 
@@ -87,13 +89,10 @@ endif()
 
 # output paths
 if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
-	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/bin CACHE PATH "" FORCE)
-	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
-	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/${CMAKE_BUILD_TYPE}/lib CACHE PATH "" FORCE)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin CACHE PATH "" FORCE)
+    set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
+    set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
 endif()
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin CACHE PATH "" FORCE)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
-set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
 
 message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 
