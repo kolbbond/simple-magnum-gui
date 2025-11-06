@@ -1,5 +1,6 @@
 #include "GuiBase.hh"
 #include "Magnum/Math/Time.h"
+#include <imgui.h>
 
 namespace smg {
 
@@ -11,10 +12,11 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// configuration for multisampling
 	Configuration conf;
 	conf.setWindowFlags(Configuration::WindowFlag::Resizable);
+	conf.setWindowFlags(Configuration::WindowFlag::Maximized);
 	conf.setTitle("GuiBase");
 	setWindowTitle("GuiBase");
 	GLConfiguration glConf;
-	glConf.setSampleCount(4); // 4x MSAA
+	glConf.setSampleCount(_samples); // 4x MSAA
 
 	// create window here
 	if(!tryCreate(conf, glConf)) {
@@ -84,31 +86,52 @@ GuiBase::GuiBase(const Arguments& arguments)
 	//       add additional pixels
 	//      add additional fonts (nerdfonts)? JetBrainsMono atleast
 	Containers::ArrayView<const char> font;
-
-	// Containers::Pointer<Text::AbstractFont> _font;
-
-	double num_pixels = 14.0f;
-
-	std::vector<std::string> font_names = {
-		"Roboto-Medium.ttf", "SourceSansPro-Regular.ttf", "DroidSans.ttf", "Cousine-Regular.ttf", "Karla-Regular.ttf"
-	};
+	double num_pixels = 18.0f;
+	std::vector<std::string> font_names = { "Roboto-Medium.ttf",
+		"SourceSansPro-Regular.ttf",
+		"DroidSans.ttf",
+		"Cousine-Regular.ttf",
+		"Karla-Regular.ttf",
+		"JetBrainsMonoNerdFont-Regular.ttf" };
 
 	// each font
-	printf("adding fonts\n");
+	printf("Adding Fonts\n");
+	ImGuiIO& io = ImGui::GetIO();
 	for(size_t i = 0; i < font_names.size(); i++) {
 		ImFontConfig font_cfg;
 		font_cfg.FontDataOwnedByAtlas = false;
 		font = Utility::Resource{ "font" }.getRaw(font_names[i].c_str());
 		snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
-		ImGui::GetIO().Fonts->AddFontFromMemoryTTF(const_cast<char*>(font.data()),
+		ImFont* myfont = io.Fonts->AddFontFromMemoryTTF(const_cast<char*>(font.data()),
 			static_cast<int>(font.size()),
 			num_pixels * framebufferSize().x() / static_cast<int>(size.x()),
 			&font_cfg);
+		_fonts.push_back(myfont);
+		_fontData.push_back(font);
 	}
 
 	// loaded fonts
+	_font_default = _fonts[5];
+	io.FontDefault = _font_default;
 
-	_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.FrameRounding = 8.0f;
+	style.WindowRounding = 8.0f;
+
+	// set custom colorscheme
+	// transparent
+	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.2f, 0.2f, 0.2f, 0.2f);
+
+	// blue buttons
+	style.Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.4f, 0.7f, 1.0f);
+
+	// lighter blue on hover
+	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.5f, 1.0f, 1.0f);
+
+	// create magnum imgui context
+	//_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+	_imgui =
+		ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
 	// create a context for implot
 	// might need to connect to imgui but idk
@@ -133,6 +156,11 @@ void GuiBase::drawBegin() {
 
 	// start a new frame
 	_imgui.newFrame();
+
+	// set default font
+	ImGuiIO& io = ImGui::GetIO();
+	//_font_default = _fonts[0];
+	//io.FontDefault = _font_default;
 
 	/* Enable text input, if needed */
 	// get the input

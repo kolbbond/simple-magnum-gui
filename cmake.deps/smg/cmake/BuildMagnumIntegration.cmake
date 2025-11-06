@@ -19,10 +19,6 @@ set(imgui_path "${DEPS_BUILD_DIR}/src/magnumintegration/src/MagnumExternal/ImGui
 
 set(my_configure_command "${CMAKE_COMMAND} -S ${DEPS_BUILD_DIR}/src/magnumintegration -B ${DEPS_BUILD_DIR}/build/magnumintegration ${DEPS_CMAKE_ARGS} ${magnumintegration_CMAKE_ARGS}")
 
-#message(WARNING ${my_configure_command})
-#message(STATUS "DEPS_CMAKE_ARGS: ${DEPS_CMAKE_ARGS}")
-#message(STATUS "magnumintegration_CMAKE_ARGS: ${magnumintegration_CMAKE_ARGS}")
-
 get_externalproject_options(magnumintegration ${DEPS_IGNORE_SHA})
 ExternalProject_Add(magnumintegration
   DOWNLOAD_DIR ${DEPS_DOWNLOAD_DIR}/magnumintegration

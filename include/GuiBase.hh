@@ -46,6 +46,13 @@ protected:
 	Color4 _clearColor = 0x72909aff_rgbaf;
 	Float _floatValue = 0.0f;
 
+	int _samples = 4; // MSAA samples
+
+	// font setting
+	std::vector<Containers::ArrayView<const char>> _fontData;
+	std::vector<ImFont*> _fonts;
+	ImFont* _font_default = nullptr;
+
 	// list of set callbacks
 	std::vector<ShDrawCallbackPr> _callback_list;
 
