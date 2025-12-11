@@ -1,22 +1,26 @@
 // main gui class
 #pragma once
 
+#include <tuple>
+#include <vector>
+
 // magnum includes
+#include <Magnum/Magnum.h>
 #include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Shaders/VertexColorGL.h>
+#include <Magnum/Image.h>
+#include <Magnum/Trade/ImageData.h>
+#include <Magnum/Trade/Trade.h>
 
-#include <tuple>
-#include <vector>
 #include "log.hh"
 
 #include "SDL_video.h"
 #include "imgui.h"
 #include "log.hh"
-#include <Magnum/Magnum.h>
 
 // smg includes
 #include "DrawCallback.hh"
@@ -53,6 +57,9 @@ protected:
 	std::vector<ImFont*> _fonts;
 	ImFont* _font_default = nullptr;
 
+	// icon settings
+	Containers::Optional<Trade::ImageData2D> _icon;
+
 	// list of set callbacks
 	std::vector<ShDrawCallbackPr> _callback_list;
 
@@ -88,6 +95,7 @@ public:
 	// getters
 	SDL_Window* get_window();
 	std::pair<int, int> get_window_position();
+	void set_window_icon(std::string icon_file);
 	void set_window_position(int x, int y);
 	void set_window_size(int x, int y);
 

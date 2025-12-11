@@ -233,10 +233,16 @@ if(ENABLE_IMPLOT3D)
 endif()
 
 # fonts 
-corrade_add_resource(smg_RESOURCES "assets/resources.conf")
+corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
+corrade_add_resource(smg_RESOURCE_images "assets/resource_images.conf")
 
 # make our library (shared or static?)
-add_library(smg SHARED ${mysources} ${smg_RESOURCES})
+add_library(smg SHARED 
+    ${mysources} 
+    ${smg_RESOURCE_fonts}
+    ${smg_RESOURCE_images}
+)
+
 add_library(smg::smg ALIAS smg)
 add_library(smg:: ALIAS smg)
 

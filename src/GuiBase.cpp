@@ -1,6 +1,13 @@
-#include "GuiBase.hh"
-#include "Magnum/Math/Time.h"
+#include <Magnum/Trade/Trade.h>
 #include <imgui.h>
+#include <Magnum/Math/Time.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/Platform/Sdl2Application.h>
+#include <Magnum/ImageView.h>
+#include <Magnum/PixelFormat.h>
+#include <Magnum/Trade/AbstractImporter.h>
+
+#include "GuiBase.hh"
 
 namespace smg {
 
@@ -59,6 +66,28 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// get the created window and override the position
 	_window = Platform::Sdl2Application::window();
 	SDL_SetWindowPosition(_window, 0, 0);
+
+	// load window icon
+	// get raw icon data from resources
+	Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
+	if(rawData.isEmpty()) {
+		Error() << "Failed to load raw icon data from resource 'smg.jpg'.";
+		return;
+	}
+
+	// importer plugin
+	PluginManager::Manager<Trade::AbstractImporter> manager;
+	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
+	if(!importer || !importer->openData(rawData)) Fatal{} << "Can't open data with AnyImageImporter";
+
+	Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+	if(!image) Fatal{} << "Importing the image failed";
+	_icon = importer->image2D(0);
+	if(!_icon) Fatal{} << "Importing the image failed";
+	if(_icon) {
+		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+		Platform::Sdl2Application::setWindowIcon(icon_view);
+	}
 
 	// start an imgui context
 	printf("Creating imgui context\n");
@@ -164,9 +193,9 @@ void GuiBase::drawBegin() {
 
 	/* Enable text input, if needed */
 	// get the input
-	if(ImGui::GetIO().WantTextInput && !isTextInputActive())
+	if(io.WantTextInput && !isTextInputActive())
 		startTextInput();
-	else if(!ImGui::GetIO().WantTextInput && isTextInputActive())
+	else if(!io.WantTextInput && isTextInputActive())
 		stopTextInput();
 
 	/* Update application cursor */
@@ -279,6 +308,25 @@ void GuiBase::draw_callbacks() {
 }
 
 // setters
+void GuiBase::set_window_icon(std::string icon_file) {
+
+	// importer plugin
+	PluginManager::Manager<Trade::AbstractImporter> manager;
+	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
+	if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
+
+	// load image
+	//Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+	//if(!image) Fatal{} << "Importing the image failed";
+	_icon = importer->image2D(0);
+	if(!_icon) Fatal{} << "Importing the image failed";
+	if(_icon) {
+		// 5. Create an ImageView2D from the decoded data.
+		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+		Platform::Sdl2Application::setWindowIcon(icon_view);
+	}
+}
+
 void GuiBase::set_window_position(int x, int y) {
 	//
 	SDL_SetWindowPosition(_window, x, y);
