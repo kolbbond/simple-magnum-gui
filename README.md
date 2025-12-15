@@ -3,6 +3,8 @@
 A simple gui to generate a window and allow plotting.
 Great for quick debugging and drawing of data. 
 
+![smg example](assets/smg_example.png)
+
 Magnum gives easy opengl support.
 
 Make sure to clone the submodules too.

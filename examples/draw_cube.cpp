@@ -47,7 +47,7 @@ int callback_fun(void* indata) {
 
 	static bool hidden = false;
 
-	ImGui::Begin("hey mom");
+	ImGui::Begin("Hello Window");
 	ImGui::Text("my message is: %s", mydata->name.c_str());
 
 	// check buttons
