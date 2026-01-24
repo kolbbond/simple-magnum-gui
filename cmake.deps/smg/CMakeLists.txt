@@ -29,3 +29,33 @@ if(USE_BUNDLED_MAGNUM)
     include(BuildMagnumIntegration)
 endif()
 
+# Install built SMG dependencies (Corrade, Magnum, MagnumPlugins, MagnumIntegration)
+# to the final install prefix so consuming projects can find them via find_package()
+# DEPS_INSTALL_DIR is inherited from parent cmake.deps/CMakeLists.txt
+if(NOT DEFINED DEPS_INSTALL_DIR)
+    # Fallback if not defined (shouldn't happen when built via cmake.deps)
+    set(DEPS_INSTALL_DIR "${CMAKE_BINARY_DIR}/../usr")
+endif()
+message(STATUS "SMG deps will install from: ${DEPS_INSTALL_DIR}")
+
+install(DIRECTORY ${DEPS_INSTALL_DIR}/bin/
+    DESTINATION bin
+    USE_SOURCE_PERMISSIONS
+    OPTIONAL
+)
+install(DIRECTORY ${DEPS_INSTALL_DIR}/lib/
+    DESTINATION lib
+    USE_SOURCE_PERMISSIONS
+    OPTIONAL
+)
+install(DIRECTORY ${DEPS_INSTALL_DIR}/include/
+    DESTINATION include
+    USE_SOURCE_PERMISSIONS
+    OPTIONAL
+)
+install(DIRECTORY ${DEPS_INSTALL_DIR}/share/
+    DESTINATION share
+    USE_SOURCE_PERMISSIONS
+    OPTIONAL
+)
+
