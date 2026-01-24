@@ -57,12 +57,44 @@ if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
 endif()
 
-# Build external dependencies (Corrade, Magnum, Magnum-Integration)
-add_subdirectory(external)
+# Option to use system-installed dependencies instead of building from source
+# This is required for CREATE_INSTALL to work, as we can't export subdirectory targets
+option(USE_SYSTEM_MAGNUM "Use system-installed Magnum/Corrade instead of building from source" OFF)
 
-# ImPlot paths (from external/)
-set(SMG_IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot")
-set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
+if(USE_SYSTEM_MAGNUM)
+    # Find system packages
+    find_package(Corrade REQUIRED Utility PluginManager)
+    find_package(Magnum REQUIRED
+        GL
+        MeshTools
+        Primitives
+        Shaders
+        Trade
+        Text
+        Sdl2Application)
+    find_package(MagnumIntegration REQUIRED ImGui)
+
+    # ImPlot paths (still from our external/ since they're header-only style)
+    set(SMG_IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot")
+    set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
+else()
+    # Build external dependencies (Corrade, Magnum, Magnum-Integration)
+    add_subdirectory(external)
+
+    # When building dependencies from source, we can't install
+    if(CREATE_INSTALL)
+        message(WARNING "CREATE_INSTALL requires USE_SYSTEM_MAGNUM=ON. Disabling install.")
+        set(CREATE_INSTALL OFF)
+    endif()
+endif()
+
+# ImPlot paths (from external/ - set if not already set by external/CMakeLists.txt)
+if(NOT DEFINED SMG_IMPLOT_DIR)
+    set(SMG_IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot")
+endif()
+if(NOT DEFINED SMG_IMPLOT3D_DIR)
+    set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
+endif()
 
 # Sources
 set(smg_sources
