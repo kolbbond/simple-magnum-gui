@@ -5,7 +5,7 @@
       "name": "base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
-      "hidden": true
+      "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
       },

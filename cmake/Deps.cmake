@@ -2,7 +2,6 @@ set(DEPS_INSTALL_DIR "${CMAKE_BINARY_DIR}/usr")
 set(DEPS_BIN_DIR "${DEPS_INSTALL_DIR}/bin")
 set(DEPS_LIB_DIR "${DEPS_INSTALL_DIR}/lib")
 
-
 set(DEPS_SHARE_DIR "${DEPS_INSTALL_DIR}/share/lua/5.1")
 
 set(DEPS_BUILD_DIR "${CMAKE_BINARY_DIR}/build")
@@ -58,31 +57,22 @@ if(CMAKE_OSX_SYSROOT)
   set(DEPS_C_COMPILER "${DEPS_C_COMPILER} -isysroot${CMAKE_OSX_SYSROOT}")
 endif()
 
+# Load dependency URLs and hashes from Dependencies.cmake
 get_filename_component(rootdir ${PROJECT_SOURCE_DIR} NAME)
 if(${rootdir} MATCHES "cmake.deps")
-  set(depsfile ${PROJECT_SOURCE_DIR}/deps.txt)
+  set(DEPS_CMAKE_DIR ${PROJECT_SOURCE_DIR}/cmake)
 else()
-  set(depsfile ${PROJECT_SOURCE_DIR}/../cmake.deps/deps.txt)
+  set(DEPS_CMAKE_DIR ${PROJECT_SOURCE_DIR}/../cmake.deps/cmake)
 endif()
 
 set_directory_properties(PROPERTIES
   EP_PREFIX "${DEPS_BUILD_DIR}"
-  CMAKE_CONFIGURE_DEPENDS ${depsfile})
+  CMAKE_CONFIGURE_DEPENDS ${DEPS_CMAKE_DIR}/Dependencies.cmake)
 
-file(READ ${depsfile} DEPENDENCIES)
-STRING(REGEX REPLACE "\n" ";" DEPENDENCIES "${DEPENDENCIES}")
-foreach(dep ${DEPENDENCIES})
-  STRING(REGEX REPLACE " " ";" dep "${dep}")
-  list(GET dep 0 name)
-  list(GET dep 1 value)
-  if(NOT ${name})
-    # _URL variables must NOT be set when USE_EXISTING_SRC_DIR is set,
-    # otherwise ExternalProject will try to re-download the sources.
-    if(NOT USE_EXISTING_SRC_DIR)
-      set(${name} ${value})
-    endif()
-  endif()
-endforeach()
+# Include dependency definitions (URLs and SHA256 hashes)
+if(NOT USE_EXISTING_SRC_DIR)
+  include(${DEPS_CMAKE_DIR}/Dependencies.cmake)
+endif()
 
 function(get_externalproject_options name DEPS_IGNORE_SHA)
   string(TOUPPER ${name} name_allcaps)
