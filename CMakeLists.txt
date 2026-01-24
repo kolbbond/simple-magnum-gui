@@ -221,32 +221,33 @@ if(ENABLE_IMPLOT3D)
     )
 endif()
 
-# Export/config files only when using system packages
-# (when building from source, dependencies aren't in our export set)
+# Generate and install config files (always)
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
+
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
+    INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
+)
+
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
+    DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Export targets - only works when using system packages
+# (when building from source, dependency targets aren't in our export set)
 if(USE_SYSTEM_MAGNUM)
     install(EXPORT smg-targets
         FILE smgTargets.cmake
         NAMESPACE smg::
-        DESTINATION ${INSTALL_CONFIGDIR}
-    )
-
-    include(CMakePackageConfigHelpers)
-    write_basic_package_version_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
-        VERSION ${PROJECT_VERSION}
-        COMPATIBILITY AnyNewerVersion
-    )
-
-    configure_package_config_file(
-        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgConfig.cmake.in
-        ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
-        INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
-        PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
-    )
-
-    install(FILES
-        ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
-        ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
         DESTINATION ${INSTALL_CONFIGDIR}
     )
 
