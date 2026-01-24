@@ -15,13 +15,19 @@ set(MAGNUM_WITH_TEXT ON CACHE BOOL "" FORCE)
 set(MAGNUM_WITH_MAGNUMFONT ON CACHE BOOL "" FORCE)
 set(MAGNUM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
+# Magnum Plugins options
+set(MAGNUM_WITH_ANYIMAGEIMPORTER ON CACHE BOOL "" FORCE)
+set(MAGNUM_WITH_STBIMAGEIMPORTER ON CACHE BOOL "" FORCE)
+set(MAGNUM_BUILD_PLUGINS_STATIC OFF CACHE BOOL "" FORCE)
+set(MAGNUM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+
 # Magnum Integration options (imgui is a submodule inside magnum-integration)
 set(MAGNUM_WITH_IMGUI ON CACHE BOOL "" FORCE)
-set(MAGNUM_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 
 # Build in order
 add_subdirectory(corrade)
 add_subdirectory(magnum)
+add_subdirectory(magnum-plugins)
 add_subdirectory(magnum-integration)
 
 # ImPlot/ImPlot3D don't have CMakeLists - sources are included directly by smg
