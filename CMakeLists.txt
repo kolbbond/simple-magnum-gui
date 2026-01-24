@@ -16,13 +16,6 @@ option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build with ImPlot3D" ON)
 
-# Install only makes sense when building standalone (not as subdirectory)
-# because we can't export targets that depend on non-exported subdirectory targets
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-    option(CREATE_INSTALL "install into system dir" ON)
-else()
-    set(CREATE_INSTALL OFF)
-endif()
 
 # Module path
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
@@ -58,7 +51,6 @@ if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
 endif()
 
 # Option to use system-installed dependencies instead of building from source
-# This is required for CREATE_INSTALL to work, as we can't export subdirectory targets
 option(USE_SYSTEM_MAGNUM "Use system-installed Magnum/Corrade instead of building from source" OFF)
 
 if(USE_SYSTEM_MAGNUM)
@@ -79,13 +71,8 @@ if(USE_SYSTEM_MAGNUM)
     set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
 else()
     # Build external dependencies (Corrade, Magnum, Magnum-Integration)
+    # These have their own install rules and will be installed alongside smg
     add_subdirectory(external)
-
-    # When building dependencies from source, we can't install
-    if(CREATE_INSTALL)
-        message(WARNING "CREATE_INSTALL requires USE_SYSTEM_MAGNUM=ON. Disabling install.")
-        set(CREATE_INSTALL OFF)
-    endif()
 endif()
 
 # ImPlot paths (from external/ - set if not already set by external/CMakeLists.txt)
@@ -195,35 +182,48 @@ if(ENABLE_EXAMPLES)
 endif()
 
 # Installation
-if(CREATE_INSTALL)
-    include(GNUInstallDirs)
-    set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/smg)
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/smg)
 
+# Install the library target
+# When building dependencies from source, we can't export targets that reference
+# non-exported dependency targets. Only create export set with system packages.
+if(USE_SYSTEM_MAGNUM)
     install(TARGETS smg
         EXPORT smg-targets
         LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
         ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
         RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     )
-
     set_target_properties(smg PROPERTIES EXPORT_NAME smg)
+else()
+    install(TARGETS smg
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()
 
-    install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
-    install(FILES
-        ${CMAKE_BINARY_DIR}/include/version.hh
-        ${CMAKE_BINARY_DIR}/include/smg.hh
+# Install headers (always)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+install(FILES
+    ${CMAKE_BINARY_DIR}/include/version.hh
+    ${CMAKE_BINARY_DIR}/include/smg.hh
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+)
+install(FILES ${SMG_IMPLOT_DIR}/implot.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+)
+
+if(ENABLE_IMPLOT3D)
+    install(FILES ${SMG_IMPLOT3D_DIR}/implot3d.h
         DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
     )
-    install(FILES ${SMG_IMPLOT_DIR}/implot.h
-        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
-    )
+endif()
 
-    if(ENABLE_IMPLOT3D)
-        install(FILES ${SMG_IMPLOT3D_DIR}/implot3d.h
-            DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
-        )
-    endif()
-
+# Export/config files only when using system packages
+# (when building from source, dependencies aren't in our export set)
+if(USE_SYSTEM_MAGNUM)
     install(EXPORT smg-targets
         FILE smgTargets.cmake
         NAMESPACE smg::
