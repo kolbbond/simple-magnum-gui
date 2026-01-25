@@ -19,7 +19,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// configuration for multisampling
 	Configuration conf;
 	conf.setWindowFlags(Configuration::WindowFlag::Resizable);
-	conf.setWindowFlags(Configuration::WindowFlag::Maximized);
+	conf.setSize({1600, 1000});
 	conf.setTitle("GuiBase");
 	setWindowTitle("GuiBase");
 	GLConfiguration glConf;
