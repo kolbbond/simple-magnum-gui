@@ -3,9 +3,14 @@ include(CMakeFindDependencyMacro)
 
 message(STATUS "SMG CONFIG")
 
-# add path
-list(APPEND CMAKE_MODULE_PATH ${smg_CMAKE_DIR})
-list(REMOVE_AT CMAKE_MODULE_PATH -1)
+# Compute prefix path for finding dependencies
+get_filename_component(_SMG_PREFIX "${smg_CMAKE_DIR}" PATH)  # up from lib/cmake/smg
+get_filename_component(_SMG_PREFIX "${_SMG_PREFIX}" PATH)    # up from lib/cmake
+get_filename_component(_SMG_PREFIX "${_SMG_PREFIX}" PATH)    # up from lib
+
+# Add module paths for finding ImGui and other dependencies
+list(APPEND CMAKE_MODULE_PATH "${smg_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${_SMG_PREFIX}/share/cmake/MagnumIntegration/dependencies")
 
 # posix threads
 #    find_dependency(Threads)
