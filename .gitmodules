@@ -13,6 +13,7 @@
 [submodule "external/magnum-integration"]
 	path = external/magnum-integration
 	url = https://github.com/kolbbond/magnum-integration.git
+	branch = docking
 [submodule "external/magnum-plugins"]
 	path = external/magnum-plugins
 	url = https://github.com/mosra/magnum-plugins.git
