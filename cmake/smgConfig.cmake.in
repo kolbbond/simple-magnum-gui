@@ -12,9 +12,6 @@ get_filename_component(_SMG_PREFIX "${_SMG_PREFIX}" PATH)    # up from lib
 list(APPEND CMAKE_MODULE_PATH "${smg_CMAKE_DIR}")
 list(APPEND CMAKE_MODULE_PATH "${_SMG_PREFIX}/share/cmake/MagnumIntegration/dependencies")
 
-# posix threads
-#    find_dependency(Threads)
-
 # find armadillo 
 if(@ENABLE_ARMADILLO@)
         find_dependency(Armadillo CONFIG REQUIRED)
@@ -159,6 +156,14 @@ if(NOT TARGET smg)
     # include definitions
     include("${smg_CMAKE_DIR}/smgTargets.cmake")
 
+    # On Linux with GLVND, explicitly link GLX for Sdl2Application
+    if(UNIX AND NOT APPLE)
+        find_package(OpenGL COMPONENTS GLX)
+        if(TARGET OpenGL::GLX AND TARGET smg::smg)
+            set_property(TARGET smg::smg APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES OpenGL::GLX)
+        endif()
+    endif()
 endif()
 set(smg_LIBRARIES smg)
 

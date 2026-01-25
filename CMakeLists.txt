@@ -132,11 +132,6 @@ target_link_libraries(smg PUBLIC
     MagnumIntegration::ImGui
 )
 
-if(UNIX AND NOT APPLE)
-    find_package(OpenGL REQUIRED)
-    target_link_libraries(smg PUBLIC OpenGL::GLX)
-endif()
-
 # Include directories
 target_include_directories(smg
     PUBLIC
