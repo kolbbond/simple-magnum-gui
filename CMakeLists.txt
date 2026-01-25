@@ -242,9 +242,9 @@ install(FILES
     DESTINATION ${INSTALL_CONFIGDIR}
 )
 
-# Export targets - only works when using system packages
-# (when building from source, dependency targets aren't in our export set)
+# Export targets
 if(USE_SYSTEM_MAGNUM)
+    # Use CMake's export mechanism when deps are imported targets
     install(EXPORT smg-targets
         FILE smgTargets.cmake
         NAMESPACE smg::
@@ -253,6 +253,19 @@ if(USE_SYSTEM_MAGNUM)
 
     export(EXPORT smg-targets
         FILE ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+    )
+else()
+    # Use manual template when building deps from source
+    # (CMake export doesn't work with add_subdirectory targets)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgTargets.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+        @ONLY
+    )
+
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
     )
 endif()
 
