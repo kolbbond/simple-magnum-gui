@@ -1,9 +1,18 @@
 #pragma once
 
 #include <memory>
+#include <Corrade/configure.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/ImGuiIntegration/Integration.h>
+
+// Platform-specific application
+#if defined(CORRADE_TARGET_EMSCRIPTEN)
+#include <Magnum/Platform/EmscriptenApplication.h>
+namespace smg { using Application = Magnum::Platform::EmscriptenApplication; }
+#else
 #include <Magnum/Platform/Sdl2Application.h>
+namespace smg { using Application = Magnum::Platform::Sdl2Application; }
+#endif
 
 #include "Events.hpp"
 
@@ -12,7 +21,6 @@ namespace smg {
 typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 
 // for users to implement callbacks
-// @hey: what else does user need to integrate?
 typedef int (*draw_callback)(void*);
 
 using namespace Magnum;
@@ -61,13 +69,13 @@ public:
 	void set_scroll_event(scroll_event mme);
 	void set_key_press_event(key_press_event mme);
 
-	void viewportEvent(Magnum::Platform::Sdl2Application::ViewportEvent& event);
-	void keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event);
-	void keyReleaseEvent(Magnum::Platform::Sdl2Application::KeyEvent& event);
-	void pointerPressEvent(Magnum::Platform::Sdl2Application::PointerEvent& event);
-	void pointerReleaseEvent(Magnum::Platform::Sdl2Application::PointerEvent& event);
-	void pointerMoveEvent(Magnum::Platform::Sdl2Application::PointerMoveEvent& event);
-	void ScrollEvent(Magnum::Platform::Sdl2Application::ScrollEvent& event);
-	void textInputEvent(Magnum::Platform::Sdl2Application::TextInputEvent& event);
+	void viewportEvent(Application::ViewportEvent& event);
+	void keyPressEvent(Application::KeyEvent& event);
+	void keyReleaseEvent(Application::KeyEvent& event);
+	void pointerPressEvent(Application::PointerEvent& event);
+	void pointerReleaseEvent(Application::PointerEvent& event);
+	void pointerMoveEvent(Application::PointerMoveEvent& event);
+	void ScrollEvent(Application::ScrollEvent& event);
+	void textInputEvent(Application::TextInputEvent& event);
 };
 } // namespace smg

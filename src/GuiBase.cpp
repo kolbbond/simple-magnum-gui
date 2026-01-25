@@ -1,8 +1,7 @@
+#include <Corrade/configure.h>  // For CORRADE_TARGET_EMSCRIPTEN
 #include <Magnum/Trade/Trade.h>
 #include <imgui.h>
 #include <Magnum/Math/Time.h>
-#include <Magnum/Platform/Sdl2Application.h>
-#include <Magnum/Platform/Sdl2Application.h>
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Trade/AbstractImporter.h>
@@ -23,6 +22,18 @@ GuiBase::GuiBase(const Arguments& arguments)
 	conf.setTitle("GuiBase");
 	setWindowTitle("GuiBase");
 	GLConfiguration glConf;
+
+#if defined(CORRADE_TARGET_EMSCRIPTEN)
+	// WebGL: disable MSAA - not reliably supported
+	glConf.setSampleCount(0);
+
+	// create window here (no MSAA fallback needed for WebGL)
+	if(!tryCreate(conf, glConf)) {
+		std::cerr << "Failed to create WebGL context!" << std::endl;
+		std::exit(1);
+	}
+#else
+	// Desktop: try MSAA with fallback
 	glConf.setSampleCount(_samples); // 4x MSAA
 
 	// create window here
@@ -35,25 +46,31 @@ GuiBase::GuiBase(const Arguments& arguments)
 			std::exit(1);
 		}
 	}
+#endif
 
 	// check properties
-	GLint glSampleBuffers = 0, glSamples = 0, glMaxSamples = 0;
+	GLint glSampleBuffers = 0, glSamples = 0;
 	glGetIntegerv(GL_SAMPLE_BUFFERS, &glSampleBuffers); // 1 means MSAA buffer exists
 	glGetIntegerv(GL_SAMPLES, &glSamples); // sample count (e.g., 2 or 4)
-	glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound
-
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+	GLint glMaxSamples = 0;
+	glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound (not available in WebGL)
 	Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples << "GL_MAX_SAMPLES =" << glMaxSamples;
+#else
+	Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples;
+#endif
 
+	// create a log?
+	_lg = Log::create();
+
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+	// SDL-specific initialization (desktop only)
 	int sdlBuf = 0, sdlSamp = 0;
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &sdlBuf);
 	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &sdlSamp);
 	std::printf("SDL: MULTISAMPLEBUFFERS=%d MULTISAMPLESAMPLES=%d\n", sdlBuf, sdlSamp);
 
-	// create a log?
-	_lg = Log::create();
-
 	// display display stats
-	// check SDL
 	int num_displays = SDL_GetNumVideoDisplays();
 	_lg->msg("number of displays: %s%i%s\n", KRED, num_displays, KNRM);
 	std::vector<SDL_Rect> displayBounds;
@@ -66,8 +83,10 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// get the created window and override the position
 	_window = Platform::Sdl2Application::window();
 	SDL_SetWindowPosition(_window, 0, 0);
+#endif
 
-	// load window icon
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+	// load window icon (desktop only - no window icon in browser)
 	// get raw icon data from resources
 	Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
 	if(rawData.isEmpty()) {
@@ -88,6 +107,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
 		Platform::Sdl2Application::setWindowIcon(icon_view);
 	}
+#endif
 
 	// start an imgui context
 	printf("Creating imgui context\n");
@@ -265,17 +285,20 @@ void GuiBase::drawEvent() {
 }
 
 void GuiBase::print_window_position() {
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
 	// debug
 	int x;
 	int y;
 	SDL_GetWindowPosition(_window, &x, &y);
 	_lg->msg("window (x,y): %s(%i,%i)%s\n", KBLU, x, y, KNRM);
+#endif
 }
 
 std::pair<int, int> GuiBase::get_window_position() {
-
-	std::pair<int, int> pos;
+	std::pair<int, int> pos{0, 0};
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
 	SDL_GetWindowPosition(_window, &pos.first, &pos.second);
+#endif
 	return pos;
 }
 
@@ -307,35 +330,31 @@ void GuiBase::draw_callbacks() {
 	}
 }
 
-// setters
+// setters (desktop only)
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
 void GuiBase::set_window_icon(std::string icon_file) {
-
 	// importer plugin
 	PluginManager::Manager<Trade::AbstractImporter> manager;
 	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
 	if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
 
 	// load image
-	//Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
-	//if(!image) Fatal{} << "Importing the image failed";
 	_icon = importer->image2D(0);
 	if(!_icon) Fatal{} << "Importing the image failed";
 	if(_icon) {
-		// 5. Create an ImageView2D from the decoded data.
 		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
 		Platform::Sdl2Application::setWindowIcon(icon_view);
 	}
 }
 
 void GuiBase::set_window_position(int x, int y) {
-	//
 	SDL_SetWindowPosition(_window, x, y);
 }
 
 void GuiBase::set_window_size(int w, int h) {
-	//
 	SDL_SetWindowSize(_window, w, h);
 }
+#endif
 
 // event handling for imgui
 void GuiBase::keyPressEvent(KeyEvent& event) {

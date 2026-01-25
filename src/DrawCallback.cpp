@@ -40,21 +40,21 @@ int DrawCallback::draw() {
 	return _callback(_data);
 }
 
-void DrawCallback::pointerMoveEvent(Magnum::Platform::Sdl2Application::PointerMoveEvent& event) {
+void DrawCallback::pointerMoveEvent(Application::PointerMoveEvent& event) {
 	// return callbacks pointer
 	if(_flag_pointer_move_event) {
 		_pointer_move_event(_data, event);
 	}
 }
 
-void DrawCallback::ScrollEvent(Magnum::Platform::Sdl2Application::ScrollEvent& event) {
+void DrawCallback::ScrollEvent(Application::ScrollEvent& event) {
 	// return callbacks pointer
 	if(_flag_scroll_event) {
 		_scroll_event(_data, event);
 	}
 }
 
-void DrawCallback::keyPressEvent(Magnum::Platform::Sdl2Application::KeyEvent& event) {
+void DrawCallback::keyPressEvent(Application::KeyEvent& event) {
 	// return callbacks pointer
 	if(_flag_key_press_event) {
 		_key_press_event(_data, event);

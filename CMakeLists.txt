@@ -11,6 +11,15 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Configuring ${PROJECT_NAME}")
 
+# Emscripten/WASM detection
+if(EMSCRIPTEN)
+    message(STATUS "Building for Emscripten/WASM")
+    set(SMG_PLATFORM_WASM ON)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+else()
+    set(SMG_PLATFORM_WASM OFF)
+endif()
+
 # Options
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
@@ -109,19 +118,26 @@ endif()
 corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
 corrade_add_resource(smg_RESOURCE_images "assets/resource_images.conf")
 
-# Library
-add_library(smg SHARED
-    ${smg_sources}
-    ${smg_RESOURCE_fonts}
-    ${smg_RESOURCE_images}
-)
+# Library (static for WASM, shared otherwise)
+if(SMG_PLATFORM_WASM)
+    add_library(smg STATIC
+        ${smg_sources}
+        ${smg_RESOURCE_fonts}
+        ${smg_RESOURCE_images}
+    )
+else()
+    add_library(smg SHARED
+        ${smg_sources}
+        ${smg_RESOURCE_fonts}
+        ${smg_RESOURCE_images}
+    )
+endif()
 
 add_library(smg::smg ALIAS smg)
 
 # Link dependencies
 target_link_libraries(smg PUBLIC
     Corrade::Utility
-    Magnum::Sdl2Application
     Magnum::Magnum
     Magnum::GL
     Magnum::MeshTools
@@ -131,6 +147,13 @@ target_link_libraries(smg PUBLIC
     Magnum::Text
     MagnumIntegration::ImGui
 )
+
+# Platform-specific application library
+if(SMG_PLATFORM_WASM)
+    target_link_libraries(smg PUBLIC Magnum::EmscriptenApplication)
+else()
+    target_link_libraries(smg PUBLIC Magnum::Sdl2Application)
+endif()
 
 # Include directories
 target_include_directories(smg
@@ -154,6 +177,11 @@ target_compile_options(smg PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
     -Wall -Wextra -Wpedantic>
 )
+
+# WASM-specific compile definitions
+if(SMG_PLATFORM_WASM)
+    target_compile_definitions(smg PUBLIC SMG_PLATFORM_WASM)
+endif()
 
 # Configure headers
 configure_file(
