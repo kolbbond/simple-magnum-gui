@@ -30,7 +30,25 @@ to find the libraries
 
 #### Windows dependencies
 Use vpckg to install other dependencies.
+Using classic mode to preinstall dependencies
 [vcpkg](https://github.com/microsoft/vcpkg)
+
+These commands can set it up on windows
+
+```
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+$env:VCPKG_ROOT = "$pwd"
+[Environment]::SetEnvironmentVariable("VCPKG_ROOT","env:VCPKG_ROOT","User")
+& "$env:VCPKG_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo
+
+```
+
+additionally for x64 you may need
+`
+& "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
+`
 
 Make sure you are in classic mode and install 
 
@@ -40,11 +58,15 @@ Make sure you are in classic mode and install
 
 
 # make sure to add the dll libraries to path 
-$env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
-
 and SDL2 from vcpkg
-
+$env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
 $env:PATH="C:\Users\you\programs\vcpkg\installed\x64-windows\bin;$env:PATH"
+
+then to build on windows 
+```
+cmake --preset windows-vcpkg
+cmake --build build --parallel
+```
 
 ## legacy dependencies
 These are encapsulated into the dependencies directory.  

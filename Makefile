@@ -3,8 +3,14 @@
 BUILD_DIR ?= build
 CMAKE ?= cmake
 CMAKE_BUILD_TYPE ?= Release
-CMAKE_GENERATOR ?= $(shell command -v ninja > /dev/null 2>&1 && echo "Ninja" || echo "Unix Makefiles")
-PARALLEL ?= --parallel $(shell nproc 2>/dev/null || echo 4)
+
+ifeq ($(OS),Windows_NT)
+  CMAKE_GENERATOR ?= Ninja
+  PARALLEL ?= --parallel $(if $(NUMBER_OF_PROCESSORS),$(NUMBER_OF_PROCESSORS),4)
+else
+  CMAKE_GENERATOR ?= $(shell command -v ninja > /dev/null 2>&1 && echo "Ninja" || echo "Unix Makefiles")
+  PARALLEL ?= --parallel $(shell nproc 2>/dev/null || echo 4)
+endif
 
 CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
 CMAKE_EXTRA_FLAGS ?=

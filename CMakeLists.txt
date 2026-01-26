@@ -81,6 +81,9 @@ if(USE_SYSTEM_MAGNUM)
 else()
     # Build external dependencies (Corrade, Magnum, Magnum-Integration)
     # These have their own install rules and will be installed alongside smg
+    # Keep plugin discovery working in build trees on multi-config generators.
+    set(MAGNUM_PLUGINS_DEBUG_DIR "${CMAKE_BINARY_DIR}/bin/magnum-d" CACHE PATH "" FORCE)
+    set(MAGNUM_PLUGINS_RELEASE_DIR "${CMAKE_BINARY_DIR}/bin/magnum" CACHE PATH "" FORCE)
     add_subdirectory(external)
 endif()
 
@@ -304,7 +307,7 @@ message("\n"
 )
 
 # Windows: copy SDL2 DLL
-if(WIN32)
+if(WIN32 AND TARGET SDL2::SDL2)
     add_custom_command(TARGET smg POST_BUILD
         COMMAND "${CMAKE_COMMAND}" -E copy_if_different
             "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:smg>"
