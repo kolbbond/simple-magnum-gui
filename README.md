@@ -29,50 +29,34 @@ make sure to add a LD_LIBRARY_PATH
 to find the libraries
 
 #### Windows dependencies
-Use vpckg to install other dependencies.
-Using classic mode to preinstall dependencies
-[vcpkg](https://github.com/microsoft/vcpkg)
-
-These commands can set it up on windows
+Use vcpkg (classic mode) for SDL2/Freetype/libjpeg-turbo:
 
 ```
 git clone https://github.com/microsoft/vcpkg.git
 cd vcpkg
 .\bootstrap-vcpkg.bat
 $env:VCPKG_ROOT = "$pwd"
-[Environment]::SetEnvironmentVariable("VCPKG_ROOT","env:VCPKG_ROOT","User")
+[Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
 & "$env:VCPKG_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo
-
 ```
 
-additionally for x64 you may need
-`
-& "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Auxiliary\Build\vcvars64.bat"
-`
+Open an x64 MSVC environment (Developer PowerShell or DevShell) and ensure
+`ninja` is on PATH, then build:
 
-Make sure you are in classic mode and install 
-
-1. SDL2
-2. Freetype
-3. libjpeg-turbo
-
-
-# make sure to add the dll libraries to path 
-and SDL2 from vcpkg
-$env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
-$env:PATH="C:\Users\you\programs\vcpkg\installed\x64-windows\bin;$env:PATH"
-
-then to build on windows 
 ```
 cmake --preset windows-vcpkg
-cmake --build build --parallel
+cmake --build build --config Debug
+```
+
+If you run from the build tree, set plugin and SDL2 paths:
+
+```
+$env:MAGNUM_PLUGINS_DEBUG_DIR="$pwd\build\bin\magnum-d"
+$env:PATH="$env:VCPKG_ROOT\installed\x64-windows\debug\bin;$env:PATH"
 ```
 
 ## legacy dependencies
-These are encapsulated into the dependencies directory.  
-The cmake commands are implemented in shell script wrappers in the
-`scripts` directory. 
-FYI both of the above scripts install to `~/.local`. 
+These are Linux-focused scripts in `scripts` and install to `~/.local`.
 
  ## utilizing the library
 Gui uses a naive callback system to enable different systems.
@@ -85,7 +69,6 @@ See the examples
     * set your data
 * add the callback to your guibase object
 * run your game loop and call the gui function `mainLoopIteration`
-
 
 
 
