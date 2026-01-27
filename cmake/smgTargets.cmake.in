@@ -15,12 +15,19 @@ get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)  # up from lib
 add_library(smg::smg SHARED IMPORTED)
 
 set_target_properties(smg::smg PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@/smg"
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@"
     INTERFACE_LINK_LIBRARIES "Corrade::Utility;Magnum::Sdl2Application;Magnum::Magnum;Magnum::GL;Magnum::MeshTools;Magnum::Primitives;Magnum::Shaders;Magnum::Trade;Magnum::Text;MagnumIntegration::ImGui"
 )
 
-# Set library location
-set_target_properties(smg::smg PROPERTIES
-    IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/libsmg.so"
-    IMPORTED_SONAME "libsmg.so"
-)
+# Set library location (platform-specific)
+if(WIN32)
+    set_target_properties(smg::smg PROPERTIES
+        IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
+        IMPORTED_IMPLIB "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/smg.lib"
+    )
+else()
+    set_target_properties(smg::smg PROPERTIES
+        IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/libsmg.so"
+        IMPORTED_SONAME "libsmg.so"
+    )
+endif()
