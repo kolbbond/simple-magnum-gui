@@ -24,6 +24,7 @@ endif()
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build with ImPlot3D" ON)
+option(ENABLE_SCENEGRAPH "build with Magnum SceneGraph for 3D scene management" OFF)
 
 
 # Module path
@@ -73,6 +74,9 @@ if(USE_SYSTEM_MAGNUM)
         Trade
         Text
         Sdl2Application)
+    if(ENABLE_SCENEGRAPH)
+        find_package(Magnum REQUIRED SceneGraph)
+    endif()
     find_package(MagnumIntegration REQUIRED ImGui)
 
     # ImPlot paths (still from our external/ since they're header-only style)
@@ -150,6 +154,10 @@ target_link_libraries(smg PUBLIC
     Magnum::Text
     MagnumIntegration::ImGui
 )
+
+if(ENABLE_SCENEGRAPH)
+    target_link_libraries(smg PUBLIC Magnum::SceneGraph)
+endif()
 
 # Platform-specific application library
 if(SMG_PLATFORM_WASM)

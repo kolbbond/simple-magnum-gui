@@ -146,6 +146,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// each font
 	printf("Adding Fonts\n");
 	ImGuiIO& io = ImGui::GetIO();
+
+	// Enable docking
+	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	for(size_t i = 0; i < font_names.size(); i++) {
 		ImFontConfig font_cfg;
 		font_cfg.FontDataOwnedByAtlas = false;
