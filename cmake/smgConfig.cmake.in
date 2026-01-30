@@ -46,7 +46,7 @@ endif()
 # Magnum
 if(NOT TARGET Magnum)
     message(STATUS "Magnum is not target")
-    find_dependency(Magnum REQUIRED 
+    find_dependency(Magnum REQUIRED
         GL
         MeshTools
         Primitives
@@ -55,6 +55,7 @@ if(NOT TARGET Magnum)
         Sdl2Application
         Text
         MagnumFont
+        SceneGraph
 )
 endif()
 

@@ -16,7 +16,7 @@ add_library(smg::smg SHARED IMPORTED)
 
 set_target_properties(smg::smg PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES "Corrade::Utility;Magnum::Sdl2Application;Magnum::Magnum;Magnum::GL;Magnum::MeshTools;Magnum::Primitives;Magnum::Shaders;Magnum::Trade;Magnum::Text;MagnumIntegration::ImGui"
+    INTERFACE_LINK_LIBRARIES "Corrade::Utility;Magnum::Sdl2Application;Magnum::Magnum;Magnum::GL;Magnum::MeshTools;Magnum::Primitives;Magnum::Shaders;Magnum::Trade;Magnum::Text;Magnum::SceneGraph;MagnumIntegration::ImGui"
 )
 
 # Set library location (platform-specific)
