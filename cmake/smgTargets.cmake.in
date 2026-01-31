@@ -14,20 +14,41 @@ get_filename_component(_IMPORT_PREFIX "${_IMPORT_PREFIX}" PATH)  # up from lib
 # Create imported target smg::smg
 add_library(smg::smg SHARED IMPORTED)
 
+# Build interface link libraries (SceneGraph is conditional)
+set(_SMG_INTERFACE_LIBS "Corrade::Utility;Magnum::Sdl2Application;Magnum::Magnum;Magnum::GL;Magnum::MeshTools;Magnum::Primitives;Magnum::Shaders;Magnum::Trade;Magnum::Text;MagnumIntegration::ImGui")
+if(@ENABLE_SCENEGRAPH@)
+    list(APPEND _SMG_INTERFACE_LIBS "Magnum::SceneGraph")
+endif()
+
 set_target_properties(smg::smg PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@"
-    INTERFACE_LINK_LIBRARIES "Corrade::Utility;Magnum::Sdl2Application;Magnum::Magnum;Magnum::GL;Magnum::MeshTools;Magnum::Primitives;Magnum::Shaders;Magnum::Trade;Magnum::Text;Magnum::SceneGraph;MagnumIntegration::ImGui"
+    INTERFACE_LINK_LIBRARIES "${_SMG_INTERFACE_LIBS}"
 )
 
 # Set library location (platform-specific)
 if(WIN32)
+    # Set configuration-specific locations for Windows multi-config builds
+    # This ensures the correct DLL/lib is used for each build type
     set_target_properties(smg::smg PROPERTIES
-        IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
         IMPORTED_IMPLIB "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/smg.lib"
+        # Default location (used when config doesn't match below)
+        IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
+        # Configuration-specific locations
+        IMPORTED_LOCATION_DEBUG "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
+        IMPORTED_LOCATION_RELEASE "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
+        IMPORTED_LOCATION_RELWITHDEBINFO "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
+        IMPORTED_LOCATION_MINSIZEREL "${_IMPORT_PREFIX}/@CMAKE_INSTALL_BINDIR@/smg.dll"
     )
+    # Map any other configs to Release
+    set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_DEBUG Debug Release RelWithDebInfo "")
+    set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_RELEASE Release RelWithDebInfo Debug "")
+    set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release Debug "")
+    set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_MINSIZEREL MinSizeRel Release RelWithDebInfo "")
 else()
     set_target_properties(smg::smg PROPERTIES
         IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/libsmg.so"
         IMPORTED_SONAME "libsmg.so"
     )
 endif()
+
+unset(_SMG_INTERFACE_LIBS)

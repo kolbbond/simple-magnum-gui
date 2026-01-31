@@ -46,7 +46,7 @@ endif()
 # Magnum
 if(NOT TARGET Magnum)
     message(STATUS "Magnum is not target")
-    find_dependency(Magnum REQUIRED
+    set(_SMG_MAGNUM_COMPONENTS
         GL
         MeshTools
         Primitives
@@ -55,8 +55,12 @@ if(NOT TARGET Magnum)
         Sdl2Application
         Text
         MagnumFont
-        SceneGraph
-)
+    )
+    if(@ENABLE_SCENEGRAPH@)
+        list(APPEND _SMG_MAGNUM_COMPONENTS SceneGraph)
+    endif()
+    find_dependency(Magnum REQUIRED ${_SMG_MAGNUM_COMPONENTS})
+    unset(_SMG_MAGNUM_COMPONENTS)
 endif()
 
 # find implot?
