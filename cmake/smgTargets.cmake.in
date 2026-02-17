@@ -44,6 +44,10 @@ if(WIN32)
     set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_RELEASE Release RelWithDebInfo Debug "")
     set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_RELWITHDEBINFO RelWithDebInfo Release Debug "")
     set_property(TARGET smg::smg PROPERTY MAP_IMPORTED_CONFIG_MINSIZEREL MinSizeRel Release RelWithDebInfo "")
+elseif(APPLE)
+    set_target_properties(smg::smg PROPERTIES
+        IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/libsmg.dylib"
+    )
 else()
     set_target_properties(smg::smg PROPERTIES
         IMPORTED_LOCATION "${_IMPORT_PREFIX}/@CMAKE_INSTALL_LIBDIR@/smg/libsmg.so"
