@@ -1,6 +1,19 @@
-[submodule "implot"]
-	path = implot
-    url = https://github.com/epezent/implot.git
-[submodule "implot3d"]
-	path = implot3d
-	url = https://github.com/brenocq/implot3d.git 
+[submodule "external/corrade"]
+	path = external/corrade
+	url = https://github.com/mosra/corrade.git
+[submodule "external/magnum"]
+	path = external/magnum
+	url = https://github.com/mosra/magnum.git
+[submodule "external/implot"]
+	path = external/implot
+	url = https://github.com/epezent/implot.git
+[submodule "external/implot3d"]
+	path = external/implot3d
+	url = https://github.com/brenocq/implot3d.git
+[submodule "external/magnum-integration"]
+	path = external/magnum-integration
+	url = https://github.com/kolbbond/magnum-integration.git
+	branch = docking
+[submodule "external/magnum-plugins"]
+	path = external/magnum-plugins
+	url = https://github.com/mosra/magnum-plugins.git

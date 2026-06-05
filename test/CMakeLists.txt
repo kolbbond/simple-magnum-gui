@@ -2,7 +2,7 @@
 message(STATUS "testing")
 
 # add the test files
-set(test_list 
+set(test_list
     #    test_magnum_sdl2.cpp
     test_magnum_application_main.cpp
     test_magnum_imgui.cpp
@@ -10,6 +10,7 @@ set(test_list
     test_smg_guibase_looped.cpp
     test_plottris.cpp
     test_plotquads.cpp
+    test_smg_libraries.cpp
     #test_magnum_implot.cpp
     #test_loadimage.cpp
     #test_maptotexture.cpp

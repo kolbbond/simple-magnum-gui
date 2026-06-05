@@ -3,96 +3,14 @@ include(CMakeFindDependencyMacro)
 
 message(STATUS "SMG CONFIG")
 
-# add path
-list(APPEND CMAKE_MODULE_PATH ${smg_CMAKE_DIR})
-list(REMOVE_AT CMAKE_MODULE_PATH -1)
+# Compute prefix path for finding dependencies
+get_filename_component(_SMG_PREFIX "${smg_CMAKE_DIR}" PATH)  # up from lib/cmake/smg
+get_filename_component(_SMG_PREFIX "${_SMG_PREFIX}" PATH)    # up from lib/cmake
+get_filename_component(_SMG_PREFIX "${_SMG_PREFIX}" PATH)    # up from lib
 
-# posix threads
-#    find_dependency(Threads)
-
-# find armadillo 
-if(@ENABLE_ARMADILLO@)
-        find_dependency(Armadillo CONFIG REQUIRED)
-
-# Superlu
-    if(@ENABLE_SUPERLU@)
-        if(@superlu_FOUND@)
-            if(@Armadillo_VERSION@ VERSION_GREATER_EQUAL 14.4.0)
-                find_dependency(superlu)
-            else()
-                find_dependency(superlu EXACT 5.3.0)
-            endif()
-            set(ENABLE_SUPERLU ON)
-        else()
-            set(ENABLE_SUPERLU OFF)
-        endif()
-    endif()
-
-# BLAS library
-    if(@ENABLE_BLAS@)
-        set(BLA_VENDOR @BLA_VENDOR@)
-        if(@LAPACK_FOUND@)
-            find_dependency(LAPACK QUIET)
-        endif()
-        if(NOT BLAS_FOUND)
-            find_dependency(BLAS QUIET)
-        endif()
-        
-        # create an interface for BLAS
-        if(BLAS_FOUND)
-            # message(STATUS "using blas: ${BLAS_LIBRARIES}")
-            if(NOT TARGET BLAS::BLAS)
-                add_library(BLAS::BLAS INTERFACE IMPORTED)
-                set_target_properties(BLAS::BLAS PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${BLAS_LIBRARIES}")
-            endif()
-        endif()
-
-        # create an interface for LAPACK
-        if(LAPACK_FOUND)
-            if(NOT TARGET LAPACK::LAPACK)
-                add_library(LAPACK::LAPACK INTERFACE IMPORTED)
-                set_target_properties(LAPACK::LAPACK PROPERTIES
-                    INTERFACE_LINK_LIBRARIES "${LAPACK_LIBRARIES}")
-            endif()
-        endif()
-    endif()
-
-# armadillo itself
-    if(NOT TARGET Arma::Armadillo)
-        add_library(Arma::Armadillo INTERFACE IMPORTED)
-        set_target_properties(Arma::Armadillo PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
-            INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARY}")
-
-        # disable opernmp acceleration
-        # target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
-
-        # set (n)debug flags for Armadilo
-        if(CMAKE_BUILD_TYPE STREQUAL Release)
-            message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
-        else()
-            message(STATUS "Using Armadillo in debug mode")
-        endif()
-
-        # disable armadillo wrapper (for using custom BLAS)
-        if(BLAS_FOUND AND LAPACK_FOUND)
-            # report to user
-            message(STATUS "Disabling Armadillo BLAS wrapper.")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
-        endif()
-
-        # disable superlu if not available
-        if(ENABLE_SUPERLU)
-            message(STATUS "Enabling Armadillo Superlu")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
-        else()
-            message(STATUS "Disabling Armadillo SuperLU")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
-        endif()
-    endif()
-endif()
+# Add module paths for finding ImGui and other dependencies
+list(APPEND CMAKE_MODULE_PATH "${smg_CMAKE_DIR}")
+list(APPEND CMAKE_MODULE_PATH "${_SMG_PREFIX}/share/cmake/MagnumIntegration/dependencies")
 
 # SDL (should be included through magnum)
 if(OFF)
@@ -128,7 +46,7 @@ endif()
 # Magnum
 if(NOT TARGET Magnum)
     message(STATUS "Magnum is not target")
-    find_dependency(Magnum REQUIRED 
+    set(_SMG_MAGNUM_COMPONENTS
         GL
         MeshTools
         Primitives
@@ -137,7 +55,12 @@ if(NOT TARGET Magnum)
         Sdl2Application
         Text
         MagnumFont
-)
+    )
+    if(@ENABLE_SCENEGRAPH@)
+        list(APPEND _SMG_MAGNUM_COMPONENTS SceneGraph)
+    endif()
+    find_dependency(Magnum REQUIRED ${_SMG_MAGNUM_COMPONENTS})
+    unset(_SMG_MAGNUM_COMPONENTS)
 endif()
 
 # find implot?
@@ -154,6 +77,13 @@ if(NOT TARGET smg)
     # include definitions
     include("${smg_CMAKE_DIR}/smgTargets.cmake")
 
+    # On Linux with GLVND, explicitly link GLX for Sdl2Application
+    if(UNIX AND NOT APPLE)
+        find_package(OpenGL COMPONENTS GLX)
+        if(TARGET OpenGL::GLX AND TARGET smg::smg)
+            set_property(TARGET smg::smg APPEND PROPERTY
+                INTERFACE_LINK_LIBRARIES OpenGL::GLX)
+        endif()
+    endif()
 endif()
 set(smg_LIBRARIES smg)
-

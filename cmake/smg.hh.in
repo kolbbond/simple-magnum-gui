@@ -2,6 +2,5 @@
 
 // our wrappers
 #include "GuiBase.hh"
-#include "Plotter.hh"
 #include "Statics.hh"
 

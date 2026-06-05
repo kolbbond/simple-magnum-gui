@@ -5,10 +5,10 @@
       "name": "base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
-      "hidden": true
+      "hidden": true,
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug"
-      },
+      }
     },
     {
       "name": "default",
@@ -34,6 +34,16 @@
       "description": "Optimized for performance, disables debug information",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      },
+      "inherits": ["base"]
+    },
+    {
+      "name": "windows-vcpkg",
+      "displayName": "Windows + vcpkg",
+      "description": "Use vcpkg toolchain on Windows (requires VCPKG_ROOT env var)",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-windows"
       },
       "inherits": ["base"]
     },

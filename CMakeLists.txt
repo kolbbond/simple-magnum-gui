@@ -1,463 +1,324 @@
-# build imgui with magnum
-cmake_minimum_required(VERSION 3.11)
+# simple-magnum-gui - ImGui with Magnum
+cmake_minimum_required(VERSION 3.16)
 
 project(
-  simple-magnum-gui 
+  simple-magnum-gui
   VERSION 0.1
   LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-message(STATUS "starting cmake generation: " ${PROJECT_NAME})
+message(STATUS "Configuring ${PROJECT_NAME}")
 
-# switchboard
-option(USE_BUNDLED_DEPS "use bundled dependencies from cmake.deps" ON)
-option(ENABLE_BLAS "build with optimized BLAS library" ON)
-option(ENABLE_SUPERLU "link with superlu" ON)
-option(ENABLE_ARMADILLO "build with armadillo" OFF)
+# Emscripten/WASM detection
+if(EMSCRIPTEN)
+    message(STATUS "Building for Emscripten/WASM")
+    set(SMG_PLATFORM_WASM ON)
+    set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+else()
+    set(SMG_PLATFORM_WASM OFF)
+endif()
+
+# Options
 option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
-option(ENABLE_IMPLOT3D "build IMPLOT3D" ON)
-option(CREATE_INSTALL "install into general system dir" ON)
-option(FLAG_DEBUG "include debug scripts" OFF)
+option(ENABLE_IMPLOT3D "build with ImPlot3D" ON)
+option(ENABLE_SCENEGRAPH "build with Magnum SceneGraph for 3D scene management" OFF)
 
 
-# we are going to transition to just using Magnum
-# right now just magnum works
-option(USE_MAGNUM "use magnum and magnum integration libraries" ON)
-option(USE_X "use X for window" OFF)
-option(USE_SDL "use SDL for window" OFF)
-option(USE_OPENGL "use OpenGL for rendering" OFF)
+# Module path
+set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
-# modules
-set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" 
-    ${CMAKE_MODULE_PATH})
-
-# set export commands for clangd and color
+# Export compile commands for clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(CMAKE_COLOR_DIAGNOSTICS ON)
 
-# Set the default build type if not specified
+# Default build type
 if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
-# if using bundled dependencies
-# additional prefix paths
-if(USE_BUNDLED_DEPS)
-    if(DEFINED ENV{SMG_BUILD_DIR})
-      set(SMG_PREFIX "$ENV{SMG_BUILD_DIR}/usr" CACHE PATH "Path prefix for finding dependencies")
-    else()
-      set(SMG_PREFIX "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr" CACHE PATH "Path prefix for finding dependencies")
-    endif()
-#list(INSERT CMAKE_PREFIX_PATH 0 ${DEPS_PREFIX})
-    list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/") # for opengl and sdl
-    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}")
-    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/bin/")
-    list(INSERT CMAKE_PREFIX_PATH 0 "${SMG_PREFIX}/include/")
-endif()
-
-
-message(STATUS "CMAKE_PREFIX_PATH: ${CMAKE_PREFIX_PATH}")
-
-# system detection
+# System-specific settings
 if(WIN32)
-    message(STATUS "this is a Windows machine")
-
-    # add vcpkg paths
-    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake/SDL2")
-    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/cmake")
-    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/include/")
-    list(INSERT CMAKE_PREFIX_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/../vcpkg/installed/x64-windows/lib/")
-# windows specific
-    if(WIN32)
+    message(STATUS "Building on Windows")
     set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
-    endif()
-endif(WIN32)
-if(UNIX)
-  message(STATUS "this is a linux machine")
-endif(UNIX)
-
-# ensure out of core build
-if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
-  message(
-    FATAL_ERROR
-      "In-source builds not allowed (for your own safety).\nPlease make a new directory (called a build directory) and run CMake from there.\n"
-  )
+elseif(UNIX)
+    message(STATUS "Building on Linux/Unix")
+    list(INSERT CMAKE_PREFIX_PATH 0 "/usr/lib/x86_64-linux-gnu/")
 endif()
 
-# output paths
-if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_LIBRARY_OUTPUT_DIRECTORY AND NOT DEFINED CMAKE_ARCHIVE_OUTPUT_DIRECTORY)
+# Prevent in-source builds
+if(PROJECT_SOURCE_DIR STREQUAL PROJECT_BINARY_DIR)
+  message(FATAL_ERROR "In-source builds not allowed. Use a separate build directory.")
+endif()
+
+# Output paths
+if(NOT DEFINED CMAKE_RUNTIME_OUTPUT_DIRECTORY)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin CACHE PATH "" FORCE)
     set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
     set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib CACHE PATH "" FORCE)
 endif()
 
-message(STATUS "building in ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+# Option to use system-installed dependencies instead of building from source
+option(USE_SYSTEM_MAGNUM "Use system-installed Magnum/Corrade instead of building from source" OFF)
 
-# add dependencies
-if(BUILD_DEPENDENCIES)
-    add_subdirectory(dependencies)
+if(USE_SYSTEM_MAGNUM)
+    # Find system packages
+    find_package(Corrade REQUIRED Utility PluginManager)
+    find_package(Magnum REQUIRED
+        GL
+        MeshTools
+        Primitives
+        Shaders
+        Trade
+        Text
+        Sdl2Application)
+    if(ENABLE_SCENEGRAPH)
+        find_package(Magnum REQUIRED SceneGraph)
+    endif()
+    find_package(MagnumIntegration REQUIRED ImGui)
+
+    # ImPlot paths (still from our external/ since they're header-only style)
+    set(SMG_IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot")
+    set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
+else()
+    # Build external dependencies (Corrade, Magnum, Magnum-Integration)
+    # These have their own install rules and will be installed alongside smg
+    # Keep plugin discovery working in build trees on multi-config generators.
+    set(MAGNUM_PLUGINS_DEBUG_DIR "${CMAKE_BINARY_DIR}/bin/magnum-d" CACHE PATH "" FORCE)
+    set(MAGNUM_PLUGINS_RELEASE_DIR "${CMAKE_BINARY_DIR}/bin/magnum" CACHE PATH "" FORCE)
+    add_subdirectory(external)
 endif()
 
-# package finding
-#find_package(Corrade REQUIRED Main Utility)
-find_package(Corrade REQUIRED Utility)
-find_package(Magnum REQUIRED 
-    GL
-    MeshTools
-    Primitives
-    Shaders
-    Trade
-    Sdl2Application
-    MagnumFont
-    Text
-)
-
-find_package(MagnumIntegration REQUIRED ImGui)
-
-# @hey: armadillo is required but this is an option
-if(ENABLE_ARMADILLO)
-
-# find armadillo 
-    find_package(Armadillo 12.8.0 CONFIG REQUIRED)
-
-# On some systems superlu needs to be explcitly linked against
-    if(ENABLE_SUPERLU)
-            if(Armadillo_VERSION VERSION_GREATER_EQUAL 14.4.0)
-                    find_package(superlu)
-            else()
-                    find_package(superlu EXACT 5.3.0) # before armadillo 14.4.0
-            endif()
-    endif()
-
-# check if optimized BLAS enabled
-    if(ENABLE_BLAS)
-        find_package(LAPACK REQUIRED)
-        if (NOT BLAS_FOUND)
-            find_package(BLAS REQUIRED)
-        endif()
-
-        # create an interface for BLAS
-        if(BLAS_FOUND)
-            # message(STATUS "using blas: ${BLAS_LIBRARIES}")
-            if(NOT TARGET BLAS::BLAS)
-                add_library(BLAS::BLAS INTERFACE IMPORTED)
-                set_target_properties(BLAS::BLAS PROPERTIES
-                    INTERFACE "${BLAS_LIBRARIES}")
-            endif()
-        endif()
-
-        # create an interface for LAPACK
-        if(LAPACK_FOUND)
-            if(NOT TARGET LAPACK::LAPACK)
-                add_library(LAPACK::LAPACK INTERFACE IMPORTED)
-                set_target_properties(LAPACK::LAPACK PROPERTIES
-                    INTERFACE "${LAPACK_LIBRARIES}")
-            endif()
-        endif()
-    endif()
-
-# find armadillo library
-    if(NOT TARGET Arma::Armadillo)
-        # create target
-        add_library(Arma::Armadillo INTERFACE IMPORTED)
-        set_target_properties(Arma::Armadillo PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${ARMADILLO_INCLUDE_DIRS}"
-            INTERFACE_LINK_LIBRARIES "${ARMADILLO_LIBRARIES}")
-
-        # disable opernmp acceleration
-        # target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_OPENMP)
-        # target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_HDF5)
-
-        # set (n)debug flags for Armadilo
-        if(CMAKE_BUILD_TYPE STREQUAL Release)
-            message(STATUS "Using Armadillo no-debug flags (conformance check disabled!)")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DNDEBUG -DARMA_NO_DEBUG -DARMA_DONT_CHECK_CONFORMANCE -DARMA_WARN_LEVEL=1)
-        else()
-            message(STATUS "Using Armadillo in debug mode")
-        endif()
-
-        # disable armadillo wrapper (for using custom BLAS)
-        if(BLAS_FOUND AND LAPACK_FOUND)
-            # report to user
-            message(STATUS "Disabling Armadillo blas wrapper")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_WRAPPER -DARMA_USE_BLAS)
-        endif()
-
-        # disable superlu if not available
-        if(superlu_FOUND)
-            message(STATUS "Enabling Superlu")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_USE_SUPERLU)
-        else()
-            message(STATUS "Disabling Armadillo SuperLU")
-            target_compile_definitions(Arma::Armadillo INTERFACE -DARMA_DONT_USE_SUPERLU)
-        endif()
-    endif()
-
+# ImPlot paths (from external/ - set if not already set by external/CMakeLists.txt)
+if(NOT DEFINED SMG_IMPLOT_DIR)
+    set(SMG_IMPLOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot")
+endif()
+if(NOT DEFINED SMG_IMPLOT3D_DIR)
+    set(SMG_IMPLOT3D_DIR "${CMAKE_CURRENT_SOURCE_DIR}/external/implot3d")
 endif()
 
-# @hey: add a implot library build instead of including source files
-
-# set sources for our gui implementation
-set(mysources
+# Sources
+set(smg_sources
     src/GuiBase.cpp
     src/DrawCallback.cpp
     src/log.cpp
     src/Statics.cpp
 
-    # add implot here for now
-    implot/implot.cpp
-    implot/implot_demo.cpp
-    implot/implot_items.cpp
+    # ImPlot
+    ${SMG_IMPLOT_DIR}/implot.cpp
+    ${SMG_IMPLOT_DIR}/implot_demo.cpp
+    ${SMG_IMPLOT_DIR}/implot_items.cpp
 )
 
-# if we have armadillo
-if(ENABLE_ARMADILLO)
-
-    set(mysources ${mysources}
-    src/Plotter.cpp
-    )
-
-endif()
-
-# for implot3d
 if(ENABLE_IMPLOT3D)
-    list(APPEND mysources
-        implot3d/implot3d.cpp
-        implot3d/implot3d_items.cpp
-        implot3d/implot3d_demo.cpp
-        implot3d/implot3d_meshes.cpp
+    list(APPEND smg_sources
+        ${SMG_IMPLOT3D_DIR}/implot3d.cpp
+        ${SMG_IMPLOT3D_DIR}/implot3d_items.cpp
+        ${SMG_IMPLOT3D_DIR}/implot3d_demo.cpp
+        ${SMG_IMPLOT3D_DIR}/implot3d_meshes.cpp
     )
 endif()
 
-# fonts 
+# Corrade resources
 corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
 corrade_add_resource(smg_RESOURCE_images "assets/resource_images.conf")
 
-# make our library (shared or static?)
-add_library(smg SHARED 
-    ${mysources} 
-    ${smg_RESOURCE_fonts}
-    ${smg_RESOURCE_images}
-)
+# Library (static for WASM, shared otherwise)
+if(SMG_PLATFORM_WASM)
+    add_library(smg STATIC
+        ${smg_sources}
+        ${smg_RESOURCE_fonts}
+        ${smg_RESOURCE_images}
+    )
+else()
+    add_library(smg SHARED
+        ${smg_sources}
+        ${smg_RESOURCE_fonts}
+        ${smg_RESOURCE_images}
+    )
+endif()
 
 add_library(smg::smg ALIAS smg)
-add_library(smg:: ALIAS smg)
 
-# link them
+# Link dependencies
 target_link_libraries(smg PUBLIC
-    #Corrade::Main # causes problem on win32 with entry points
     Corrade::Utility
-    Magnum::Application
     Magnum::Magnum
     Magnum::GL
-    Magnum::Magnum
     Magnum::MeshTools
     Magnum::Primitives
     Magnum::Shaders
     Magnum::Trade
     Magnum::Text
-
     MagnumIntegration::ImGui
-    #ImPlot::ImPlot
 )
 
-if(WIN32)
+if(ENABLE_SCENEGRAPH)
+    target_link_libraries(smg PUBLIC Magnum::SceneGraph)
+endif()
+
+# Platform-specific application library
+if(SMG_PLATFORM_WASM)
+    target_link_libraries(smg PUBLIC Magnum::EmscriptenApplication)
 else()
-    target_link_libraries(smg PUBLIC
-        OpenGL::GLX
-    )
+    target_link_libraries(smg PUBLIC Magnum::Sdl2Application)
 endif()
 
-if(ENABLE_ARMADILLO)
-    target_link_libraries(smg PUBLIC
-        Arma::Armadillo)
-endif()
-
-# add additional sources
-target_sources(smg PRIVATE ${mysources})
-
-# at this point we can build everything
-# include directories we are making an interface for projects that link to THIS
-# library (includes all dependencies in our lib)
-target_include_directories(
-  smg
-  PUBLIC $<INSTALL_INTERFACE:include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot>
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/lib/ImGuiFileDialog>
-         $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
- PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
+# Include directories
+target_include_directories(smg
+    PUBLIC
+        $<INSTALL_INTERFACE:include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${SMG_IMPLOT_DIR}>
+        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include>
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 
 if(ENABLE_IMPLOT3D)
-    target_include_directories(
-        smg PUBLIC
-         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/implot3d>
-     )
- endif()
+    target_include_directories(smg PUBLIC
+        $<BUILD_INTERFACE:${SMG_IMPLOT3D_DIR}>
+    )
+endif()
 
-message(STATUS "compiler id: " ${CXX_COMPILER_ID})
-target_compile_options(
-  smg
-  PRIVATE
+# Compiler warnings
+target_compile_options(smg PRIVATE
     $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:
-    -Wpedantic
-    -Wall
-    -Wextra>)
+    -Wall -Wextra -Wpedantic>
+)
 
-# general header
+# WASM-specific compile definitions
+if(SMG_PLATFORM_WASM)
+    target_compile_definitions(smg PUBLIC SMG_PLATFORM_WASM)
+endif()
+
+# Configure headers
 configure_file(
-    ${PROJECT_SOURCE_DIR}/cmake/smg.hh.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smg.hh.in
     ${CMAKE_BINARY_DIR}/include/smg.hh
-    )
-
-# version header
+)
 configure_file(
-    ${CMAKE_SOURCE_DIR}/cmake/version.hh.in
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/version.hh.in
     ${CMAKE_BINARY_DIR}/include/version.hh
-    )
+)
 
-# add tests? we can probably steal from the examples? add test subdir
+# Tests
 if(ENABLE_TESTING)
-  message(STATUS "setup tests")
-  enable_testing()
-  add_subdirectory(test)
-endif(ENABLE_TESTING)
+    enable_testing()
+    add_subdirectory(test)
+endif()
 
+# Examples
 if(ENABLE_EXAMPLES)
-    message(STATUS "build examples")
     add_subdirectory(examples)
 endif()
 
-# rpath for build
-list(APPEND CMAKE_BUILD_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
-list(APPEND CMAKE_BUILD_RPATH "$ORIGIN/../../.deps/usr/lib") # for dependencies
-message(STATUS "CMAKE_BUILD_RPATH: ${CMAKE_BUILD_RPATH}")
-set_property(TARGET smg PROPERTY BUILD_RPATH "${CMAKE_BUILD_RPATH}")
+# Installation
+include(GNUInstallDirs)
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/smg)
 
-# ##############################################################################
-# INSTALLATION if we are installing
-if(CREATE_INSTALL)
+# Install the library target
+# When building dependencies from source, we can't export targets that reference
+# non-exported dependency targets. Only create export set with system packages.
+if(USE_SYSTEM_MAGNUM)
+    install(TARGETS smg
+        EXPORT smg-targets
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+    set_target_properties(smg PROPERTIES EXPORT_NAME smg)
+else()
+    install(TARGETS smg
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+    )
+endif()
 
-    # how can we install on windows? ...  @hey
-  include(GNUInstallDirs)
-
-  set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/smg)
-
-  install(
-    TARGETS smg
-    EXPORT smg-targets
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
-    ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}/smg
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+# Install headers (always)
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+install(FILES
+    ${CMAKE_BINARY_DIR}/include/version.hh
+    ${CMAKE_BINARY_DIR}/include/smg.hh
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+)
+install(FILES ${SMG_IMPLOT_DIR}/implot.h
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
 )
 
-  # change export name?
-  set_target_properties(smg PROPERTIES EXPORT_NAME smg)
+if(ENABLE_IMPLOT3D)
+    install(FILES ${SMG_IMPLOT3D_DIR}/implot3d.h
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+    )
+endif()
 
-  # install header files
-  install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+# Generate and install config files (always)
+include(CMakePackageConfigHelpers)
+write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY AnyNewerVersion
+)
 
-  # version header install
-  install(FILES ${CMAKE_BINARY_DIR}/include/version.hh
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
+configure_package_config_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
+    INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
+)
 
-  # general header install
-  install(FILES ${CMAKE_BINARY_DIR}/include/smg.hh
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
-
-  # add implot headers
-  install(FILES 
-      ${CMAKE_SOURCE_DIR}/implot/implot.h
-          DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
-
-      # add implot3d headers
-    if(ENABLE_IMPLOT3D)
-      install(FILES 
-          ${CMAKE_SOURCE_DIR}/implot3d/implot3d.h
-              DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg)
-      endif()
-
-    set(_INCLUDE_INSTALL_DIR smg)
-
-  # Export targets to a script
-  install(
-    EXPORT smg-targets
-    FILE smgTargets.cmake
-    NAMESPACE smg::
+install(FILES
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
     DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Export targets
+if(USE_SYSTEM_MAGNUM)
+    # Use CMake's export mechanism when deps are imported targets
+    install(EXPORT smg-targets
+        FILE smgTargets.cmake
+        NAMESPACE smg::
+        DESTINATION ${INSTALL_CONFIGDIR}
     )
 
-  # create a configversion.cmake
-  include(CMakePackageConfigHelpers)
-  write_basic_package_version_file(
-      ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
-      VERSION smg
-      COMPATIBILITY AnyNewerVersion
-  )
+    export(EXPORT smg-targets
+        FILE ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+    )
+else()
+    # Use manual template when building deps from source
+    # (CMake export doesn't work with add_subdirectory targets)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgTargets.cmake.in
+        ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+        @ONLY
+    )
 
-  configure_package_config_file(
-      ${CMAKE_CURRENT_LIST_DIR}/cmake/smgConfig.cmake.in
-      ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
-      INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
-      PATH_VARS CMAKE_INSTALL_INCLUDEDIR CMAKE_INSTALL_LIBDIR
-  )
+    install(FILES
+        ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
+        DESTINATION ${INSTALL_CONFIGDIR}
+    )
+endif()
 
-  # install not finished!
-  # install config, configversion and custom find modules
-  # (to find with cmake in other projects)
-  install (FILES
-      ${CMAKE_CURRENT_BINARY_DIR}/smgConfig.cmake
-      ${CMAKE_CURRENT_BINARY_DIR}/smgConfigVersion.cmake
-      # install dependency modules too?
-      ${CMAKE_CURRENT_SOURCE_DIR}/cmake/FindImGui.cmake
-      DESTINATION ${INSTALL_CONFIGDIR}
-      )
-
-  ################################################## 
-  # EXPORT finally
-  export(EXPORT smg-targets
-      FILE ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
-      )
-
-  # setup install paths
-  include(GNUInstallDirs)
-
-  # set rpaths
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH FALSE)
-  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
-  #list(APPEND CMAKE_INSTALL_RPATH "${CMAKE_CURRENT_SOURCE_DIR}/.deps/usr/lib") # for dependencies
-  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../${CMAKE_INSTALL_LIBDIR}")
-  list(APPEND CMAKE_INSTALL_RPATH "$ORIGIN/../lib")
-  message(STATUS "CMAKE_INSTALL_RPATH: ${CMAKE_INSTALL_RPATH}")
-  #set_property(TARGET smg PROPERTY INSTALL_RPATH "${CMAKE_INSTALL_RPATH}")
-
-  # create debian package?
-  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/cmake")
-
-endif(CREATE_INSTALL)
-
-# cmake summary
+# Summary
 message("\n"
-    "Installation Summary\n"
-    "--------------------\n"
-    "* Install Directory            : ${CMAKE_INSTALL_PREFIX}\n"
-    "* Build Type                   : ${CMAKE_BUILD_TYPE}\n"
-    "* Build static libs            : ${BUILD_STATIC_LIBS}\n"
-    "* Build tests                  : ${ENABLE_TESTING}\n"
-    "* Magnum                       : ${USE_MAGNUM}\n"
-    "* Armadillo                    : ${ENABLE_ARMADILLO}\n"
+    "Build Summary\n"
+    "-------------\n"
+    "* Install Directory : ${CMAKE_INSTALL_PREFIX}\n"
+    "* Build Type        : ${CMAKE_BUILD_TYPE}\n"
+    "* Tests             : ${ENABLE_TESTING}\n"
+    "* Examples          : ${ENABLE_EXAMPLES}\n"
+    "* ImPlot3D          : ${ENABLE_IMPLOT3D}\n"
 )
 
-# copy of SDL2
-if (WIN32)
-    add_custom_command(
-        TARGET smg POST_BUILD
-        COMMAND "${CMAKE_COMMAND}" -E copy_if_different "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:smg>"
+# Windows: copy SDL2 DLL
+if(WIN32 AND TARGET SDL2::SDL2)
+    add_custom_command(TARGET smg POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "$<TARGET_FILE:SDL2::SDL2>" "$<TARGET_FILE_DIR:smg>"
         VERBATIM
     )
 endif()

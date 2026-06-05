@@ -5,8 +5,17 @@
 #include <vector>
 
 // magnum includes
+#include <Corrade/configure.h>
 #include <Magnum/Magnum.h>
+
+// Platform-specific application
+#if defined(CORRADE_TARGET_EMSCRIPTEN)
+#include <Magnum/Platform/EmscriptenApplication.h>
+#else
 #include <Magnum/Platform/Sdl2Application.h>
+#include "SDL_video.h"
+#endif
+
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
@@ -18,7 +27,6 @@
 
 #include "log.hh"
 
-#include "SDL_video.h"
 #include "imgui.h"
 #include "log.hh"
 
@@ -39,8 +47,10 @@ protected:
 	// our imgui context
 	ImGuiIntegration::Context _imgui{ NoCreate };
 
-	// actual window (assume SDL?)
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+	// actual window (desktop only, assume SDL)
 	SDL_Window* _window;
+#endif
 
 	// logger
 	ShLogPr _lg; // = NullLog::create();
@@ -92,12 +102,14 @@ public:
 	// add custom callbacks
 	void add_callback(ShDrawCallbackPr);
 
-	// getters
-	SDL_Window* get_window();
+	// getters (some are desktop-only)
 	std::pair<int, int> get_window_position();
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+	SDL_Window* get_window();
 	void set_window_icon(std::string icon_file);
 	void set_window_position(int x, int y);
 	void set_window_size(int x, int y);
+#endif
 
 	// event wrappers
 	void viewportEvent(ViewportEvent& event) override;

@@ -21,6 +21,7 @@ int callback_fun(void* data) {
 
 	// cast our data to be meaningful
 	data_ex mydata = *reinterpret_cast<data_ex*>(data);
+	(void)mydata; // suppress unused warning
 
 	ImGui::Begin("hey mom");
 	ImGui::Text("Hello, world!");
@@ -37,36 +38,30 @@ int callback_fun(void* data) {
 	return 0;
 }
 
-int main(int argc, char** argv) {
+// Custom application class that sets up callback in constructor
+class GuiBaseExample : public GuiBase {
+public:
+	explicit GuiBaseExample(const Arguments& arguments)
+		: GuiBase(arguments) {
+		// example data
+		_mydata.x = 5;
+		_mydata.y = 6;
+		_mydata.name = "heymom";
 
-	// make our application class
-	printf("make guibase application\n");
-	GuiBase gui({argc, argv});
+		// make our callback
+		_mycb = DrawCallback::create();
+		_mycb->set_callback(callback_fun);
+		_mycb->set_data((void*)&_mydata);
 
-	// example data
-	data_ex mydata = data_ex();
-	mydata.x = 5;
-	mydata.y = 6;
-	mydata.name = "heymom";
-
-	// make our call back
-	ShDrawCallbackPr mycb = DrawCallback::create();
-	mycb->set_callback(callback_fun);
-
-	// reference the data here
-	mycb->set_data((void*)&mydata);
-
-	// set callback into our gui
-	gui.add_callback(mycb);
-
-	// exec calls mainloopiteration a bunch
-	// this checks events and draws
-	std::string input;
-	bool done = false;
-	while(!done) {
-		done = !gui.mainLoopIteration();
+		// set callback into our gui
+		add_callback(_mycb);
 	}
 
-	// exit
-	gui.exit();
-}
+private:
+	data_ex _mydata;
+	ShDrawCallbackPr _mycb;
+};
+
+// Use MAGNUM_APPLICATION_MAIN for proper cross-platform main loop
+// This handles Emscripten's event loop correctly
+MAGNUM_APPLICATION_MAIN(GuiBaseExample)

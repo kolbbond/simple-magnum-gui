@@ -1,71 +1,82 @@
 # Simple-Magnum-Gui (SMG)
 
-A simple gui to generate a window and allow plotting.
-Great for quick debugging and drawing of data. 
+A simple GUI for generating windows and plotting data. Great for quick debugging and visualization.
 
 ![smg example](assets/smg_example.png)
 
-Magnum gives easy opengl support.
+## Getting Started
 
-Make sure to clone the submodules too.
+Clone with submodules:
+```bash
+git clone --recurse-submodules https://github.com/kolbbond/simple-magnum-gui.git
+```
 
-`git submodule init`
-`git submodule update`
+Or if already cloned:
+```bash
+git submodule update --init --recursive
+```
 
-### Dependencies
+## Dependencies
 
-This utilizes Dear ImGui, Magnum, ImPlot.  
-[Corrade](github.com/mosra/corrade)  
-[Magnum](github.com/mosra/magnum)  
-[magnum-integration](https://github.com/mosra/magnum-integration)  
-[imgui](https://github.com/ocornut/imgui)  * cloned into src/MagnumExternal/ImGui directory
-add implot and implot3
+Built on [Magnum](https://github.com/mosra/magnum) for OpenGL support, with:
+- [Corrade](https://github.com/mosra/corrade)
+- [magnum-integration](https://github.com/mosra/magnum-integration)
+- [Dear ImGui](https://github.com/ocornut/imgui)
+- [ImPlot](https://github.com/epezent/implot)
+- [ImPlot3D](https://github.com/brenocq/implot3d)
 
-### Linux dependencies
-Build with the `make deps`
-and `make`
-make sure to add a LD_LIBRARY_PATH
-`export LD_LIBRARY_PATH=/home/you/programs/simple-magnum-gui/.deps/usr/lib:${LD_LIBRARY_PATH}`
-to find the libraries
+### Linux
 
-#### Windows dependencies
-Use vpckg to install other dependencies.
-[vcpkg](https://github.com/microsoft/vcpkg)
+Build dependencies and project:
+```bash
+make deps
+make
+```
 
-Make sure you are in classic mode and install 
+Add library path:
+```bash
+export LD_LIBRARY_PATH=/path/to/simple-magnum-gui/.deps/usr/lib:${LD_LIBRARY_PATH}
+```
 
-1. SDL2
-2. Freetype
-3. libjpeg-turbo
+### Windows
 
+Use vcpkg (classic mode) for SDL2/Freetype/libjpeg-turbo:
+```powershell
+git clone https://github.com/microsoft/vcpkg.git
+cd vcpkg
+.\bootstrap-vcpkg.bat
+$env:VCPKG_ROOT = "$pwd"
+[Environment]::SetEnvironmentVariable("VCPKG_ROOT", $env:VCPKG_ROOT, "User")
+& "$env:VCPKG_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo
+```
 
-# make sure to add the dll libraries to path 
-$env:PATH="C:\Users\you\programs\simple-magnum-gui\.deps\usr\bin;$env:PATH"
+Open an x64 MSVC environment (Developer PowerShell or DevShell) with `ninja` on PATH, then build:
+```powershell
+cmake --preset windows-vcpkg
+cmake --build build --config Debug
+```
 
-and SDL2 from vcpkg
+If running from the build tree, set plugin and SDL2 paths:
+```powershell
+$env:MAGNUM_PLUGINS_DEBUG_DIR="$pwd\build\bin\magnum-d"
+$env:PATH="$env:VCPKG_ROOT\installed\x64-windows\debug\bin;$env:PATH"
+```
 
-$env:PATH="C:\Users\you\programs\vcpkg\installed\x64-windows\bin;$env:PATH"
+## Usage
 
-## legacy dependencies
-These are encapsulated into the dependencies directory.  
-The cmake commands are implemented in shell script wrappers in the
-`scripts` directory. 
-FYI both of the above scripts install to `~/.local`. 
+The GUI uses a callback system:
 
- ## utilizing the library
-Gui uses a naive callback system to enable different systems.
-See the examples
- * Start the gui window with GuiBase
- * create a DrawCallback
-    * set your static callback function with prototype 
-        ` int callback_function(void* data); `
-    * set any events (mouse move, mouse scroll, key press) with the relevant prototypes
-    * set your data
-* add the callback to your guibase object
-* run your game loop and call the gui function `mainLoopIteration`
+1. Start a window with `GuiBase`
+2. Create a `DrawCallback`:
+   - Set your callback function: `int callback_function(void* data);`
+   - Set event handlers (mouse move, scroll, key press)
+   - Set your data pointer
+3. Add the callback to your `GuiBase` object
+4. Run your loop calling `mainLoopIteration`
 
+See the examples for details.
 
+## Legacy
 
-
-
+Legacy Linux scripts in `scripts/` install to `~/.local`.
 
