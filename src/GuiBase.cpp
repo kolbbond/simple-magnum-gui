@@ -1,4 +1,5 @@
 #include <Corrade/configure.h>  // For CORRADE_TARGET_EMSCRIPTEN
+#include <iostream>             // std::cerr / std::endl (no longer pulled in transitively)
 #include <Magnum/Trade/Trade.h>
 #include <imgui.h>
 #include <Magnum/Math/Time.h>

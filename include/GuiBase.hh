@@ -48,12 +48,12 @@ protected:
 	ImGuiIntegration::Context _imgui{ NoCreate };
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	// actual window (desktop only, assume SDL)
-	SDL_Window* _window;
+	// actual window (desktop only, assume SDL); non-owning, owned by Platform::Application
+	SDL_Window* _window = nullptr;
 #endif
 
-	// logger
-	ShLogPr _lg; // = NullLog::create();
+	// logger (safe no-op default until the constructor installs a real Log)
+	ShLogPr _lg = NullLog::create();
 
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;
