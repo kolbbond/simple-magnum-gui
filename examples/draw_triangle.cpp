@@ -13,6 +13,7 @@
 
 using namespace smg;
 using namespace Magnum;
+using namespace Magnum::Math::Literals;
 
 // type of geometry
 struct TriangleVertex {

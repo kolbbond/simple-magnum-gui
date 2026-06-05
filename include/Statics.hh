@@ -9,7 +9,6 @@
 
 namespace smg {
 typedef std::shared_ptr<class Statics> ShStaticsPr;
-using namespace Magnum;
 
 class Statics {
 

@@ -9,11 +9,19 @@
 
 #include "GuiBase.hh"
 
+// Implementation-local convenience; the public header no longer leaks these.
+using namespace Magnum;
+using namespace Magnum::Math::Literals;
+
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
 	//: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
 	: Platform::Application{ arguments, NoCreate } {
+
+	// background clear color (moved here from the header to keep the _rgbaf
+	// literal out of the public API)
+	_clearColor = 0x72909aff_rgbaf;
 
 
 	// configuration for multisampling

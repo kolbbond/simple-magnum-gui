@@ -34,18 +34,15 @@
 #include "DrawCallback.hh"
 #include "implot.h"
 
-using namespace Magnum;
-using namespace Magnum::Math::Literals;
-
 namespace smg {
 
 // base gui class, entry point for guis
 
-class GuiBase: public Platform::Application {
+class GuiBase: public Magnum::Platform::Application {
 
 protected:
 	// our imgui context
-	ImGuiIntegration::Context _imgui{ NoCreate };
+	Magnum::ImGuiIntegration::Context _imgui{ Magnum::NoCreate };
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
 	// actual window (desktop only, assume SDL); non-owning, owned by Platform::Application
@@ -57,18 +54,18 @@ protected:
 
 	bool _showDemoWindow = true;
 	bool _showAnotherWindow = false;
-	Color4 _clearColor = 0x72909aff_rgbaf;
-	Float _floatValue = 0.0f;
+	Magnum::Color4 _clearColor; // initialized in constructor
+	Magnum::Float _floatValue = 0.0f;
 
 	int _samples = 4; // MSAA samples
 
 	// font setting
-	std::vector<Containers::ArrayView<const char>> _fontData;
+	std::vector<Corrade::Containers::ArrayView<const char>> _fontData;
 	std::vector<ImFont*> _fonts;
 	ImFont* _font_default = nullptr;
 
 	// icon settings
-	Containers::Optional<Trade::ImageData2D> _icon;
+	Corrade::Containers::Optional<Magnum::Trade::ImageData2D> _icon;
 
 	// list of set callbacks
 	std::vector<ShDrawCallbackPr> _callback_list;

@@ -21,6 +21,7 @@
 
 using namespace smg;
 using namespace Magnum;
+using namespace Magnum::Math::Literals;
 
 // use data as void pointer in callback
 class Data_ex {

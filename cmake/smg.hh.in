@@ -1,6 +1,17 @@
+// Simple-Magnum-Gui (SMG) umbrella header.
+//
+// Pulls in the full public API so consumers can `#include <smg/smg.hh>`
+// instead of including each header individually. Listed in dependency order;
+// GuiBase.hh transitively provides DrawCallback.hh, Events.hpp and log.hh.
 #pragma once
 
-// our wrappers
+// low-level utilities (not pulled in transitively)
+#include "typedefs.hh"
+#include "log.hh"
+#include "error.hh"
+
+// public API
+#include "Events.hpp"
+#include "DrawCallback.hh"
 #include "GuiBase.hh"
 #include "Statics.hh"
-

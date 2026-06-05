@@ -23,8 +23,6 @@ typedef std::shared_ptr<class DrawCallback> ShDrawCallbackPr;
 // for users to implement callbacks
 typedef int (*draw_callback)(void*);
 
-using namespace Magnum;
-
 class DrawCallback {
 protected:
 	// draw callback function
