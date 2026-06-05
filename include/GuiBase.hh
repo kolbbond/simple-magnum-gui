@@ -100,9 +100,9 @@ public:
 	void add_callback(ShDrawCallbackPr);
 
 	// getters (some are desktop-only)
-	std::pair<int, int> get_window_position();
+	[[nodiscard]] std::pair<int, int> get_window_position() const;
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	SDL_Window* get_window();
+	[[nodiscard]] SDL_Window* get_window() const;
 	void set_window_icon(std::string icon_file);
 	void set_window_position(int x, int y);
 	void set_window_size(int x, int y);

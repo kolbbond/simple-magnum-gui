@@ -88,7 +88,7 @@ void DrawCallback::set_data(void* data) {
 
 // getters
 
-void* DrawCallback::get_data() {
+void* DrawCallback::get_data() const {
 	return _data;
 }
 

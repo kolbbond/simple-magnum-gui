@@ -306,7 +306,7 @@ void GuiBase::print_window_position() {
 #endif
 }
 
-std::pair<int, int> GuiBase::get_window_position() {
+std::pair<int, int> GuiBase::get_window_position() const {
 	std::pair<int, int> pos{0, 0};
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
 	SDL_GetWindowPosition(_window, &pos.first, &pos.second);

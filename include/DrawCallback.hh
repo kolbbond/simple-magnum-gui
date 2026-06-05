@@ -60,7 +60,7 @@ public:
 	static ShDrawCallbackPr create(draw_callback callback);
 	static ShDrawCallbackPr create(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se);
 
-	void* get_data();
+	[[nodiscard]] void* get_data() const;
 	void set_callback(draw_callback);
 	void set_data(void*);
 	void set_pointer_move_event(pointer_move_event mme);
