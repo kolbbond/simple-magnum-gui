@@ -62,6 +62,31 @@ $env:MAGNUM_PLUGINS_DEBUG_DIR="$pwd\build\bin\magnum-d"
 $env:PATH="$env:VCPKG_ROOT\installed\x64-windows\debug\bin;$env:PATH"
 ```
 
+### WebAssembly (Emscripten)
+
+The WASM build cross-compiles with Emscripten via the wrapper script
+`scripts/build_wasm.sh`. Use the script rather than a bare `cmake` invocation:
+cross-compiling Magnum needs a **native** `corrade-rc` for resource compilation,
+which the script builds first (into `build-native/`) and passes through as
+`CORRADE_RC_EXECUTABLE`.
+
+Prerequisite: an activated [emsdk](https://emscripten.org/docs/getting_started/downloads.html).
+The script finds it in this order — `emcc` already on `PATH`, then `$EMSDK_PATH`,
+then `$EMSDK` (exported by `emsdk_env.sh`):
+
+```bash
+# either activate emsdk in your shell first...
+source /path/to/emsdk/emsdk_env.sh
+./scripts/build_wasm.sh
+
+# ...or point the script at your emsdk install
+EMSDK_PATH=/path/to/emsdk ./scripts/build_wasm.sh
+```
+
+Output (the WASM build dir) lands in `build-wasm/`. The build forces a static
+library (`BUILD_SHARED_LIBS=OFF`) and uses `EmscriptenApplication` instead of
+SDL2 (see `GuiBase.hh`).
+
 ## Usage
 
 The GUI uses a callback system:
