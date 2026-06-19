@@ -16,6 +16,7 @@ set(test_list
     test_bounds.cpp
     test_camera.cpp
     test_mesh_bounds.cpp
+    test_primitives_axes.cpp
 )
 
 # walk over source files

@@ -108,6 +108,7 @@ set(smg_sources
     src/SceneTypes.cpp
     src/Camera.cpp
     src/Mesh.cpp
+    src/Primitives.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
