@@ -71,6 +71,16 @@ void ScenePanel::ensure_fbo(const Magnum::Vector2i& size) {
     _fbo.attachTexture(Magnum::GL::Framebuffer::ColorAttachment{ 0 }, _color, 0)
         .attachRenderbuffer(Magnum::GL::Framebuffer::BufferAttachment::DepthStencil, _depth);
     CORRADE_INTERNAL_ASSERT(_fbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
+    if(_use_msaa) {
+        _colorMsaa = Magnum::GL::Renderbuffer{};
+        _colorMsaa.setStorageMultisample(_samples, Magnum::GL::RenderbufferFormat::RGBA8, size);
+        _depthMsaa = Magnum::GL::Renderbuffer{};
+        _depthMsaa.setStorageMultisample(_samples, Magnum::GL::RenderbufferFormat::Depth24Stencil8, size);
+        _msaaFbo = Magnum::GL::Framebuffer{ Magnum::Range2Di::fromSize({}, size) };
+        _msaaFbo.attachRenderbuffer(Magnum::GL::Framebuffer::ColorAttachment{ 0 }, _colorMsaa)
+            .attachRenderbuffer(Magnum::GL::Framebuffer::BufferAttachment::DepthStencil, _depthMsaa);
+        CORRADE_INTERNAL_ASSERT(_msaaFbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
+    }
 }
 
 void ScenePanel::render_scene(const Magnum::Vector2i& size) {
@@ -78,7 +88,8 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
     const Magnum::Matrix4 view = _camera.view();
     const Magnum::Matrix4 proj = _camera.projection(aspect);
 
-    _fbo.clearColor(0, Magnum::Color4{ 0.12f, 0.12f, 0.14f, 1.0f }).clearDepth(1.0f).bind();
+    Magnum::GL::Framebuffer& target = _use_msaa ? _msaaFbo : _fbo;
+    target.clearColor(0, Magnum::Color4{ 0.12f, 0.12f, 0.14f, 1.0f }).clearDepth(1.0f).bind();
 
     Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::DepthTest);
     Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::FaceCulling);
@@ -104,7 +115,30 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
 
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
+    if(_use_msaa) {
+        Magnum::GL::Framebuffer::blit(_msaaFbo,
+            _fbo,
+            Magnum::Range2Di::fromSize({}, size),
+            Magnum::Range2Di::fromSize({}, size),
+            Magnum::GL::FramebufferBlit::Color,
+            Magnum::GL::FramebufferBlitFilter::Linear);
+    }
     Magnum::GL::defaultFramebuffer.bind();
+}
+
+void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
+    (void)image_size;
+    if(!ImGui::IsItemHovered()) return;
+    const ImGuiIO& io = ImGui::GetIO();
+    const float dx = io.MouseDelta.x;
+    const float dy = io.MouseDelta.y;
+    if(ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+        _camera.orbit(dx, dy);
+    else if(ImGui::IsMouseDragging(ImGuiMouseButton_Middle))
+        _camera.pan(dx, dy);
+    else if(ImGui::IsMouseDragging(ImGuiMouseButton_Right))
+        _camera.zoom(-dy * 0.1f);
+    if(io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
 }
 
 void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
@@ -115,6 +149,7 @@ void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
 
     ImGui::Begin(title);
     Magnum::ImGuiIntegration::image(_color, Magnum::Vector2{ size });
+    handle_input(Magnum::Vector2{ size });
     ImGui::End();
 }
 

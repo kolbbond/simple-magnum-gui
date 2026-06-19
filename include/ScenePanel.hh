@@ -60,6 +60,8 @@ protected:
     LightProperties _light;
     bool _fitted{ false };
 
+    void handle_input(const Magnum::Vector2& image_size);
+
     bool _gl_ready{ false };
     Magnum::Vector2i _fbo_size{ 0, 0 };
     Magnum::Shaders::PhongGL _phong{ Magnum::NoCreate };
@@ -67,6 +69,12 @@ protected:
     Magnum::GL::Texture2D _color{ Magnum::NoCreate };
     Magnum::GL::Renderbuffer _depth{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _fbo{ Magnum::NoCreate };
+
+    bool _use_msaa{ true };
+    int _samples{ 4 };
+    Magnum::GL::Renderbuffer _colorMsaa{ Magnum::NoCreate };
+    Magnum::GL::Renderbuffer _depthMsaa{ Magnum::NoCreate };
+    Magnum::GL::Framebuffer _msaaFbo{ Magnum::NoCreate };
 };
 
 } // namespace smg
