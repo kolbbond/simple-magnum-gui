@@ -7,3 +7,7 @@ lib
 dependencies
 .deps
 imgui.ini
+
+# stray top-level clones — the real ones live under external/ as submodules
+/implot
+/implot3d

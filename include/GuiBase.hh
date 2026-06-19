@@ -28,7 +28,6 @@
 #include "log.hh"
 
 #include "imgui.h"
-#include "log.hh"
 
 // smg includes
 #include "DrawCallback.hh"
