@@ -21,6 +21,10 @@
 
 #include <iostream>
 
+using namespace Magnum;
+using namespace Magnum::Math::Literals;
+using namespace Corrade;
+
 // example data to pass into callback
 struct data_ex {
 	int x;
@@ -77,7 +81,7 @@ int callback_fun(void* data) {
 			Magnum::ImGuiIntegration::image(
 				mydata->texture, Vector2{400.0, 300.0}, Range2D{{}, Vector2{1.0f}}, Color4{1.0f}, Color4{1.0f});
 			ImGui::SameLine();
-			ImGui::Image(static_cast<ImTextureID>(&mydata->texture), {400, 300}, ImVec2(0, 0), ImVec2(1, 1));
+			ImGui::Image(reinterpret_cast<ImTextureID>(&mydata->texture), {400, 300}, ImVec2(0, 0), ImVec2(1, 1));
 
 			mydata->texture2.setStorage(1, GL::TextureFormat::RGBA8, mydata->size);
 
@@ -94,7 +98,7 @@ int callback_fun(void* data) {
 			Magnum::ImGuiIntegration::image(
 				mydata->texture2, Vector2{400.0, 300.0}, Range2D{{}, Vector2{1.0f}}, Color4{1.0f}, Color4{1.0f});
 			ImGui::SameLine();
-			ImGui::Image(static_cast<ImTextureID>(&mydata->texture2), {400, 300}, ImVec2(0, 0), ImVec2(1, 1));
+			ImGui::Image(reinterpret_cast<ImTextureID>(&mydata->texture2), {400, 300}, ImVec2(0, 0), ImVec2(1, 1));
 
 			/* Switch back to the default framebuffer */
 			GL::defaultFramebuffer.bind();
@@ -128,7 +132,7 @@ int main(int argc, char** argv) {
 	// load image
 	PluginManager::Manager<Trade::AbstractImporter> manager;
 	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-	if(!importer || !importer->openFile("/home/kolbbond/programs/cpp/smg/tests/cute_goose.jpg")) assert(0);
+	if(!importer || !importer->openFile(SMG_TEST_ASSET_DIR "/cute_goose.jpg")) assert(0);
 
 	// set into data
 	mydata.image = importer->image2D(0);
