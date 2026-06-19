@@ -1,5 +1,6 @@
 #include "ScenePanel.hh"
 
+#include <Corrade/Utility/Assert.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/RenderbufferFormat.h>
 #include <Magnum/GL/Renderer.h>
@@ -54,9 +55,6 @@ void ScenePanel::ensure_gl() {
     if(_gl_ready) return;
     _phong = Magnum::Shaders::PhongGL{ Magnum::Shaders::PhongGL::Configuration{}.setFlags(Magnum::Shaders::PhongGL::Flag::VertexColor) };
     _vcolor = Magnum::Shaders::VertexColorGL3D{};
-    _flat = Magnum::Shaders::FlatGL3D{};
-    _wire = Magnum::Shaders::MeshVisualizerGL3D{ Magnum::Shaders::MeshVisualizerGL3D::Configuration{}.setFlags(
-        Magnum::Shaders::MeshVisualizerGL3D::Flag::Wireframe) };
     _gl_ready = true;
 }
 
@@ -72,6 +70,7 @@ void ScenePanel::ensure_fbo(const Magnum::Vector2i& size) {
     _fbo = Magnum::GL::Framebuffer{ Magnum::Range2Di::fromSize({}, size) };
     _fbo.attachTexture(Magnum::GL::Framebuffer::ColorAttachment{ 0 }, _color, 0)
         .attachRenderbuffer(Magnum::GL::Framebuffer::BufferAttachment::DepthStencil, _depth);
+    CORRADE_INTERNAL_ASSERT(_fbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
 }
 
 void ScenePanel::render_scene(const Magnum::Vector2i& size) {
@@ -103,6 +102,7 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
         }
     }
 
+    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
     Magnum::GL::defaultFramebuffer.bind();
 }

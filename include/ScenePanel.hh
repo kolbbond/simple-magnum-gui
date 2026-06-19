@@ -11,8 +11,6 @@
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Matrix4.h>
-#include <Magnum/Shaders/FlatGL.h>
-#include <Magnum/Shaders/MeshVisualizerGL.h>
 #include <Magnum/Shaders/PhongGL.h>
 #include <Magnum/Shaders/VertexColorGL.h>
 
@@ -66,8 +64,6 @@ protected:
     Magnum::Vector2i _fbo_size{ 0, 0 };
     Magnum::Shaders::PhongGL _phong{ Magnum::NoCreate };
     Magnum::Shaders::VertexColorGL3D _vcolor{ Magnum::NoCreate };
-    Magnum::Shaders::FlatGL3D _flat{ Magnum::NoCreate };
-    Magnum::Shaders::MeshVisualizerGL3D _wire{ Magnum::NoCreate };
     Magnum::GL::Texture2D _color{ Magnum::NoCreate };
     Magnum::GL::Renderbuffer _depth{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _fbo{ Magnum::NoCreate };
