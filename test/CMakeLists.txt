@@ -13,6 +13,7 @@ set(test_list
     test_smg_libraries.cpp
     test_magnum_implot.cpp
     test_maptotexture.cpp
+    test_bounds.cpp
 )
 
 # walk over source files
