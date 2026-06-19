@@ -15,6 +15,7 @@ set(test_list
     test_maptotexture.cpp
     test_bounds.cpp
     test_camera.cpp
+    test_mesh_bounds.cpp
 )
 
 # walk over source files

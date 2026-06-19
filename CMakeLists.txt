@@ -107,6 +107,7 @@ set(smg_sources
     src/Statics.cpp
     src/SceneTypes.cpp
     src/Camera.cpp
+    src/Mesh.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
