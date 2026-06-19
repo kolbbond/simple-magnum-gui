@@ -5,6 +5,7 @@
 #include <Magnum/ImageView.h>
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Trade/AbstractImporter.h>
+#include "implot3d.h"
 
 #include "GuiBase.hh"
 
@@ -190,6 +191,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// ImPlot::SetImGuiContext(_imgui);
 	printf("%s--- SMG: Creating implot context ---%s\n", KBLU, KNRM);
 	ImPlot::CreateContext();
+	ImPlot3D::CreateContext();
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
 	/* Have some sane speed, please */

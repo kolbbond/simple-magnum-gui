@@ -33,6 +33,7 @@
 // smg includes
 #include "DrawCallback.hh"
 #include "implot.h"
+#include "implot3d.h"
 
 using namespace Magnum;
 using namespace Magnum::Math::Literals;
@@ -79,6 +80,8 @@ public:
 
 	~GuiBase() {
 		//	std::printf(" [X] GuiBase destructor [X] \n");
+		ImPlot3D::DestroyContext();
+		ImPlot::DestroyContext();
 		this->exit();
 	};
 
