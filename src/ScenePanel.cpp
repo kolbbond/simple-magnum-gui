@@ -28,7 +28,7 @@ std::size_t ScenePanel::add_cube(const Magnum::Matrix4& t, const Magnum::Color3&
 std::size_t ScenePanel::add_sphere(const Magnum::Matrix4& t, const Magnum::Color3& c) { return add(primitives::sphere(), t, c); }
 std::size_t ScenePanel::add_plane(const Magnum::Matrix4& t, const Magnum::Color3& c) { return add(primitives::plane(), t, c); }
 std::size_t ScenePanel::add_grid(const Magnum::Matrix4& t, const Magnum::Color3& c) {
-    const std::size_t h = add(primitives::grid(), t, c);
+    const std::size_t h = add(primitives::grid(Magnum::Vector2i{ 10, 10 }, c), t, c);
     _objects[h].wireframe = true;
     return h;
 }

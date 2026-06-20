@@ -6,6 +6,7 @@
 #include <Corrade/Containers/ArrayView.h>
 #include <Magnum/GL/Mesh.h>
 #include <Magnum/Magnum.h>
+#include <Magnum/Mesh.h>
 #include <Magnum/Trade/Trade.h>
 
 #include "SceneTypes.hh"
