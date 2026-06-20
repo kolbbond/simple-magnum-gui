@@ -15,6 +15,7 @@ else()
         draw_cube.cpp
         draw_triangle.cpp
         guibase.cpp
+        scene_panel.cpp
     )
 endif()
 

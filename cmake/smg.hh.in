@@ -15,3 +15,10 @@
 #include "DrawCallback.hh"
 #include "GuiBase.hh"
 #include "Statics.hh"
+
+// 3D scene viewport
+#include "SceneTypes.hh"
+#include "Camera.hh"
+#include "Mesh.hh"
+#include "Primitives.hh"
+#include "ScenePanel.hh"
