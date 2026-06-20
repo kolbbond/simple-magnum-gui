@@ -121,7 +121,7 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
             Magnum::Range2Di::fromSize({}, size),
             Magnum::Range2Di::fromSize({}, size),
             Magnum::GL::FramebufferBlit::Color,
-            Magnum::GL::FramebufferBlitFilter::Linear);
+            Magnum::GL::FramebufferBlitFilter::Nearest);
     }
     Magnum::GL::defaultFramebuffer.bind();
 }
