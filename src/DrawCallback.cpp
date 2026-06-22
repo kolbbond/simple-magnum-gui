@@ -36,6 +36,10 @@ DrawCallback::~DrawCallback() {
 }
 
 int DrawCallback::draw() {
+	// no draw callback registered yet — nothing to do
+	if(!_callback) {
+		return 0;
+	}
 	// callback with data
 	return _callback(_data);
 }

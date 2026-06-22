@@ -65,7 +65,7 @@ option(USE_SYSTEM_MAGNUM "Use system-installed Magnum/Corrade instead of buildin
 
 if(USE_SYSTEM_MAGNUM)
     # Find system packages
-    find_package(Corrade REQUIRED Utility PluginManager)
+    find_package(Corrade REQUIRED Utility PluginManager TestSuite)
     find_package(Magnum REQUIRED
         GL
         MeshTools

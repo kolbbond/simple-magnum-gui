@@ -6,6 +6,7 @@
 #pragma once
 
 // low-level utilities (not pulled in transitively)
+#include "version.hh"
 #include "typedefs.hh"
 #include "log.hh"
 #include "error.hh"

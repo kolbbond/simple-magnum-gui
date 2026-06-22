@@ -13,17 +13,17 @@
 // specific headers
 //#include "error.hh"
 
-// Terminal color definitions
-// color definitions
-#define KNRM "\x1B[0m"
-#define KBLD "\033[1m"
-#define KRED "\x1B[31m"
-#define KGRN "\x1B[32m"
-#define KYEL "\x1B[33m"
-#define KBLU "\x1B[34m"
-#define KMAG "\x1B[35m"
-#define KCYN "\x1B[36m"
-#define KWHT "\x1B[37m"
+// Terminal color definitions (SMG_-prefixed to avoid colliding with
+// consumer/project-rat color macros leaking through the umbrella header)
+#define SMG_KNRM "\x1B[0m"
+#define SMG_KBLD "\033[1m"
+#define SMG_KRED "\x1B[31m"
+#define SMG_KGRN "\x1B[32m"
+#define SMG_KYEL "\x1B[33m"
+#define SMG_KBLU "\x1B[34m"
+#define SMG_KMAG "\x1B[35m"
+#define SMG_KCYN "\x1B[36m"
+#define SMG_KWHT "\x1B[37m"
 
 namespace smg {
 

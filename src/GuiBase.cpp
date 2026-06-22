@@ -81,12 +81,12 @@ GuiBase::GuiBase(const Arguments& arguments)
 
 	// display display stats
 	int num_displays = SDL_GetNumVideoDisplays();
-	_lg->msg("number of displays: %s%i%s\n", KRED, num_displays, KNRM);
+	_lg->msg("number of displays: %s%i%s\n", SMG_KRED, num_displays, SMG_KNRM);
 	std::vector<SDL_Rect> displayBounds;
 	for(int i = 0; i < num_displays; i++) {
 		displayBounds.push_back(SDL_Rect());
 		SDL_GetDisplayBounds(i, &displayBounds.back());
-		_lg->msg("display %i bounds: %s(%i,%i)%s\n", i, KRED, displayBounds[i].x, displayBounds[i].y, KNRM);
+		_lg->msg("display %i bounds: %s(%i,%i)%s\n", i, SMG_KRED, displayBounds[i].x, displayBounds[i].y, SMG_KNRM);
 	}
 
 	// get the created window and override the position
@@ -137,7 +137,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// explicitly tell it to *not* do that, since the resources are always in
 	//       memory and on a static place.
 
-	printf("%s --- SMG: ADD FONTS ---%s\n", KBLU, KNRM);
+	printf("%s --- SMG: ADD FONTS ---%s\n", SMG_KBLU, SMG_KNRM);
 
 	// we need a font config for each font
 	// @hey: add more font options so we can switch?
@@ -197,7 +197,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 	// create a context for implot
 	// might need to connect to imgui but idk
 	// ImPlot::SetImGuiContext(_imgui);
-	printf("%s--- SMG: Creating implot context ---%s\n", KBLU, KNRM);
+	printf("%s--- SMG: Creating implot context ---%s\n", SMG_KBLU, SMG_KNRM);
 	ImPlot::CreateContext();
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
@@ -302,7 +302,7 @@ void GuiBase::print_window_position() {
 	int x;
 	int y;
 	SDL_GetWindowPosition(_window, &x, &y);
-	_lg->msg("window (x,y): %s(%i,%i)%s\n", KBLU, x, y, KNRM);
+	_lg->msg("window (x,y): %s(%i,%i)%s\n", SMG_KBLU, x, y, SMG_KNRM);
 #endif
 }
 
