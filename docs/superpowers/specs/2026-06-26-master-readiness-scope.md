@@ -69,3 +69,25 @@ and should not ride along with bloom/file-dialog. Tracked, not done here.
 
 A (finish Phases 2–4) → B (spec → implement) → C (build matrix + history) →
 open PR. D follows as a separate PR.
+
+## Status (2026-06-26)
+
+- **A — bloom: DONE.** Vendored + credited, desktop-only CMake wiring, ScenePanel
+  glow pass with toggle/sliders, gui smoke test. Builds clean, unit tests green.
+- **B — file dialog: DONE.** Vendored Project-Rat fork + credited Aiekick,
+  `smg::FileDialog` wrapper, example, gui smoke test. Builds clean on desktop,
+  unit tests green.
+- **C — master readiness: PARTIAL.** Full desktop build of all targets passes
+  (exit 0); `ctest -L unit` green (7/7). **WASM cross-build NOT verified** — no
+  emsdk on this machine (`emcc` absent, `EMSDK` unset). Bloom is fully guarded
+  (`SMG_WITH_BLOOM`, desktop-only) so it is excluded from WASM by construction;
+  the file dialog compiles into the WASM `smg` lib and is emscripten-aware with
+  guarded platform headers, but the actual `scripts/build_wasm.sh` run is the
+  outstanding gate. Requires an activated emsdk.
+- **D — CI: deferred** to a separate PR.
+
+### Remaining before PR
+
+1. Run `scripts/build_wasm.sh` with emsdk active; fix any WASM fallout
+   (most likely in the file dialog, since bloom is compiled out).
+2. Curate commit history (bloom + cleanup together to master).
