@@ -16,6 +16,7 @@ else()
         draw_triangle.cpp
         guibase.cpp
         scene_panel.cpp
+        file_dialog.cpp
     )
 endif()
 

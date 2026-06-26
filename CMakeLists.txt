@@ -139,6 +139,13 @@ if(NOT SMG_PLATFORM_WASM)
     corrade_add_resource(smg_RESOURCE_bloom "${SMG_BLOOM_DIR}/resources.conf")
 endif()
 
+# ImGuiFileDialog (all platforms -- pure Dear ImGui, no GL dependency)
+set(SMG_IMGUIFILEDIALOG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imguifiledialog)
+list(APPEND smg_sources
+    src/FileDialog.cpp
+    ${SMG_IMGUIFILEDIALOG_DIR}/ImGuiFileDialog.cpp
+)
+
 # Corrade resources
 corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
 corrade_add_resource(smg_RESOURCE_images "assets/resource_images.conf")
@@ -208,6 +215,9 @@ if(NOT SMG_PLATFORM_WASM)
     target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_BLOOM_DIR}/include>)
     target_compile_definitions(smg PUBLIC SMG_WITH_BLOOM)
 endif()
+
+# ImGuiFileDialog headers are private -- smg::FileDialog is the public surface
+target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_IMGUIFILEDIALOG_DIR}>)
 
 # Compiler warnings
 target_compile_options(smg PRIVATE
