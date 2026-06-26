@@ -101,6 +101,14 @@ The GUI uses a callback system:
 
 See the examples for details.
 
+## Acknowledgements
+
+- **Bloom effect** — the `ScenePanel` glow uses
+  [magnum-bloom](https://gitlab.com/jeroen.van.nugteren/magnum-bloom) by
+  **Jeroen van Nugteren** (Unlicense / public domain), a mip-chain physically
+  based bloom renderer for Magnum. The sources are vendored under
+  `external/bloom/`; see `external/bloom/PROVENANCE.md` for details.
+
 ## Legacy
 
 Legacy Linux scripts in `scripts/` install to `~/.local`.
