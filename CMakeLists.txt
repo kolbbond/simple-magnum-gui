@@ -110,6 +110,7 @@ set(smg_sources
     src/Mesh.cpp
     src/Primitives.cpp
     src/ScenePanel.cpp
+    src/IsoGrid.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
