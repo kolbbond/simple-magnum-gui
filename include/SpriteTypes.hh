@@ -1,6 +1,8 @@
 // sprite value types: anchors, blend modes, sheet frame-UV math (headless)
 #pragma once
 
+#include <cmath>
+
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Math/Vector2.h>
@@ -32,6 +34,29 @@ struct SpriteGrid {
 // local-quad shift so the chosen anchor lands on the sprite's world position
 [[nodiscard]] inline Magnum::Vector2 anchor_offset(Anchor a) {
     return a == Anchor::BottomCenter ? Magnum::Vector2{ 0.0f, 0.5f } : Magnum::Vector2{ 0.0f, 0.0f };
+}
+
+// frame-range animation clip; advances by wall-clock seconds, loops
+struct SpriteClip {
+    int first{ 0 };
+    int last{ 0 };
+    float fps{ 0.0f };
+
+    [[nodiscard]] int frame_at(float t) const {
+        const int span = last - first + 1;
+        if(span <= 1 || fps <= 0.0f) return first;
+        const int step = int(std::floor(t * fps));
+        const int wrapped = ((step % span) + span) % span;
+        return first + wrapped;
+    }
+};
+
+// facing angle (degrees, CCW) -> sheet row in [0, num_dirs); wraps
+[[nodiscard]] inline int dir_row(float facing_deg, int num_dirs) {
+    if(num_dirs <= 0) return 0;
+    const float step = 360.0f / float(num_dirs);
+    const int r = int(std::lround(facing_deg / step));
+    return ((r % num_dirs) + num_dirs) % num_dirs;
 }
 
 } // namespace smg
