@@ -6,6 +6,7 @@
 #include <Magnum/Math/Angle.h>
 #include <Magnum/Math/Constants.h>
 #include <Magnum/Math/Functions.h>
+#include <Magnum/Math/Vector4.h>
 
 #include "SceneTypes.hh"
 
@@ -47,6 +48,20 @@ void Camera::iso() {
     _projection = Projection::Orthographic;
     _yaw = float(Magnum::Constants::piHalf()) * 0.5f; // 45 deg
     _pitch = std::atan(0.5f); // ~26.57 deg, 2:1 dimetric
+}
+
+Camera::Ray Camera::unproject(const Magnum::Vector2& screen_px, const Magnum::Vector2& viewport_px) const {
+    const float aspect = viewport_px.y() > 0.0f ? viewport_px.x() / viewport_px.y() : 1.0f;
+    // pixel -> NDC; flip Y because the screen origin is top-left
+    const float ndcx = 2.0f * screen_px.x() / viewport_px.x() - 1.0f;
+    const float ndcy = 1.0f - 2.0f * screen_px.y() / viewport_px.y();
+    const Magnum::Matrix4 invVP = (projection(aspect) * view()).inverted();
+
+    const Magnum::Vector4 n = invVP * Magnum::Vector4{ ndcx, ndcy, -1.0f, 1.0f };
+    const Magnum::Vector4 f = invVP * Magnum::Vector4{ ndcx, ndcy, 1.0f, 1.0f };
+    const Magnum::Vector3 np = n.xyz() / n.w();
+    const Magnum::Vector3 fp = f.xyz() / f.w();
+    return Ray{ np, (fp - np).normalized() };
 }
 
 void Camera::orbit(float dx, float dy) {

@@ -3,6 +3,7 @@
 
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Matrix4.h>
+#include <Magnum/Math/Vector2.h>
 #include <Magnum/Math/Vector3.h>
 
 namespace smg {
@@ -24,6 +25,14 @@ public:
     void set_projection(Projection p) { _projection = p; }
     [[nodiscard]] Projection projection_mode() const { return _projection; }
     void iso(); // orthographic + 2:1 dimetric preset
+
+    struct Ray {
+        Magnum::Vector3 origin;
+        Magnum::Vector3 direction;
+    };
+
+    // screen pixels (origin top-left, y-down) -> world-space ray; works for both projection modes
+    [[nodiscard]] Ray unproject(const Magnum::Vector2& screen_px, const Magnum::Vector2& viewport_px) const;
 
     void orbit(float dx, float dy); // screen-pixel deltas
     void pan(float dx, float dy);

@@ -50,6 +50,7 @@ set(unit_test_list
     test_sprite_types.cpp
     test_sprite_anim.cpp
     test_iso_grid.cpp
+    test_camera_pick.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})
