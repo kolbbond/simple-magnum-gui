@@ -41,5 +41,24 @@ int main() {
     cam.pan(10.0f, 0.0f);
     CHECK((cam.pivot() - p0).length() > 0.0f);
 
+    // orthographic mode: the pivot still projects to the NDC origin
+    cam.set_projection(Camera::Projection::Orthographic);
+    CHECK(cam.projection_mode() == Camera::Projection::Orthographic);
+    const Magnum::Vector4 oclip = cam.projection(1.0f) * cam.view() * Magnum::Vector4{ cam.pivot(), 1.0f };
+    const Magnum::Vector3 ondc = oclip.xyz() / oclip.w();
+    CHECK(smgtest::approx(ondc.x(), 0.0f));
+    CHECK(smgtest::approx(ondc.y(), 0.0f));
+
+    // ortho projection has no perspective foreshortening: w == 1
+    CHECK(smgtest::approx(oclip.w(), 1.0f));
+
+    // iso preset selects orthographic and the 2:1 dimetric pitch
+    Camera iso;
+    iso.iso();
+    CHECK(iso.projection_mode() == Camera::Projection::Orthographic);
+    // sin(atan(0.5)) ~= 0.447 -> eye elevation along the up axis for 2:1 dimetric
+    const Magnum::Vector3 d = (iso.eye() - iso.pivot()).normalized();
+    CHECK(smgtest::approx(d.y(), 0.4472f, 1e-2f));
+
     TEST_RETURN();
 }

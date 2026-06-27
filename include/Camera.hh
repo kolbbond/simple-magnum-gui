@@ -13,11 +13,17 @@ enum class UpAxis { Y, Z };
 
 class Camera {
 public:
+    enum class Projection { Perspective, Orthographic };
+
     Camera();
 
     [[nodiscard]] Magnum::Matrix4 view() const; // world -> camera
     [[nodiscard]] Magnum::Matrix4 projection(float aspect) const;
     [[nodiscard]] Magnum::Vector3 eye() const;
+
+    void set_projection(Projection p) { _projection = p; }
+    [[nodiscard]] Projection projection_mode() const { return _projection; }
+    void iso(); // orthographic + 2:1 dimetric preset
 
     void orbit(float dx, float dy); // screen-pixel deltas
     void pan(float dx, float dy);
@@ -33,6 +39,7 @@ public:
         _far = f;
     }
     void set_up_axis(UpAxis a) { _up = a; }
+    [[nodiscard]] UpAxis up_axis() const { return _up; }
 
 private:
     [[nodiscard]] Magnum::Vector3 up_vector() const;
@@ -45,6 +52,7 @@ private:
     float _near{ 0.05f };
     float _far{ 500.0f };
     UpAxis _up{ UpAxis::Y };
+    Projection _projection{ Projection::Perspective };
 };
 
 } // namespace smg

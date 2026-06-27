@@ -4,6 +4,7 @@
 #include <cmath>
 
 #include <Magnum/Math/Angle.h>
+#include <Magnum/Math/Constants.h>
 #include <Magnum/Math/Functions.h>
 
 #include "SceneTypes.hh"
@@ -33,7 +34,19 @@ Magnum::Vector3 Camera::eye() const {
 Magnum::Matrix4 Camera::view() const { return Magnum::Matrix4::lookAt(eye(), _pivot, up_vector()).invertedRigid(); }
 
 Magnum::Matrix4 Camera::projection(float aspect) const {
+    if(_projection == Projection::Orthographic) {
+        // match the perspective framing at pivot depth so fit()/zoom() stay meaningful
+        const float halfFov = float(Magnum::Rad{ Magnum::Deg{ _fov_deg } } * 0.5f);
+        const float height = 2.0f * _distance * std::tan(halfFov);
+        return Magnum::Matrix4::orthographicProjection(Magnum::Vector2{ height * aspect, height }, _near, _far);
+    }
     return Magnum::Matrix4::perspectiveProjection(Magnum::Deg{ _fov_deg }, aspect, _near, _far);
+}
+
+void Camera::iso() {
+    _projection = Projection::Orthographic;
+    _yaw = float(Magnum::Constants::piHalf()) * 0.5f; // 45 deg
+    _pitch = std::atan(0.5f); // ~26.57 deg, 2:1 dimetric
 }
 
 void Camera::orbit(float dx, float dy) {
