@@ -12,6 +12,10 @@
 
 #include "Primitives.hh"
 
+#ifdef SMG_WITH_BLOOM
+#    include "bloomrenderer.hh"
+#endif
+
 namespace smg {
 
 ScenePanel::ScenePanel() = default;
@@ -94,6 +98,19 @@ void ScenePanel::ensure_fbo(const Magnum::Vector2i& size) {
         CORRADE_INTERNAL_ASSERT(_msaaFbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
     }
 #endif
+
+#ifdef SMG_WITH_BLOOM
+    // color-only target for the post-bloom composite (no depth needed)
+    _postColor = Magnum::GL::Texture2D{};
+    _postColor.setStorage(1, Magnum::GL::TextureFormat::RGBA8, size)
+        .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
+        .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear);
+    _postFbo = Magnum::GL::Framebuffer{ Magnum::Range2Di::fromSize({}, size) };
+    _postFbo.attachTexture(Magnum::GL::Framebuffer::ColorAttachment{ 0 }, _postColor, 0);
+    CORRADE_INTERNAL_ASSERT(_postFbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
+    if(!_bloom) _bloom = bloom::BloomRenderer::create();
+    _bloom->initialize(size, true);
+#endif
 }
 
 void ScenePanel::render_scene(const Magnum::Vector2i& size) {
@@ -164,15 +181,48 @@ void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
     if(io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
 }
 
+#ifdef SMG_WITH_BLOOM
+Magnum::GL::Texture2D& ScenePanel::bloom_pass(const Magnum::Vector2i& size) {
+    (void)size;
+    _bloom->set_bloom_strength(_bloom_strength);
+    _bloom->set_filter_radius(_bloom_radius);
+    _bloom->render_bloom_texture(_color);
+
+    // render_final composites into the currently bound FBO; _postFbo.bind()
+    // restores its construction viewport, so no manual viewport fix is needed.
+    _postFbo.bind();
+    _postFbo.clearColor(0, Magnum::Color4{ 0.0f });
+    _bloom->render_final(_color);
+    Magnum::GL::defaultFramebuffer.bind();
+    return _postColor;
+}
+#endif
+
 void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
     ensure_gl();
     ensure_fbo(size);
     if(!_fitted) fit();
     render_scene(size);
 
+    Magnum::GL::Texture2D* shown = &_color;
+#ifdef SMG_WITH_BLOOM
+    if(_bloom_enabled) shown = &bloom_pass(size);
+#endif
+
     ImGui::Begin(title);
-    Magnum::ImGuiIntegration::image(_color, Magnum::Vector2{ size });
+    Magnum::ImGuiIntegration::image(*shown, Magnum::Vector2{ size });
     handle_input(Magnum::Vector2{ size });
+#ifdef SMG_WITH_BLOOM
+    ImGui::Checkbox("Bloom", &_bloom_enabled);
+    if(_bloom_enabled) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SliderFloat("strength", &_bloom_strength, 0.0f, 1.0f);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(110.0f);
+        ImGui::SliderFloat("radius", &_bloom_radius, 0.001f, 0.02f, "%.4f");
+    }
+#endif
     ImGui::End();
 }
 

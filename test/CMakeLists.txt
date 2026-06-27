@@ -67,6 +67,8 @@ if(SMG_BUILD_GUI_TESTS)
         test_plotquads.cpp
         test_smg_libraries.cpp
         test_scene_panel.cpp
+        test_scene_bloom.cpp
+        test_file_dialog.cpp
     )
     foreach(srcfile ${gui_test_list})
         string(REPLACE ".cpp" "" name ${srcfile})

@@ -23,6 +23,9 @@ public:
         _panel->add_cube(Matrix4::translation({ -1.5f, 0.5f, 0.0f }), Color3{ 0.9f, 0.4f, 0.3f });
         _panel->add_sphere(Matrix4::translation({ 1.5f, 0.5f, 0.0f }), Color3{ 0.3f, 0.6f, 0.9f });
 
+        // overbright sphere so the bloom glow is clearly visible
+        _panel->add_sphere(Matrix4::translation({ 0.0f, 1.6f, 0.0f }) * Matrix4::scaling(Vector3{ 0.4f }), Color3{ 3.0f });
+
         _cb = DrawCallback::create();
         _cb->set_callback(scene_callback);
         _cb->set_data(_panel.get());

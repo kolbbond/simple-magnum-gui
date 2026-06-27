@@ -126,6 +126,26 @@ if(ENABLE_IMPLOT3D)
     )
 endif()
 
+# Bloom post-process (desktop only -- shaders require GL330)
+if(NOT SMG_PLATFORM_WASM)
+    set(SMG_BLOOM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/bloom)
+    list(APPEND smg_sources
+        ${SMG_BLOOM_DIR}/src/bloomrenderer.cpp
+        ${SMG_BLOOM_DIR}/src/bloomfbo.cpp
+        ${SMG_BLOOM_DIR}/src/bloomdownsample.cpp
+        ${SMG_BLOOM_DIR}/src/bloomupsample.cpp
+        ${SMG_BLOOM_DIR}/src/bloomfinal.cpp
+    )
+    corrade_add_resource(smg_RESOURCE_bloom "${SMG_BLOOM_DIR}/resources.conf")
+endif()
+
+# ImGuiFileDialog (all platforms -- pure Dear ImGui, no GL dependency)
+set(SMG_IMGUIFILEDIALOG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imguifiledialog)
+list(APPEND smg_sources
+    src/FileDialog.cpp
+    ${SMG_IMGUIFILEDIALOG_DIR}/ImGuiFileDialog.cpp
+)
+
 # Corrade resources
 corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
 corrade_add_resource(smg_RESOURCE_images "assets/resource_images.conf")
@@ -142,6 +162,7 @@ else()
         ${smg_sources}
         ${smg_RESOURCE_fonts}
         ${smg_RESOURCE_images}
+        ${smg_RESOURCE_bloom}
     )
 endif()
 
@@ -187,6 +208,16 @@ if(ENABLE_IMPLOT3D)
         $<BUILD_INTERFACE:${SMG_IMPLOT3D_DIR}>
     )
 endif()
+
+# Bloom: private include (ScenePanel forward-declares the renderer); public
+# define so consumers and the library agree on ScenePanel's layout.
+if(NOT SMG_PLATFORM_WASM)
+    target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_BLOOM_DIR}/include>)
+    target_compile_definitions(smg PUBLIC SMG_WITH_BLOOM)
+endif()
+
+# ImGuiFileDialog headers are private -- smg::FileDialog is the public surface
+target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_IMGUIFILEDIALOG_DIR}>)
 
 # Compiler warnings
 target_compile_options(smg PRIVATE

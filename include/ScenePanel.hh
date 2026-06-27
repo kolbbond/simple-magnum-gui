@@ -18,6 +18,12 @@
 #include "Mesh.hh"
 #include "SceneTypes.hh"
 
+#ifdef SMG_WITH_BLOOM
+namespace bloom {
+class BloomRenderer;
+}
+#endif
+
 namespace smg {
 
 typedef std::shared_ptr<class ScenePanel> ShScenePanelPr;
@@ -75,6 +81,17 @@ protected:
     Magnum::GL::Renderbuffer _colorMsaa{ Magnum::NoCreate };
     Magnum::GL::Renderbuffer _depthMsaa{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _msaaFbo{ Magnum::NoCreate };
+
+#ifdef SMG_WITH_BLOOM
+    // optional glow pass (desktop only): scene -> bloom -> _postFbo -> ImGui
+    Magnum::GL::Texture2D& bloom_pass(const Magnum::Vector2i& size);
+    std::shared_ptr<bloom::BloomRenderer> _bloom;
+    Magnum::GL::Texture2D _postColor{ Magnum::NoCreate };
+    Magnum::GL::Framebuffer _postFbo{ Magnum::NoCreate };
+    bool _bloom_enabled{ true };
+    float _bloom_strength{ 0.3f };
+    float _bloom_radius{ 0.005f };
+#endif
 };
 
 } // namespace smg
