@@ -23,3 +23,8 @@
 #include "Mesh.hh"
 #include "Primitives.hh"
 #include "ScenePanel.hh"
+
+// 2D sprites on an isometric plane
+#include "SpriteTypes.hh"
+#include "SpriteSheet.hh"
+#include "IsoGrid.hh"

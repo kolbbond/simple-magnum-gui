@@ -3,6 +3,7 @@
 
 #include <cstddef>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include <Magnum/GL/Framebuffer.h>
@@ -15,8 +16,11 @@
 #include <Magnum/Shaders/VertexColorGL.h>
 
 #include "Camera.hh"
+#include "IsoGrid.hh"
 #include "Mesh.hh"
 #include "SceneTypes.hh"
+#include "SpriteSheet.hh"
+#include "SpriteTypes.hh"
 
 #ifdef SMG_WITH_BLOOM
 namespace bloom {
@@ -25,6 +29,8 @@ class BloomRenderer;
 #endif
 
 namespace smg {
+
+class SpriteRenderer;
 
 typedef std::shared_ptr<class ScenePanel> ShScenePanelPr;
 
@@ -48,6 +54,13 @@ public:
     std::size_t add_grid(const Magnum::Matrix4& transform = {}, const Magnum::Color3& color = Magnum::Color3{ 0.4f });
     std::size_t add_axes(float scale = 1.0f, const Magnum::Matrix4& transform = {});
 
+    std::size_t add_sprite(ShSpriteSheetPr sheet, int frame, const Magnum::Vector3& position, const SpriteParams& params = {});
+    [[nodiscard]] Sprite& sprite(std::size_t handle) { return _sprites[handle]; }
+
+    // ground-plane point / iso-grid cell under the mouse (valid only after draw())
+    [[nodiscard]] std::optional<Magnum::Vector3> cursor_world() const;
+    [[nodiscard]] std::optional<Magnum::Vector2i> tile_under_cursor(const IsoGrid& grid) const;
+
     void clear();
     [[nodiscard]] Object& object(std::size_t handle) { return _objects[handle]; }
     [[nodiscard]] Camera& camera() { return _camera; }
@@ -65,6 +78,10 @@ protected:
     Camera _camera;
     LightProperties _light;
     bool _fitted{ false };
+
+    std::vector<Sprite> _sprites;
+    std::shared_ptr<SpriteRenderer> _sprite_renderer;
+    mutable Magnum::Vector2 _image_min{ 0.0f, 0.0f }; // last drawn image top-left, screen px
 
     void handle_input(const Magnum::Vector2& image_size);
 

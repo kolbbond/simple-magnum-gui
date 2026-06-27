@@ -10,7 +10,9 @@
 
 #include <imgui.h>
 
+#include "IsoGrid.hh"
 #include "Primitives.hh"
+#include "SpriteRenderer.hh"
 
 #ifdef SMG_WITH_BLOOM
 #    include "bloomrenderer.hh"
@@ -42,8 +44,29 @@ std::size_t ScenePanel::add_axes(float scale, const Magnum::Matrix4& t) {
     return h;
 }
 
+std::size_t ScenePanel::add_sprite(ShSpriteSheetPr sheet, int frame, const Magnum::Vector3& position, const SpriteParams& params) {
+    _sprites.push_back(Sprite{ std::move(sheet), frame, position, params });
+    return _sprites.size() - 1;
+}
+
+std::optional<Magnum::Vector3> ScenePanel::cursor_world() const {
+    if(_fbo_size.x() <= 0 || _fbo_size.y() <= 0) return {};
+    const ImVec2 m = ImGui::GetMousePos();
+    const Magnum::Vector2 local{ m.x - _image_min.x(), m.y - _image_min.y() };
+    if(local.x() < 0.0f || local.y() < 0.0f || local.x() > float(_fbo_size.x()) || local.y() > float(_fbo_size.y())) return {};
+    const Camera::Ray ray = _camera.unproject(local, Magnum::Vector2{ _fbo_size });
+    return ray_ground(ray, _camera.up_axis());
+}
+
+std::optional<Magnum::Vector2i> ScenePanel::tile_under_cursor(const IsoGrid& grid) const {
+    const std::optional<Magnum::Vector3> w = cursor_world();
+    if(!w) return {};
+    return grid.to_cell(*w);
+}
+
 void ScenePanel::clear() {
     _objects.clear();
+    _sprites.clear();
     _fitted = false;
 }
 
@@ -59,6 +82,7 @@ void ScenePanel::ensure_gl() {
     if(_gl_ready) return;
     _phong = Magnum::Shaders::PhongGL{ Magnum::Shaders::PhongGL::Configuration{}.setFlags(Magnum::Shaders::PhongGL::Flag::VertexColor) };
     _vcolor = Magnum::Shaders::VertexColorGL3D{};
+    _sprite_renderer = std::make_shared<SpriteRenderer>();
     _gl_ready = true;
 }
 
@@ -151,8 +175,11 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
         }
     }
 
-    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
+    // sprites share the depth buffer; quads are double-sided, so drop face culling
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
+    if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj);
+
+    Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
 #ifndef CORRADE_TARGET_EMSCRIPTEN
     if(_use_msaa) {
         Magnum::GL::Framebuffer::blit(_msaaFbo,
@@ -211,6 +238,8 @@ void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
 
     ImGui::Begin(title);
     Magnum::ImGuiIntegration::image(*shown, Magnum::Vector2{ size });
+    const ImVec2 imin = ImGui::GetItemRectMin();
+    _image_min = Magnum::Vector2{ imin.x, imin.y };
     handle_input(Magnum::Vector2{ size });
 #ifdef SMG_WITH_BLOOM
     ImGui::Checkbox("Bloom", &_bloom_enabled);

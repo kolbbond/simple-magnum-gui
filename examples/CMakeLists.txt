@@ -17,6 +17,7 @@ else()
         guibase.cpp
         scene_panel.cpp
         file_dialog.cpp
+        sprite_panel.cpp
     )
 endif()
 
