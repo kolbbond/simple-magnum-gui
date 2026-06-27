@@ -2,10 +2,13 @@
 #pragma once
 
 #include <cmath>
+#include <memory>
 
 #include <Magnum/Magnum.h>
+#include <Magnum/Math/Color.h>
 #include <Magnum/Math/Range.h>
 #include <Magnum/Math/Vector2.h>
+#include <Magnum/Math/Vector3.h>
 
 namespace smg {
 
@@ -58,5 +61,23 @@ struct SpriteClip {
     const int r = int(std::lround(facing_deg / step));
     return ((r % num_dirs) + num_dirs) % num_dirs;
 }
+
+class SpriteSheet;
+typedef std::shared_ptr<SpriteSheet> ShSpriteSheetPr;
+
+struct SpriteParams {
+    Magnum::Vector2 size{ 1.0f, 1.0f }; // world units (W, H)
+    Anchor anchor{ Anchor::BottomCenter };
+    Magnum::Color4 tint{ 1.0f };
+    SpriteBlend blend{ SpriteBlend::AlphaMask };
+    bool visible{ true };
+};
+
+struct Sprite {
+    ShSpriteSheetPr sheet;
+    int frame{ 0 };
+    Magnum::Vector3 position{ 0.0f };
+    SpriteParams params;
+};
 
 } // namespace smg

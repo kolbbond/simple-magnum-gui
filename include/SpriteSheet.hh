@@ -14,8 +14,6 @@
 
 namespace smg {
 
-typedef std::shared_ptr<class SpriteSheet> ShSpriteSheetPr;
-
 class SpriteSheet {
 public:
     SpriteSheet(Magnum::GL::Texture2D&& tex, const SpriteGrid& grid);

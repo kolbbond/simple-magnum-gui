@@ -74,11 +74,15 @@ if(SMG_BUILD_GUI_TESTS)
         test_scene_bloom.cpp
         test_file_dialog.cpp
         test_sprite_sheet.cpp
+        test_sprite_renderer.cpp
     )
     foreach(srcfile ${gui_test_list})
         string(REPLACE ".cpp" "" name ${srcfile})
         smg_add_test(${name} ${srcfile} "gui")
     endforeach()
+
+    # the sprite renderer is an internal smg component (header under src/)
+    target_include_directories(test_sprite_renderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
 endif()
 
 message(STATUS "end of test creation")
