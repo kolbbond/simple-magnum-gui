@@ -84,6 +84,10 @@ if(SMG_BUILD_GUI_TESTS)
 
     # the sprite renderer is an internal smg component (header under src/)
     target_include_directories(test_sprite_renderer PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/../src)
+
+    if(SMG_WITH_IMAGE_IMPORT)
+        smg_add_test(test_sprite_load test_sprite_load.cpp "gui")
+    endif()
 endif()
 
 message(STATUS "end of test creation")

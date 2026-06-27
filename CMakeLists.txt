@@ -25,6 +25,7 @@ option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build with ImPlot3D" ON)
 option(ENABLE_SCENEGRAPH "build with Magnum SceneGraph for 3D scene management" OFF)
+option(SMG_WITH_IMAGE_IMPORT "Build SpriteSheet::load(path) via Magnum image importers" OFF)
 
 
 # Module path
@@ -221,6 +222,20 @@ endif()
 
 # ImGuiFileDialog headers are private -- smg::FileDialog is the public surface
 target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_IMGUIFILEDIALOG_DIR}>)
+
+# Optional PNG loading: AnyImageImporter + StbImageImporter are runtime-loadable
+# Magnum plugins (not link targets), so we just ensure they are built and tell
+# SpriteSheet::load where to find them. PluginManager comes in via Magnum::Trade.
+if(SMG_WITH_IMAGE_IMPORT)
+    if(USE_SYSTEM_MAGNUM)
+        find_package(Magnum REQUIRED AnyImageImporter)
+        find_package(MagnumPlugins REQUIRED StbImageImporter)
+    else()
+        add_dependencies(smg AnyImageImporter StbImageImporter)
+    endif()
+    target_compile_definitions(smg PUBLIC SMG_WITH_IMAGE_IMPORT
+        SMG_IMPORTER_DIR="${CMAKE_BINARY_DIR}/lib/magnum/importers")
+endif()
 
 # Compiler warnings
 target_compile_options(smg PRIVATE
