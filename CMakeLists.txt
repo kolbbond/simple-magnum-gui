@@ -111,6 +111,7 @@ set(smg_sources
     src/Primitives.cpp
     src/ScenePanel.cpp
     src/IsoGrid.cpp
+    src/SpriteSheet.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
