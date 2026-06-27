@@ -47,6 +47,7 @@ set(unit_test_list
     test_mesh_bounds.cpp
     test_primitives_axes.cpp
     test_primitives_grid.cpp
+    test_sprite_types.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})
