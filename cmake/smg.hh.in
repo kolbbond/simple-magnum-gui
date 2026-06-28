@@ -32,3 +32,6 @@
 // plotting & analysis
 #include "PlotData.hh"
 #include "Plot.hh"
+#ifdef SMG_WITH_IMPLOT3D
+#include "Plot3D.hh"
+#endif

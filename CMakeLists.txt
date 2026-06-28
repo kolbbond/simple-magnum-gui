@@ -211,6 +211,7 @@ if(ENABLE_IMPLOT3D)
     target_include_directories(smg PUBLIC
         $<BUILD_INTERFACE:${SMG_IMPLOT3D_DIR}>
     )
+    target_compile_definitions(smg PUBLIC SMG_WITH_IMPLOT3D)
 endif()
 
 # Bloom: private include (ScenePanel forward-declares the renderer); public

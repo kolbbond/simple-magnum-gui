@@ -91,6 +91,10 @@ if(SMG_BUILD_GUI_TESTS)
     if(SMG_WITH_IMAGE_IMPORT)
         smg_add_test(test_sprite_load test_sprite_load.cpp "gui")
     endif()
+
+    if(ENABLE_IMPLOT3D)
+        smg_add_test(test_plot3d test_plot3d.cpp "gui")
+    endif()
 endif()
 
 message(STATUS "end of test creation")
