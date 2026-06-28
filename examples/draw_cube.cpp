@@ -21,6 +21,7 @@
 
 using namespace smg;
 using namespace Magnum;
+using namespace Magnum::Math::Literals;
 
 // use data as void pointer in callback
 class Data_ex {
@@ -84,7 +85,7 @@ int callback_fun(void* indata) {
 
 int main(int argc, char** argv) {
 	ShLogPr lg = Log::create();
-	lg->msg("%sbegin main%s\n", KYEL, KNRM);
+	lg->msg("%sbegin main%s\n", SMG_KYEL, SMG_KNRM);
 
 	// make our application class
 	// this starts the gl context too
@@ -99,7 +100,7 @@ int main(int argc, char** argv) {
 	ShDataPr mydata = std::make_shared<Data_ex>();
 	mydata->name = "heymom";
 
-	lg->msg("%smaking cube%s\n", KYEL, KNRM);
+	lg->msg("%smaking cube%s\n", SMG_KYEL, SMG_KNRM);
 
 	// make our cube mesh and initial rotation
 	mydata->_mesh = MeshTools::compile(Primitives::cubeSolid());
@@ -123,7 +124,7 @@ int main(int argc, char** argv) {
 
 	// exec calls mainloopiteration a bunch
 	// this checks events and draws
-	lg->msg("%sevent loop%s\n", KYEL, KNRM);
+	lg->msg("%sevent loop%s\n", SMG_KYEL, SMG_KNRM);
 	bool done = false;
 	while(!done) {
 		done = !gui.mainLoopIteration();

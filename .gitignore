@@ -7,3 +7,11 @@ lib
 dependencies
 .deps
 imgui.ini
+
+# cross-build scratch (wasm: native corrade-rc + emscripten output)
+build-native
+build-wasm
+
+# stray top-level clones — the real ones live under external/ as submodules
+/implot
+/implot3d

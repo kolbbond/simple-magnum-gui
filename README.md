@@ -62,6 +62,31 @@ $env:MAGNUM_PLUGINS_DEBUG_DIR="$pwd\build\bin\magnum-d"
 $env:PATH="$env:VCPKG_ROOT\installed\x64-windows\debug\bin;$env:PATH"
 ```
 
+### WebAssembly (Emscripten)
+
+The WASM build cross-compiles with Emscripten via the wrapper script
+`scripts/build_wasm.sh`. Use the script rather than a bare `cmake` invocation:
+cross-compiling Magnum needs a **native** `corrade-rc` for resource compilation,
+which the script builds first (into `build-native/`) and passes through as
+`CORRADE_RC_EXECUTABLE`.
+
+Prerequisite: an activated [emsdk](https://emscripten.org/docs/getting_started/downloads.html).
+The script finds it in this order — `emcc` already on `PATH`, then `$EMSDK_PATH`,
+then `$EMSDK` (exported by `emsdk_env.sh`):
+
+```bash
+# either activate emsdk in your shell first...
+source /path/to/emsdk/emsdk_env.sh
+./scripts/build_wasm.sh
+
+# ...or point the script at your emsdk install
+EMSDK_PATH=/path/to/emsdk ./scripts/build_wasm.sh
+```
+
+Output (the WASM build dir) lands in `build-wasm/`. The build forces a static
+library (`BUILD_SHARED_LIBS=OFF`) and uses `EmscriptenApplication` instead of
+SDL2 (see `GuiBase.hh`).
+
 ## Usage
 
 The GUI uses a callback system:
@@ -75,6 +100,19 @@ The GUI uses a callback system:
 4. Run your loop calling `mainLoopIteration`
 
 See the examples for details.
+
+## Acknowledgements
+
+- **Bloom effect** — the `ScenePanel` glow uses
+  [magnum-bloom](https://gitlab.com/jeroen.van.nugteren/magnum-bloom) by
+  **Jeroen van Nugteren** (Unlicense / public domain), a mip-chain physically
+  based bloom renderer for Magnum. The sources are vendored under
+  `external/bloom/`; see `external/bloom/PROVENANCE.md` for details.
+- **File dialog** — `smg::FileDialog` wraps
+  [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog) by
+  **Stephane Cuillerdier (Aiekick)** (MIT). Vendored under
+  `external/imguifiledialog/` from the Project-Rat fork (adds a re-init fix by
+  Jeroen van Nugteren); see `external/imguifiledialog/PROVENANCE.md`.
 
 ## Legacy
 

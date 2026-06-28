@@ -5,6 +5,8 @@
 
 #include <iostream>
 
+using namespace Magnum;
+
 // example data to pass into callback
 class data_ex {
 public:

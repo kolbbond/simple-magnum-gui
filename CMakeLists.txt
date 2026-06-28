@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(
   simple-magnum-gui
-  VERSION 0.1
+  VERSION 0.1.0
   LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -25,6 +25,7 @@ option(ENABLE_TESTING "build unit/system tests" ON)
 option(ENABLE_EXAMPLES "build examples" ON)
 option(ENABLE_IMPLOT3D "build with ImPlot3D" ON)
 option(ENABLE_SCENEGRAPH "build with Magnum SceneGraph for 3D scene management" OFF)
+option(SMG_WITH_IMAGE_IMPORT "Build SpriteSheet::load(path) via Magnum image importers" OFF)
 
 
 # Module path
@@ -65,7 +66,7 @@ option(USE_SYSTEM_MAGNUM "Use system-installed Magnum/Corrade instead of buildin
 
 if(USE_SYSTEM_MAGNUM)
     # Find system packages
-    find_package(Corrade REQUIRED Utility PluginManager)
+    find_package(Corrade REQUIRED Utility PluginManager TestSuite)
     find_package(Magnum REQUIRED
         GL
         MeshTools
@@ -105,6 +106,14 @@ set(smg_sources
     src/DrawCallback.cpp
     src/log.cpp
     src/Statics.cpp
+    src/SceneTypes.cpp
+    src/Camera.cpp
+    src/Mesh.cpp
+    src/Primitives.cpp
+    src/ScenePanel.cpp
+    src/IsoGrid.cpp
+    src/SpriteSheet.cpp
+    src/SpriteRenderer.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
@@ -120,6 +129,26 @@ if(ENABLE_IMPLOT3D)
         ${SMG_IMPLOT3D_DIR}/implot3d_meshes.cpp
     )
 endif()
+
+# Bloom post-process (desktop only -- shaders require GL330)
+if(NOT SMG_PLATFORM_WASM)
+    set(SMG_BLOOM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/bloom)
+    list(APPEND smg_sources
+        ${SMG_BLOOM_DIR}/src/bloomrenderer.cpp
+        ${SMG_BLOOM_DIR}/src/bloomfbo.cpp
+        ${SMG_BLOOM_DIR}/src/bloomdownsample.cpp
+        ${SMG_BLOOM_DIR}/src/bloomupsample.cpp
+        ${SMG_BLOOM_DIR}/src/bloomfinal.cpp
+    )
+    corrade_add_resource(smg_RESOURCE_bloom "${SMG_BLOOM_DIR}/resources.conf")
+endif()
+
+# ImGuiFileDialog (all platforms -- pure Dear ImGui, no GL dependency)
+set(SMG_IMGUIFILEDIALOG_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/imguifiledialog)
+list(APPEND smg_sources
+    src/FileDialog.cpp
+    ${SMG_IMGUIFILEDIALOG_DIR}/ImGuiFileDialog.cpp
+)
 
 # Corrade resources
 corrade_add_resource(smg_RESOURCE_fonts "assets/resource_fonts.conf")
@@ -137,6 +166,7 @@ else()
         ${smg_sources}
         ${smg_RESOURCE_fonts}
         ${smg_RESOURCE_images}
+        ${smg_RESOURCE_bloom}
     )
 endif()
 
@@ -181,6 +211,31 @@ if(ENABLE_IMPLOT3D)
     target_include_directories(smg PUBLIC
         $<BUILD_INTERFACE:${SMG_IMPLOT3D_DIR}>
     )
+    target_compile_definitions(smg PUBLIC SMG_WITH_IMPLOT3D)
+endif()
+
+# Bloom: private include (ScenePanel forward-declares the renderer); public
+# define so consumers and the library agree on ScenePanel's layout.
+if(NOT SMG_PLATFORM_WASM)
+    target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_BLOOM_DIR}/include>)
+    target_compile_definitions(smg PUBLIC SMG_WITH_BLOOM)
+endif()
+
+# ImGuiFileDialog headers are private -- smg::FileDialog is the public surface
+target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_IMGUIFILEDIALOG_DIR}>)
+
+# Optional PNG loading: AnyImageImporter + StbImageImporter are runtime-loadable
+# Magnum plugins (not link targets), so we just ensure they are built and tell
+# SpriteSheet::load where to find them. PluginManager comes in via Magnum::Trade.
+if(SMG_WITH_IMAGE_IMPORT)
+    if(USE_SYSTEM_MAGNUM)
+        find_package(Magnum REQUIRED AnyImageImporter)
+        find_package(MagnumPlugins REQUIRED StbImageImporter)
+    else()
+        add_dependencies(smg AnyImageImporter StbImageImporter)
+    endif()
+    target_compile_definitions(smg PUBLIC SMG_WITH_IMAGE_IMPORT
+        SMG_IMPORTER_DIR="${CMAKE_BINARY_DIR}/lib/magnum/importers")
 endif()
 
 # Compiler warnings

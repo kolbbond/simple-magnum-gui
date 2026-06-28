@@ -1,6 +1,37 @@
+// Simple-Magnum-Gui (SMG) umbrella header.
+//
+// Pulls in the full public API so consumers can `#include <smg/smg.hh>`
+// instead of including each header individually. Listed in dependency order;
+// GuiBase.hh transitively provides DrawCallback.hh, Events.hpp and log.hh.
 #pragma once
 
-// our wrappers
+// low-level utilities (not pulled in transitively)
+#include "version.hh"
+#include "typedefs.hh"
+#include "log.hh"
+#include "error.hh"
+
+// public API
+#include "Events.hpp"
+#include "DrawCallback.hh"
 #include "GuiBase.hh"
 #include "Statics.hh"
 
+// 3D scene viewport
+#include "SceneTypes.hh"
+#include "Camera.hh"
+#include "Mesh.hh"
+#include "Primitives.hh"
+#include "ScenePanel.hh"
+
+// 2D sprites on an isometric plane
+#include "SpriteTypes.hh"
+#include "SpriteSheet.hh"
+#include "IsoGrid.hh"
+
+// plotting & analysis
+#include "PlotData.hh"
+#include "Plot.hh"
+#ifdef SMG_WITH_IMPLOT3D
+#include "Plot3D.hh"
+#endif

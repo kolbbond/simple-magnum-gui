@@ -1,4 +1,5 @@
-#include <Corrade/configure.h>  // For CORRADE_TARGET_EMSCRIPTEN
+#include <Corrade/configure.h> // For CORRADE_TARGET_EMSCRIPTEN
+#include <iostream> // std::cerr / std::endl (no longer pulled in transitively)
 #include <Magnum/Trade/Trade.h>
 #include <imgui.h>
 #include <Magnum/Math/Time.h>
@@ -8,438 +9,449 @@
 
 #include "GuiBase.hh"
 
+#ifdef SMG_WITH_IMPLOT3D
+#    include "implot3d.h"
+#endif
+
+// Implementation-local convenience; the public header no longer leaks these.
+using namespace Magnum;
+using namespace Magnum::Math::Literals;
+
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
-	//: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
-	: Platform::Application{ arguments, NoCreate } {
+    //: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
+    : Platform::Application{ arguments, NoCreate } {
+
+    // background clear color (moved here from the header to keep the _rgbaf
+    // literal out of the public API)
+    _clearColor = 0x72909aff_rgbaf;
 
 
-	// configuration for multisampling
-	Configuration conf;
-	conf.setWindowFlags(Configuration::WindowFlag::Resizable);
-	conf.setSize({1600, 1000});
-	conf.setTitle("GuiBase");
-	setWindowTitle("GuiBase");
-	GLConfiguration glConf;
+    // configuration for multisampling
+    Configuration conf;
+    conf.setWindowFlags(Configuration::WindowFlag::Resizable);
+    conf.setSize({ 1600, 1000 });
+    conf.setTitle("GuiBase");
+    setWindowTitle("GuiBase");
+    GLConfiguration glConf;
 
 #if defined(CORRADE_TARGET_EMSCRIPTEN)
-	// WebGL: disable MSAA - not reliably supported
-	glConf.setSampleCount(0);
+    // WebGL: disable MSAA - not reliably supported
+    glConf.setSampleCount(0);
 
-	// create window here (no MSAA fallback needed for WebGL)
-	if(!tryCreate(conf, glConf)) {
-		std::cerr << "Failed to create WebGL context!" << std::endl;
-		std::exit(1);
-	}
+    // create window here (no MSAA fallback needed for WebGL)
+    if(!tryCreate(conf, glConf)) {
+        std::cerr << "Failed to create WebGL context!" << std::endl;
+        std::exit(1);
+    }
 #else
-	// Desktop: try MSAA with fallback
-	glConf.setSampleCount(_samples); // 4x MSAA
+    // Desktop: try MSAA with fallback
+    glConf.setSampleCount(_samples); // 4x MSAA
 
-	// create window here
-	if(!tryCreate(conf, glConf)) {
-		std::cerr << "Failed to create window with MSAA!" << std::endl;
+    // create window here
+    if(!tryCreate(conf, glConf)) {
+        std::cerr << "Failed to create window with MSAA!" << std::endl;
 
-		// fallback
-		if(!tryCreate(conf, glConf.setSampleCount(0))) {
-			std::cerr << "Failed to create window without MSAA!" << std::endl;
-			std::exit(1);
-		}
-	}
+        // fallback
+        if(!tryCreate(conf, glConf.setSampleCount(0))) {
+            std::cerr << "Failed to create window without MSAA!" << std::endl;
+            std::exit(1);
+        }
+    }
 #endif
 
-	// check properties
-	GLint glSampleBuffers = 0, glSamples = 0;
-	glGetIntegerv(GL_SAMPLE_BUFFERS, &glSampleBuffers); // 1 means MSAA buffer exists
-	glGetIntegerv(GL_SAMPLES, &glSamples); // sample count (e.g., 2 or 4)
+    // check properties
+    GLint glSampleBuffers = 0, glSamples = 0;
+    glGetIntegerv(GL_SAMPLE_BUFFERS, &glSampleBuffers); // 1 means MSAA buffer exists
+    glGetIntegerv(GL_SAMPLES, &glSamples); // sample count (e.g., 2 or 4)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	GLint glMaxSamples = 0;
-	glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound (not available in WebGL)
-	Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples << "GL_MAX_SAMPLES =" << glMaxSamples;
+    GLint glMaxSamples = 0;
+    glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound (not available in WebGL)
+    Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples << "GL_MAX_SAMPLES =" << glMaxSamples;
 #else
-	Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples;
+    Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples;
 #endif
 
-	// create a log?
-	_lg = Log::create();
+    // create a log?
+    _lg = Log::create();
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	// SDL-specific initialization (desktop only)
-	int sdlBuf = 0, sdlSamp = 0;
-	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &sdlBuf);
-	SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &sdlSamp);
-	std::printf("SDL: MULTISAMPLEBUFFERS=%d MULTISAMPLESAMPLES=%d\n", sdlBuf, sdlSamp);
+    // SDL-specific initialization (desktop only)
+    int sdlBuf = 0, sdlSamp = 0;
+    SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &sdlBuf);
+    SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &sdlSamp);
+    std::printf("SDL: MULTISAMPLEBUFFERS=%d MULTISAMPLESAMPLES=%d\n", sdlBuf, sdlSamp);
 
-	// display display stats
-	int num_displays = SDL_GetNumVideoDisplays();
-	_lg->msg("number of displays: %s%i%s\n", KRED, num_displays, KNRM);
-	std::vector<SDL_Rect> displayBounds;
-	for(int i = 0; i < num_displays; i++) {
-		displayBounds.push_back(SDL_Rect());
-		SDL_GetDisplayBounds(i, &displayBounds.back());
-		_lg->msg("display %i bounds: %s(%i,%i)%s\n", i, KRED, displayBounds[i].x, displayBounds[i].y, KNRM);
-	}
+    // display display stats
+    int num_displays = SDL_GetNumVideoDisplays();
+    _lg->msg("number of displays: %s%i%s\n", SMG_KRED, num_displays, SMG_KNRM);
+    std::vector<SDL_Rect> displayBounds;
+    for(int i = 0; i < num_displays; i++) {
+        displayBounds.push_back(SDL_Rect());
+        SDL_GetDisplayBounds(i, &displayBounds.back());
+        _lg->msg("display %i bounds: %s(%i,%i)%s\n", i, SMG_KRED, displayBounds[i].x, displayBounds[i].y, SMG_KNRM);
+    }
 
-	// get the created window and override the position
-	_window = Platform::Sdl2Application::window();
-	SDL_SetWindowPosition(_window, 0, 0);
+    // get the created window and override the position
+    _window = Platform::Sdl2Application::window();
+    SDL_SetWindowPosition(_window, 0, 0);
 #endif
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	// load window icon (desktop only - no window icon in browser)
-	// get raw icon data from resources
-	Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
-	if(rawData.isEmpty()) {
-		Error() << "Failed to load raw icon data from resource 'smg.jpg'.";
-		return;
-	}
+    // load window icon (desktop only - no window icon in browser)
+    // get raw icon data from resources
+    Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
+    if(rawData.isEmpty()) {
+        Error() << "Failed to load raw icon data from resource 'smg.jpg'.";
+        return;
+    }
 
-	// importer plugin
-	PluginManager::Manager<Trade::AbstractImporter> manager;
-	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-	if(!importer || !importer->openData(rawData)) Fatal{} << "Can't open data with AnyImageImporter";
+    // importer plugin
+    PluginManager::Manager<Trade::AbstractImporter> manager;
+    Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
+    if(!importer || !importer->openData(rawData)) Fatal{} << "Can't open data with AnyImageImporter";
 
-	Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
-	if(!image) Fatal{} << "Importing the image failed";
-	_icon = importer->image2D(0);
-	if(!_icon) Fatal{} << "Importing the image failed";
-	if(_icon) {
-		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-		Platform::Sdl2Application::setWindowIcon(icon_view);
-	}
+    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
+    if(!image) Fatal{} << "Importing the image failed";
+    _icon = importer->image2D(0);
+    if(!_icon) Fatal{} << "Importing the image failed";
+    if(_icon) {
+        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+        Platform::Sdl2Application::setWindowIcon(icon_view);
+    }
 #endif
 
-	// start an imgui context
-	printf("Creating imgui context\n");
-	Vector2i window_size = windowSize();
+    // start an imgui context
+    printf("Creating imgui context\n");
+    Vector2i window_size = windowSize();
 
-	// override?
-	window_size[0] = 1920;
-	window_size[1] = 1080;
-	printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
+    // override?
+    window_size[0] = 1920;
+    window_size[1] = 1080;
+    printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
 
-	ImGui::CreateContext();
+    ImGui::CreateContext();
 
-	const Vector2 size = Vector2{ windowSize() } / dpiScaling();
+    const Vector2 size = Vector2{ windowSize() } / dpiScaling();
 
-	// Add a font that actually looks acceptable on HiDPI screens. ImGui by
-	// default takes ownership of the passed data pointer and then frees it
-	// (using what? free()?), that's why the non-const pointer. We have to
-	// explicitly tell it to *not* do that, since the resources are always in
-	//       memory and on a static place.
+    // Add a font that actually looks acceptable on HiDPI screens. ImGui by
+    // default takes ownership of the passed data pointer and then frees it
+    // (using what? free()?), that's why the non-const pointer. We have to
+    // explicitly tell it to *not* do that, since the resources are always in
+    //       memory and on a static place.
 
-	printf("%s --- SMG: ADD FONTS ---%s\n", KBLU, KNRM);
+    printf("%s --- SMG: ADD FONTS ---%s\n", SMG_KBLU, SMG_KNRM);
 
-	// we need a font config for each font
-	// @hey: add more font options so we can switch?
-	//       add additional pixels
-	//      add additional fonts (nerdfonts)? JetBrainsMono atleast
-	Containers::ArrayView<const char> font;
-	double num_pixels = 18.0f;
-	std::vector<std::string> font_names = { "Roboto-Medium.ttf",
-		"SourceSansPro-Regular.ttf",
-		"DroidSans.ttf",
-		"Cousine-Regular.ttf",
-		"Karla-Regular.ttf",
-		"JetBrainsMonoNerdFont-Regular.ttf" };
+    // we need a font config for each font
+    // @hey: add more font options so we can switch?
+    //       add additional pixels
+    //      add additional fonts (nerdfonts)? JetBrainsMono atleast
+    Containers::ArrayView<const char> font;
+    double num_pixels = 18.0f;
+    std::vector<std::string> font_names = { "Roboto-Medium.ttf",
+        "SourceSansPro-Regular.ttf",
+        "DroidSans.ttf",
+        "Cousine-Regular.ttf",
+        "Karla-Regular.ttf",
+        "JetBrainsMonoNerdFont-Regular.ttf" };
 
-	// each font
-	printf("Adding Fonts\n");
-	ImGuiIO& io = ImGui::GetIO();
+    // each font
+    printf("Adding Fonts\n");
+    ImGuiIO& io = ImGui::GetIO();
 
-	// Enable docking
-	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
-	for(size_t i = 0; i < font_names.size(); i++) {
-		ImFontConfig font_cfg;
-		font_cfg.FontDataOwnedByAtlas = false;
-		font = Utility::Resource{ "font" }.getRaw(font_names[i].c_str());
-		snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
-		ImFont* myfont = io.Fonts->AddFontFromMemoryTTF(const_cast<char*>(font.data()),
-			static_cast<int>(font.size()),
-			num_pixels * framebufferSize().x() / static_cast<int>(size.x()),
-			&font_cfg);
-		_fonts.push_back(myfont);
-		_fontData.push_back(font);
-	}
+    // Enable docking
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+    for(size_t i = 0; i < font_names.size(); i++) {
+        ImFontConfig font_cfg;
+        font_cfg.FontDataOwnedByAtlas = false;
+        font = Utility::Resource{ "font" }.getRaw(font_names[i].c_str());
+        snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %0.1f px", font_names[i].c_str(), num_pixels);
+        ImFont* myfont = io.Fonts->AddFontFromMemoryTTF(const_cast<char*>(font.data()),
+            static_cast<int>(font.size()),
+            num_pixels * framebufferSize().x() / static_cast<int>(size.x()),
+            &font_cfg);
+        _fonts.push_back(myfont);
+        _fontData.push_back(font);
+    }
 
-	// loaded fonts
-	_font_default = _fonts[5];
-	io.FontDefault = _font_default;
+    // loaded fonts
+    _font_default = _fonts[5];
+    io.FontDefault = _font_default;
 
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.FrameRounding = 8.0f;
-	style.WindowRounding = 8.0f;
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.FrameRounding = 8.0f;
+    style.WindowRounding = 8.0f;
 
-	// set custom colorscheme
-	// transparent
-	style.Colors[ImGuiCol_WindowBg] = ImVec4(0.2f, 0.2f, 0.2f, 0.2f);
+    // set custom colorscheme
+    // transparent
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.2f, 0.2f, 0.2f, 0.2f);
 
-	// blue buttons
-	style.Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.4f, 0.7f, 1.0f);
+    // blue buttons
+    style.Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.4f, 0.7f, 1.0f);
 
-	// lighter blue on hover
-	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.5f, 1.0f, 1.0f);
+    // lighter blue on hover
+    style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.5f, 1.0f, 1.0f);
 
-	// create magnum imgui context
-	//_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
-	_imgui =
-		ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+    // create magnum imgui context
+    //_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+    _imgui =
+        ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
-	// create a context for implot
-	// might need to connect to imgui but idk
-	// ImPlot::SetImGuiContext(_imgui);
-	printf("%s--- SMG: Creating implot context ---%s\n", KBLU, KNRM);
-	ImPlot::CreateContext();
+    // create a context for implot
+    // might need to connect to imgui but idk
+    // ImPlot::SetImGuiContext(_imgui);
+    printf("%s--- SMG: Creating implot context ---%s\n", SMG_KBLU, SMG_KNRM);
+    ImPlot::CreateContext();
+#ifdef SMG_WITH_IMPLOT3D
+    ImPlot3D::CreateContext();
+#endif
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
-	/* Have some sane speed, please */
-	// this is [ms] per frame?
-	// setMinimalLoopPeriod(16);
-	Nanoseconds nspf = 16.0_msec;
-	setMinimalLoopPeriod(nspf);
+    /* Have some sane speed, please */
+    // this is [ms] per frame?
+    // setMinimalLoopPeriod(16);
+    Nanoseconds nspf = 16.0_msec;
+    setMinimalLoopPeriod(nspf);
 #endif
 }
 
 void GuiBase::drawBegin() {
-	// setup the drawing state
-	// clear buffer
+    // setup the drawing state
+    // clear buffer
 
-	GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
+    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
-	// start a new frame
-	_imgui.newFrame();
+    // start a new frame
+    _imgui.newFrame();
 
-	// set default font
-	ImGuiIO& io = ImGui::GetIO();
-	//_font_default = _fonts[0];
-	//io.FontDefault = _font_default;
+    // set default font
+    ImGuiIO& io = ImGui::GetIO();
+    //_font_default = _fonts[0];
+    //io.FontDefault = _font_default;
 
-	/* Enable text input, if needed */
-	// get the input
-	if(io.WantTextInput && !isTextInputActive())
-		startTextInput();
-	else if(!io.WantTextInput && isTextInputActive())
-		stopTextInput();
+    /* Enable text input, if needed */
+    // get the input
+    if(io.WantTextInput && !isTextInputActive())
+        startTextInput();
+    else if(!io.WantTextInput && isTextInputActive())
+        stopTextInput();
 
-	/* Update application cursor */
-	_imgui.updateApplicationCursor(*this);
+    /* Update application cursor */
+    _imgui.updateApplicationCursor(*this);
 }
 
 void GuiBase::drawEnd() {
-	// draw, reset, swap
+    // draw, reset, swap
 
-	/* Set appropriate states. If you only draw ImGui, it is sufficient to
+    /* Set appropriate states. If you only draw ImGui, it is sufficient to
 just enable blending and scissor test in the constructor. */
-	GL::Renderer::enable(GL::Renderer::Feature::Blending);
-	GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
-	GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
-	GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::Blending);
+    GL::Renderer::enable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::disable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::disable(GL::Renderer::Feature::DepthTest);
 
-	// Set up proper blending to be used by ImGui. There's a great chance
-	// you'll need this exact behavior for the rest of your scene. If not, set
-	// this only for the drawFrame() call.
-	GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
-	GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    // Set up proper blending to be used by ImGui. There's a great chance
+    // you'll need this exact behavior for the rest of your scene. If not, set
+    // this only for the drawFrame() call.
+    GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
+    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
 
-	// draw the frame to background buffer
-	_imgui.drawFrame();
+    // draw the frame to background buffer
+    _imgui.drawFrame();
 
-	/* Reset state. Only needed if you want to draw something else with
+    /* Reset state. Only needed if you want to draw something else with
 different state after. */
-	GL::Renderer::disable(GL::Renderer::Feature::Blending);
-	GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
-	GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
-	GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::disable(GL::Renderer::Feature::Blending);
+    GL::Renderer::disable(GL::Renderer::Feature::ScissorTest);
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 
-	// swap background buffers and redraw to screen
-	swapBuffers();
-	redraw();
+    // swap background buffers and redraw to screen
+    swapBuffers();
+    redraw();
 }
 
 void GuiBase::drawEvent() {
-	// main loop
-	// this is called each frame
+    // main loop
+    // this is called each frame
 
-	//////////////////////////////////////////////////
-	// setup the drawing
-	// draws an imgui frame
-	drawBegin();
+    //////////////////////////////////////////////////
+    // setup the drawing
+    // draws an imgui frame
+    drawBegin();
 
-	// Do your drawing here?
-	// @hey, how do we add in custom functions from outside while utilizing
-	// the console api's from here ...
-	// add static function calls from outside???
-	//std::pair<int, int> pos = get_window_position();
-	//Vector2i window_size = windowSize();
-	//ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
-	//ImGui::Text("window size: (%i,%i)", window_size.x(), window_size.y());
-	//ImGui::Text("fps: %0.3f\n", Magnum::Double(ImGui::GetIO().Framerate));
-	//ImGui::Text("ms/frame: %0.3f\n",
-	//1000.0 / Magnum::Double(ImGui::GetIO().Framerate));
+    // Do your drawing here?
+    // @hey, how do we add in custom functions from outside while utilizing
+    // the console api's from here ...
+    // add static function calls from outside???
+    //std::pair<int, int> pos = get_window_position();
+    //Vector2i window_size = windowSize();
+    //ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
+    //ImGui::Text("window size: (%i,%i)", window_size.x(), window_size.y());
+    //ImGui::Text("fps: %0.3f\n", Magnum::Double(ImGui::GetIO().Framerate));
+    //ImGui::Text("ms/frame: %0.3f\n",
+    //1000.0 / Magnum::Double(ImGui::GetIO().Framerate));
 
-	//////////////////////////////////////////////////
-	// call back function?
-	// draws everything we need
-	draw_callbacks();
+    //////////////////////////////////////////////////
+    // call back function?
+    // draws everything we need
+    draw_callbacks();
 
-	// draw and reset
-	// swaps buffer to screen
-	drawEnd();
+    // draw and reset
+    // swaps buffer to screen
+    drawEnd();
 }
 
 void GuiBase::print_window_position() {
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	// debug
-	int x;
-	int y;
-	SDL_GetWindowPosition(_window, &x, &y);
-	_lg->msg("window (x,y): %s(%i,%i)%s\n", KBLU, x, y, KNRM);
+    // debug
+    int x;
+    int y;
+    SDL_GetWindowPosition(_window, &x, &y);
+    _lg->msg("window (x,y): %s(%i,%i)%s\n", SMG_KBLU, x, y, SMG_KNRM);
 #endif
 }
 
-std::pair<int, int> GuiBase::get_window_position() {
-	std::pair<int, int> pos{0, 0};
+std::pair<int, int> GuiBase::get_window_position() const {
+    std::pair<int, int> pos{ 0, 0 };
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	SDL_GetWindowPosition(_window, &pos.first, &pos.second);
+    SDL_GetWindowPosition(_window, &pos.first, &pos.second);
 #endif
-	return pos;
+    return pos;
 }
 
 void GuiBase::add_callback(ShDrawCallbackPr callback) {
-	// add callback to list
+    // add callback to list
 
-	// append
-	_callback_list.push_back(callback);
+    // append
+    _callback_list.push_back(callback);
 }
 
 void GuiBase::draw_callbacks() {
-	// draw callbacks from list
+    // draw callbacks from list
 
-	// check if list empty
-	if(_callback_list.empty()) {
-	} else {
+    // check if list empty
+    if(_callback_list.empty()) {
+    } else {
 
-		// walk callbacks
-		int num_callbacks = static_cast<int>(_callback_list.size());
-		for(int i = 0; i < num_callbacks; i++) {
+        // walk callbacks
+        int num_callbacks = static_cast<int>(_callback_list.size());
+        for(int i = 0; i < num_callbacks; i++) {
 
-			// get data pointer
-			ShDrawCallbackPr mycallback = _callback_list[i];
+            // get data pointer
+            ShDrawCallbackPr mycallback = _callback_list[i];
 
-			// call the callback
-			int flag = mycallback->draw();
-			if(flag) printf("callback error!\n");
-		}
-	}
+            // call the callback
+            int flag = mycallback->draw();
+            if(flag) printf("callback error!\n");
+        }
+    }
 }
 
 // setters (desktop only)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
 void GuiBase::set_window_icon(std::string icon_file) {
-	// importer plugin
-	PluginManager::Manager<Trade::AbstractImporter> manager;
-	Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-	if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
+    // importer plugin
+    PluginManager::Manager<Trade::AbstractImporter> manager;
+    Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
+    if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
 
-	// load image
-	_icon = importer->image2D(0);
-	if(!_icon) Fatal{} << "Importing the image failed";
-	if(_icon) {
-		Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-		Platform::Sdl2Application::setWindowIcon(icon_view);
-	}
+    // load image
+    _icon = importer->image2D(0);
+    if(!_icon) Fatal{} << "Importing the image failed";
+    if(_icon) {
+        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+        Platform::Sdl2Application::setWindowIcon(icon_view);
+    }
 }
 
-void GuiBase::set_window_position(int x, int y) {
-	SDL_SetWindowPosition(_window, x, y);
-}
+void GuiBase::set_window_position(int x, int y) { SDL_SetWindowPosition(_window, x, y); }
 
-void GuiBase::set_window_size(int w, int h) {
-	SDL_SetWindowSize(_window, w, h);
-}
+void GuiBase::set_window_size(int w, int h) { SDL_SetWindowSize(_window, w, h); }
 #endif
 
 // event handling for imgui
 void GuiBase::keyPressEvent(KeyEvent& event) {
-	if(_imgui.handleKeyPressEvent(event)) return;
+    if(_imgui.handleKeyPressEvent(event)) return;
 
-	// check if list empty
-	if(_callback_list.empty()) {
-	} else {
+    // check if list empty
+    if(_callback_list.empty()) {
+    } else {
 
-		// walk callbacks
-		int num_callbacks = static_cast<int>(_callback_list.size());
-		for(int i = 0; i < num_callbacks; i++) {
+        // walk callbacks
+        int num_callbacks = static_cast<int>(_callback_list.size());
+        for(int i = 0; i < num_callbacks; i++) {
 
-			// get data pointer
-			ShDrawCallbackPr mycallback = _callback_list[i];
+            // get data pointer
+            ShDrawCallbackPr mycallback = _callback_list[i];
 
-			// call the callback
-			mycallback->keyPressEvent(event);
-		}
-	}
+            // call the callback
+            mycallback->keyPressEvent(event);
+        }
+    }
 }
 
 void GuiBase::keyReleaseEvent(KeyEvent& event) {
-	if(_imgui.handleKeyReleaseEvent(event)) return;
+    if(_imgui.handleKeyReleaseEvent(event)) return;
 }
 
 void GuiBase::pointerPressEvent(PointerEvent& event) {
-	if(_imgui.handlePointerPressEvent(event)) return;
+    if(_imgui.handlePointerPressEvent(event)) return;
 }
 
 void GuiBase::pointerReleaseEvent(PointerEvent& event) {
-	if(_imgui.handlePointerReleaseEvent(event)) return;
+    if(_imgui.handlePointerReleaseEvent(event)) return;
 }
 
 void GuiBase::pointerMoveEvent(PointerMoveEvent& event) {
-	// let imgui handle its own events
-	if(_imgui.handlePointerMoveEvent(event)) return;
+    // let imgui handle its own events
+    if(_imgui.handlePointerMoveEvent(event)) return;
 
-	// check if list empty
-	if(_callback_list.empty()) {
-	} else {
+    // check if list empty
+    if(_callback_list.empty()) {
+    } else {
 
-		// walk callbacks
-		int num_callbacks = static_cast<int>(_callback_list.size());
-		for(int i = 0; i < num_callbacks; i++) {
+        // walk callbacks
+        int num_callbacks = static_cast<int>(_callback_list.size());
+        for(int i = 0; i < num_callbacks; i++) {
 
-			// get data pointer
-			ShDrawCallbackPr mycallback = _callback_list[i];
+            // get data pointer
+            ShDrawCallbackPr mycallback = _callback_list[i];
 
-			// call the callback
-			mycallback->pointerMoveEvent(event);
-		}
-	}
+            // call the callback
+            mycallback->pointerMoveEvent(event);
+        }
+    }
 }
 
 void GuiBase::scrollEvent(ScrollEvent& event) {
-	if(_imgui.handleScrollEvent(event)) {
-		/* Prevent scrolling the page */
-		event.setAccepted();
-		return;
-	}
+    if(_imgui.handleScrollEvent(event)) {
+        /* Prevent scrolling the page */
+        event.setAccepted();
+        return;
+    }
 
-	// check if list empty
-	if(_callback_list.empty()) {
-	} else {
+    // check if list empty
+    if(_callback_list.empty()) {
+    } else {
 
-		// walk callbacks
-		int num_callbacks = static_cast<int>(_callback_list.size());
-		for(int i = 0; i < num_callbacks; i++) {
+        // walk callbacks
+        int num_callbacks = static_cast<int>(_callback_list.size());
+        for(int i = 0; i < num_callbacks; i++) {
 
-			// get data pointer
-			ShDrawCallbackPr mycallback = _callback_list[i];
+            // get data pointer
+            ShDrawCallbackPr mycallback = _callback_list[i];
 
-			// call the callback
-			mycallback->ScrollEvent(event);
-			// if(flag) printf("callback error!\n");
-		}
-	}
+            // call the callback
+            mycallback->ScrollEvent(event);
+            // if(flag) printf("callback error!\n");
+        }
+    }
 }
 
 void GuiBase::textInputEvent(TextInputEvent& event) {
-	if(_imgui.handleTextInputEvent(event)) return;
+    if(_imgui.handleTextInputEvent(event)) return;
 }
 
 //////////////////////////////////////////////////
@@ -447,52 +459,52 @@ void GuiBase::textInputEvent(TextInputEvent& event) {
 
 // imgui demo for reference
 void GuiBase::demo_imgui() {
-	// reference
+    // reference
 
-	/* 1. Show a simple window.
+    /* 1. Show a simple window.
 Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appear in
 a window called "Debug" automatically */
-	{
-		ImGui::Text("Hello, world!");
-		ImGui::SliderFloat("Float", &_floatValue, 0.0f, 1.0f);
-		if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
-		if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
-		if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
-		ImGui::Text(
-			"Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
-	}
+    {
+        ImGui::Text("Hello, world!");
+        ImGui::SliderFloat("Float", &_floatValue, 0.0f, 1.0f);
+        if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
+        if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
+        if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
+        ImGui::Text(
+            "Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
+    }
 
-	/* 2. Show another simple window, now using an explicit Begin/End pair */
-	if(_showAnotherWindow) {
-		ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
-		ImGui::Begin("Another Window", &_showAnotherWindow);
-		ImGui::Text("Hello");
-		ImGui::End();
-	}
+    /* 2. Show another simple window, now using an explicit Begin/End pair */
+    if(_showAnotherWindow) {
+        ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
+        ImGui::Begin("Another Window", &_showAnotherWindow);
+        ImGui::Text("Hello");
+        ImGui::End();
+    }
 
-	/* 3. Show the ImGui demo window. Most of the sample code is in
+    /* 3. Show the ImGui demo window. Most of the sample code is in
 ImGui::ShowDemoWindow() */
-	if(_showDemoWindow) {
-		ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
-		ImGui::ShowDemoWindow();
-	}
+    if(_showDemoWindow) {
+        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+        ImGui::ShowDemoWindow();
+    }
 }
 
 void GuiBase::demo_implot() {
-	// reference
-	/* 4. Show ImPlot Demo */
-	ImGui::Begin("ImPlot Demo");
-	ImPlot::ShowDemoWindow();
-	ImGui::End();
+    // reference
+    /* 4. Show ImPlot Demo */
+    ImGui::Begin("ImPlot Demo");
+    ImPlot::ShowDemoWindow();
+    ImGui::End();
 }
 
 void GuiBase::demo_test() {
-	// test for me???
+    // test for me???
 }
 
 void GuiBase::viewportEvent(ViewportEvent& event) {
-	GL::defaultFramebuffer.setViewport({ {}, event.framebufferSize() });
+    GL::defaultFramebuffer.setViewport({ {}, event.framebufferSize() });
 
-	_imgui.relayout(Vector2{ event.windowSize() } / event.dpiScaling(), event.windowSize(), event.framebufferSize());
+    _imgui.relayout(Vector2{ event.windowSize() } / event.dpiScaling(), event.windowSize(), event.framebufferSize());
 }
 } // namespace smg
