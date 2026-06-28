@@ -52,6 +52,7 @@ set(unit_test_list
     test_iso_grid.cpp
     test_camera_pick.cpp
     test_plot_analysis.cpp
+    test_plot_rolling.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})

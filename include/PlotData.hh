@@ -5,6 +5,45 @@
 #include <cstddef>
 #include <vector>
 
+namespace smg {
+
+// fixed-capacity ring buffer for live/streaming plot data
+template <class T>
+class RollingBuffer {
+public:
+    explicit RollingBuffer(std::size_t capacity) : _buf(capacity == 0 ? 1 : capacity) {}
+
+    void push(T v) {
+        _buf[_next] = v;
+        _next = (_next + 1) % _buf.size();
+        if(_count < _buf.size()) ++_count;
+    }
+
+    void clear() {
+        _count = 0;
+        _next = 0;
+    }
+
+    [[nodiscard]] std::size_t size() const { return _count; }
+    [[nodiscard]] std::size_t capacity() const { return _buf.size(); }
+
+    // oldest-to-newest snapshot, ready to hand to Plot::line
+    [[nodiscard]] std::vector<T> ordered() const {
+        std::vector<T> out;
+        out.reserve(_count);
+        const std::size_t start = _count < _buf.size() ? 0 : _next;
+        for(std::size_t i = 0; i < _count; ++i) out.push_back(_buf[(start + i) % _buf.size()]);
+        return out;
+    }
+
+private:
+    std::vector<T> _buf;
+    std::size_t _count{ 0 };
+    std::size_t _next{ 0 };
+};
+
+} // namespace smg
+
 namespace smg::analysis {
 
 template <class T>
