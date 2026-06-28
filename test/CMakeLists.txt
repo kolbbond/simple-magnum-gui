@@ -54,6 +54,7 @@ set(unit_test_list
     test_plot_analysis.cpp
     test_plot_rolling.cpp
     test_easing.cpp
+    test_anim_track.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})
