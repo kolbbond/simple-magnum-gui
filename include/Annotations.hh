@@ -5,10 +5,12 @@
 #include <string>
 #include <vector>
 
+#include <Magnum/GL/Texture.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Vector2.h>
 
+#include "Anim.hh"
 #include "Easing.hh"
 
 namespace smg {
@@ -43,5 +45,23 @@ struct Annotation {
     const Magnum::Vector2& image_size) {
     return image_min + norm * image_size;
 }
+
+class AnnotationLayer {
+public:
+    std::size_t add(const Annotation& a) {
+        _annotations.push_back(a);
+        return _annotations.size() - 1;
+    }
+    [[nodiscard]] Annotation& at(std::size_t handle) { return _annotations[handle]; }
+    void clear() { _annotations.clear(); }
+    [[nodiscard]] Timeline& timeline() { return _timeline; }
+
+    // render background + overlay at the timeline's current time (caller advances the timeline)
+    void draw(const char* title, Magnum::GL::Texture2D& background, const Magnum::Vector2i& size);
+
+private:
+    std::vector<Annotation> _annotations;
+    Timeline _timeline;
+};
 
 } // namespace smg

@@ -114,6 +114,7 @@ set(smg_sources
     src/IsoGrid.cpp
     src/SpriteSheet.cpp
     src/SpriteRenderer.cpp
+    src/Annotations.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp

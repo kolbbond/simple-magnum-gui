@@ -35,3 +35,8 @@
 #ifdef SMG_WITH_IMPLOT3D
 #include "Plot3D.hh"
 #endif
+
+// animation + telestration overlay
+#include "Easing.hh"
+#include "Anim.hh"
+#include "Annotations.hh"
