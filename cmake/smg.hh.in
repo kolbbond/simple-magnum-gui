@@ -28,3 +28,7 @@
 #include "SpriteTypes.hh"
 #include "SpriteSheet.hh"
 #include "IsoGrid.hh"
+
+// plotting & analysis
+#include "PlotData.hh"
+#include "Plot.hh"
