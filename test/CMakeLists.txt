@@ -56,6 +56,7 @@ set(unit_test_list
     test_easing.cpp
     test_anim_track.cpp
     test_anim_timeline.cpp
+    test_annotation_math.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})
