@@ -2,6 +2,7 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <vector>
 
@@ -54,6 +55,55 @@ public:
 
 private:
     std::vector<Keyframe<T>> _keys;
+};
+
+class Timeline {
+public:
+    explicit Timeline(float duration = 0.0f) : _duration(duration < 0.0f ? 0.0f : duration) {}
+
+    void advance(float dt) {
+        if(!_playing) return;
+        _time += dt * _speed;
+        if(_loop) {
+            if(_duration > 0.0f) {
+                _time = std::fmod(_time, _duration);
+                if(_time < 0.0f) _time += _duration;
+            } else {
+                _time = 0.0f;
+            }
+        } else if(_time >= _duration) {
+            _time = _duration;
+            _playing = false;
+        } else if(_time < 0.0f) {
+            _time = 0.0f;
+        }
+    }
+
+    void play() { _playing = true; }
+    void pause() { _playing = false; }
+    void stop() {
+        _playing = false;
+        _time = 0.0f;
+    }
+    void seek(float t) { _time = std::clamp(t, 0.0f, _duration); }
+    void set_speed(float s) { _speed = s; }
+    void set_loop(bool on) { _loop = on; }
+    void set_duration(float d) {
+        _duration = d < 0.0f ? 0.0f : d;
+        if(_time > _duration) _time = _duration;
+    }
+
+    [[nodiscard]] float time() const { return _time; }
+    [[nodiscard]] float duration() const { return _duration; }
+    [[nodiscard]] bool playing() const { return _playing; }
+    [[nodiscard]] bool finished() const { return !_loop && _duration > 0.0f && _time >= _duration; }
+
+private:
+    float _time{ 0.0f };
+    float _duration{ 0.0f };
+    float _speed{ 1.0f };
+    bool _playing{ false };
+    bool _loop{ false };
 };
 
 } // namespace smg
