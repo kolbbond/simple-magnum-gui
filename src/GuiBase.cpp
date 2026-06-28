@@ -1,4 +1,5 @@
 #include <Corrade/configure.h> // For CORRADE_TARGET_EMSCRIPTEN
+#include <chrono>
 #include <iostream> // std::cerr / std::endl (no longer pulled in transitively)
 #include <Magnum/Trade/Trade.h>
 #include <imgui.h>
@@ -275,6 +276,17 @@ different state after. */
 void GuiBase::drawEvent() {
     // main loop
     // this is called each frame
+
+    // per-frame delta time (clamp spikes from stalls/breakpoints)
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    if(_have_last_frame) {
+        const float elapsed = std::chrono::duration<float>(now - _last_frame).count();
+        _dt = elapsed > 0.1f ? 0.1f : elapsed;
+    } else {
+        _dt = 0.0f;
+        _have_last_frame = true;
+    }
+    _last_frame = now;
 
     //////////////////////////////////////////////////
     // setup the drawing
