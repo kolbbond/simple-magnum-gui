@@ -32,7 +32,7 @@ struct Bounds {
 // compute an AABB over a vertex span
 [[nodiscard]] Bounds compute_bounds(Corrade::Containers::ArrayView<const Vertex> verts);
 
-// single Phong light + material defaults (ported from goose-gui)
+// single Phong light + material defaults
 struct LightProperties {
     Magnum::Color3 ambient{ 0.6f, 0.6f, 0.6f };
     Magnum::Color3 diffuse{ 1.0f, 1.0f, 1.0f };

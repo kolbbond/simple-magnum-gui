@@ -15,3 +15,8 @@ build-wasm
 # stray top-level clones — the real ones live under external/ as submodules
 /implot
 /implot3d
+
+# agent scratch — AI plans/specs, analyses, panopticon memory (kept local, never tracked)
+docs/superpowers/
+docs/analyses/
+.pan/

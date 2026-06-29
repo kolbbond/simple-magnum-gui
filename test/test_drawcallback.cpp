@@ -30,7 +30,7 @@ DrawCallbackTest::DrawCallbackTest() {
 }
 
 // Pins the fix for the uninitialized-_callback UB: a DrawCallback created
-// without a callback (goose's create()->set_callback path) must be safe to
+// without a callback (the create()->set_callback path) must be safe to
 // draw() and report "did nothing" rather than jumping through garbage.
 void DrawCallbackTest::defaultDrawIsSafe() {
 	smg::ShDrawCallbackPr cb = smg::DrawCallback::create();
