@@ -100,26 +100,23 @@ GuiBase::GuiBase(const Arguments& arguments)
 #endif
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-    // load window icon (desktop only - no window icon in browser)
-    // get raw icon data from resources
+    // load window icon (desktop only - no window icon in browser); non-fatal —
+    // a missing or broken icon must not abort construction of the whole app
     Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
-    if(rawData.isEmpty()) {
-        Error() << "Failed to load raw icon data from resource 'smg.jpg'.";
-        return;
-    }
-
-    // importer plugin
     PluginManager::Manager<Trade::AbstractImporter> manager;
     Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-    if(!importer || !importer->openData(rawData)) Fatal{} << "Can't open data with AnyImageImporter";
-
-    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
-    if(!image) Fatal{} << "Importing the image failed";
-    _icon = importer->image2D(0);
-    if(!_icon) Fatal{} << "Importing the image failed";
-    if(_icon) {
-        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-        Platform::Sdl2Application::setWindowIcon(icon_view);
+    if(rawData.isEmpty()) {
+        Warning() << "smg: window icon resource 'smg.jpg' missing; skipping icon";
+    } else if(!importer || !importer->openData(rawData)) {
+        Warning() << "smg: AnyImageImporter could not open the window icon; skipping icon";
+    } else {
+        _icon = importer->image2D(0); // decode once
+        if(_icon) {
+            Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+            Platform::Sdl2Application::setWindowIcon(icon_view);
+        } else {
+            Warning() << "smg: decoding the window icon failed; skipping icon";
+        }
     }
 #endif
 
@@ -363,20 +360,25 @@ void GuiBase::draw_callbacks() {
 
 // setters (desktop only)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-void GuiBase::set_window_icon(std::string icon_file) {
-    // importer plugin
+void GuiBase::set_window_icon(const std::string& icon_file) {
+    // a bad runtime path must not kill the app (this is a public setter, unlike
+    // the compiled-in startup icon) — log and keep the current icon
     PluginManager::Manager<Trade::AbstractImporter> manager;
     Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-    if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
-
-    // load image
-    _icon = importer->image2D(0);
-    if(!_icon) Fatal{} << "Importing the image failed";
-    if(_icon) {
-        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-        Platform::Sdl2Application::setWindowIcon(icon_view);
+    if(!importer || !importer->openFile(icon_file)) {
+        Warning() << "smg: could not open icon file" << icon_file.c_str() << "- ignoring";
+        return;
     }
+    _icon = importer->image2D(0);
+    if(!_icon) {
+        Warning() << "smg: decoding icon file failed" << icon_file.c_str() << "- ignoring";
+        return;
+    }
+    Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+    Platform::Sdl2Application::setWindowIcon(icon_view);
 }
+
+SDL_Window* GuiBase::get_window() const { return _window; }
 
 void GuiBase::set_window_position(int x, int y) { SDL_SetWindowPosition(_window, x, y); }
 

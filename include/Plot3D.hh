@@ -38,7 +38,10 @@ public:
     }
     template <class T>
     void surface(const char* label, const std::vector<T>& x, const std::vector<T>& y, const std::vector<T>& z, int nx, int ny) {
-        if(_open && nx > 0 && ny > 0 && z.size() >= std::size_t(nx) * std::size_t(ny))
+        // PlotSurface indexes x, y AND z with nx*ny elements (not axis vectors) —
+        // all three must be at least that long or it reads out of bounds
+        const std::size_t need = std::size_t(nx) * std::size_t(ny);
+        if(_open && nx > 0 && ny > 0 && x.size() >= need && y.size() >= need && z.size() >= need)
             ImPlot3D::PlotSurface(label, x.data(), y.data(), z.data(), nx, ny);
     }
 

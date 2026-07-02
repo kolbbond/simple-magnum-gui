@@ -1,6 +1,7 @@
 // embeddable 3D scene viewport: renders a retained scene into an ImGui window
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <memory>
 #include <optional>
@@ -55,16 +56,35 @@ public:
     std::size_t add_axes(float scale = 1.0f, const Magnum::Matrix4& transform = {});
 
     std::size_t add_sprite(ShSpriteSheetPr sheet, int frame, const Magnum::Vector3& position, const SpriteParams& params = {});
-    [[nodiscard]] Sprite& sprite(std::size_t handle) { return _sprites[handle]; }
+    // handles are indices; add_sprite()/clear() invalidate previously returned references
+    [[nodiscard]] Sprite& sprite(std::size_t handle) {
+        assert(handle < _sprites.size());
+        return _sprites[handle];
+    }
+    [[nodiscard]] const Sprite& sprite(std::size_t handle) const {
+        assert(handle < _sprites.size());
+        return _sprites[handle];
+    }
 
     // ground-plane point / iso-grid cell under the mouse (valid only after draw())
     [[nodiscard]] std::optional<Magnum::Vector3> cursor_world() const;
     [[nodiscard]] std::optional<Magnum::Vector2i> tile_under_cursor(const IsoGrid& grid) const;
 
     void clear();
-    [[nodiscard]] Object& object(std::size_t handle) { return _objects[handle]; }
+    // handles are indices; add*()/clear() invalidate previously returned references
+    [[nodiscard]] Object& object(std::size_t handle) {
+        assert(handle < _objects.size());
+        return _objects[handle];
+    }
+    [[nodiscard]] const Object& object(std::size_t handle) const {
+        assert(handle < _objects.size());
+        return _objects[handle];
+    }
+    [[nodiscard]] std::size_t object_count() const { return _objects.size(); }
     [[nodiscard]] Camera& camera() { return _camera; }
+    [[nodiscard]] const Camera& camera() const { return _camera; }
     [[nodiscard]] LightProperties& light() { return _light; }
+    [[nodiscard]] const LightProperties& light() const { return _light; }
     void fit();
 
     void draw(const char* title, const Magnum::Vector2i& size = Magnum::Vector2i{ 640, 480 });
