@@ -30,10 +30,7 @@ ShDrawCallbackPr DrawCallback::create(draw_callback callback) {
 ShDrawCallbackPr DrawCallback::create(draw_callback callback, void* data, key_press_event kpe, pointer_move_event pme, scroll_event se) {
 	return std::make_shared<DrawCallback>(callback, data, kpe, pme, se);
 }
-// destructor
-DrawCallback::~DrawCallback() {
-	//std::printf("[X] DrawCallback destructor\n");
-}
+DrawCallback::~DrawCallback() {}
 
 int DrawCallback::draw() {
 	// no draw callback registered yet — nothing to do

@@ -63,14 +63,6 @@ public:
 	// new line
 	virtual void newl();
 
-	// horizontal line
-	/*
-	virtual void hline(const int width,
-		const char ch = '=',
-		const std::string& str1 = {},
-		const std::string& str2 = {});
-        */
-
 	// access to indentation
 	virtual int get_num_indent();
 

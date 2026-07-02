@@ -21,11 +21,9 @@ using namespace Magnum::Math::Literals;
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
-    //: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
     : Platform::Application{ arguments, NoCreate } {
 
-    // background clear color (moved here from the header to keep the _rgbaf
-    // literal out of the public API)
+    // kept out of the header to keep the _rgbaf literal out of the public API
     _clearColor = 0x72909aff_rgbaf;
 
 
@@ -133,18 +131,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 
     const Vector2 size = Vector2{ windowSize() } / dpiScaling();
 
-    // Add a font that actually looks acceptable on HiDPI screens. ImGui by
-    // default takes ownership of the passed data pointer and then frees it
-    // (using what? free()?), that's why the non-const pointer. We have to
-    // explicitly tell it to *not* do that, since the resources are always in
-    //       memory and on a static place.
-
+    // resources are static, so FontDataOwnedByAtlas=false below stops ImGui freeing them
     printf("%s --- SMG: ADD FONTS ---%s\n", SMG_KBLU, SMG_KNRM);
 
-    // we need a font config for each font
-    // @hey: add more font options so we can switch?
-    //       add additional pixels
-    //      add additional fonts (nerdfonts)? JetBrainsMono atleast
     Containers::ArrayView<const char> font;
     double num_pixels = 18.0f;
     std::vector<std::string> font_names = { "Roboto-Medium.ttf",
@@ -191,14 +180,10 @@ GuiBase::GuiBase(const Arguments& arguments)
     // lighter blue on hover
     style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.5f, 1.0f, 1.0f);
 
-    // create magnum imgui context
-    //_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+    // wrap the existing ImGui context in Magnum's integration
     _imgui =
         ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
-    // create a context for implot
-    // might need to connect to imgui but idk
-    // ImPlot::SetImGuiContext(_imgui);
     printf("%s--- SMG: Creating implot context ---%s\n", SMG_KBLU, SMG_KNRM);
     ImPlot::CreateContext();
 #ifdef SMG_WITH_IMPLOT3D
@@ -206,9 +191,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 #endif
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
-    /* Have some sane speed, please */
-    // this is [ms] per frame?
-    // setMinimalLoopPeriod(16);
+    // cap the loop at ~16 ms/frame
     Nanoseconds nspf = 16.0_msec;
     setMinimalLoopPeriod(nspf);
 #endif
@@ -223,13 +206,9 @@ void GuiBase::drawBegin() {
     // start a new frame
     _imgui.newFrame();
 
-    // set default font
     ImGuiIO& io = ImGui::GetIO();
-    //_font_default = _fonts[0];
-    //io.FontDefault = _font_default;
 
-    /* Enable text input, if needed */
-    // get the input
+    // toggle text input to match what ImGui wants this frame
     if(io.WantTextInput && !isTextInputActive())
         startTextInput();
     else if(!io.WantTextInput && isTextInputActive())
@@ -285,30 +264,8 @@ void GuiBase::drawEvent() {
     }
     _last_frame = now;
 
-    //////////////////////////////////////////////////
-    // setup the drawing
-    // draws an imgui frame
     drawBegin();
-
-    // Do your drawing here?
-    // @hey, how do we add in custom functions from outside while utilizing
-    // the console api's from here ...
-    // add static function calls from outside???
-    //std::pair<int, int> pos = get_window_position();
-    //Vector2i window_size = windowSize();
-    //ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
-    //ImGui::Text("window size: (%i,%i)", window_size.x(), window_size.y());
-    //ImGui::Text("fps: %0.3f\n", Magnum::Double(ImGui::GetIO().Framerate));
-    //ImGui::Text("ms/frame: %0.3f\n",
-    //1000.0 / Magnum::Double(ImGui::GetIO().Framerate));
-
-    //////////////////////////////////////////////////
-    // call back function?
-    // draws everything we need
     draw_callbacks();
-
-    // draw and reset
-    // swaps buffer to screen
     drawEnd();
 }
 
@@ -331,27 +288,15 @@ std::pair<int, int> GuiBase::get_window_position() const {
 }
 
 void GuiBase::add_callback(ShDrawCallbackPr callback) {
-    // add callback to list
-
-    // append
     _callback_list.push_back(callback);
 }
 
 void GuiBase::draw_callbacks() {
-    // draw callbacks from list
-
-    // check if list empty
     if(_callback_list.empty()) {
     } else {
-
-        // walk callbacks
         int num_callbacks = static_cast<int>(_callback_list.size());
         for(int i = 0; i < num_callbacks; i++) {
-
-            // get data pointer
             ShDrawCallbackPr mycallback = _callback_list[i];
-
-            // call the callback
             int flag = mycallback->draw();
             if(flag) printf("callback error!\n");
         }
