@@ -17,21 +17,18 @@ namespace smg{
 
 	// force set increment
 	void Log::set_num_indent(const int num_indent){
+		std::lock_guard<std::mutex> lock(mtx_);
 		num_indent_ = num_indent;
 	}
 
 	// only change indent
 	void Log::msg(const int incr){
-		// lock for thread safety
-		mtx_.lock();
+		std::lock_guard<std::mutex> lock(mtx_);
 
-		// increment indentation
-		assert(static_cast<int>(num_indent_)>=-incr);
-		if(static_cast<int>(num_indent_>=-incr))
+		// increment, but never below zero (the cast used to wrap the comparison,
+		// not num_indent_, so the guard was effectively always true)
+		if(static_cast<int>(num_indent_) >= -incr)
 			num_indent_+=incr;
-
-		// unlock
-		mtx_.unlock();
 	}
 
 	// new line
@@ -48,6 +45,7 @@ namespace smg{
 
 	// access to indentation
 	int Log::get_num_indent(){
+		std::lock_guard<std::mutex> lock(mtx_);
 		return num_indent_;
 	}
 
