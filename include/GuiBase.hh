@@ -1,6 +1,7 @@
 // main gui class
 #pragma once
 
+#include <chrono>
 #include <tuple>
 #include <vector>
 
@@ -10,10 +11,10 @@
 
 // Platform-specific application
 #if defined(CORRADE_TARGET_EMSCRIPTEN)
-#include <Magnum/Platform/EmscriptenApplication.h>
+#    include <Magnum/Platform/EmscriptenApplication.h>
 #else
-#include <Magnum/Platform/Sdl2Application.h>
-#include "SDL_video.h"
+#    include <Magnum/Platform/Sdl2Application.h>
+#    include "SDL_video.h"
 #endif
 
 #include <Magnum/GL/DefaultFramebuffer.h>
@@ -28,97 +29,101 @@
 #include "log.hh"
 
 #include "imgui.h"
-#include "log.hh"
 
 // smg includes
 #include "DrawCallback.hh"
 #include "implot.h"
 
-using namespace Magnum;
-using namespace Magnum::Math::Literals;
-
 namespace smg {
 
 // base gui class, entry point for guis
 
-class GuiBase: public Platform::Application {
+class GuiBase: public Magnum::Platform::Application {
 
 protected:
-	// our imgui context
-	ImGuiIntegration::Context _imgui{ NoCreate };
+    // our imgui context
+    Magnum::ImGuiIntegration::Context _imgui{ Magnum::NoCreate };
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	// actual window (desktop only, assume SDL)
-	SDL_Window* _window;
+    // actual window (desktop only, assume SDL); non-owning, owned by Platform::Application
+    SDL_Window* _window = nullptr;
 #endif
 
-	// logger
-	ShLogPr _lg; // = NullLog::create();
+    // logger (safe no-op default until the constructor installs a real Log)
+    ShLogPr _lg = NullLog::create();
 
-	bool _showDemoWindow = true;
-	bool _showAnotherWindow = false;
-	Color4 _clearColor = 0x72909aff_rgbaf;
-	Float _floatValue = 0.0f;
+    bool _showDemoWindow = true;
+    bool _showAnotherWindow = false;
+    Magnum::Color4 _clearColor; // initialized in constructor
+    Magnum::Float _floatValue = 0.0f;
 
-	int _samples = 4; // MSAA samples
+    int _samples = 4; // MSAA samples
 
-	// font setting
-	std::vector<Containers::ArrayView<const char>> _fontData;
-	std::vector<ImFont*> _fonts;
-	ImFont* _font_default = nullptr;
+    // font setting
+    std::vector<Corrade::Containers::ArrayView<const char>> _fontData;
+    std::vector<ImFont*> _fonts;
+    ImFont* _font_default = nullptr;
 
-	// icon settings
-	Containers::Optional<Trade::ImageData2D> _icon;
+    // icon settings
+    Corrade::Containers::Optional<Magnum::Trade::ImageData2D> _icon;
 
-	// list of set callbacks
-	std::vector<ShDrawCallbackPr> _callback_list;
+    // list of set callbacks
+    std::vector<ShDrawCallbackPr> _callback_list;
+
+    // per-frame delta time (seconds), updated at the top of drawEvent
+    float _dt = 0.0f;
+    std::chrono::steady_clock::time_point _last_frame{};
+    bool _have_last_frame = false;
 
 public:
-	// constructor
-	explicit GuiBase(const Arguments& arguments);
+    // constructor
+    explicit GuiBase(const Arguments& arguments);
 
-	~GuiBase() {
-		//	std::printf(" [X] GuiBase destructor [X] \n");
-		this->exit();
-	};
+    ~GuiBase() {
+        //	std::printf(" [X] GuiBase destructor [X] \n");
+        this->exit();
+    };
 
-	// draw callbacks
-	// main draw event loop (called every iteration)
-	void drawEvent() override;
-	void drawBegin();
-	void drawEnd();
-	void draw_callbacks();
+    // draw callbacks
+    // main draw event loop (called every iteration)
+    void drawEvent() override;
+    void drawBegin();
+    void drawEnd();
+    void draw_callbacks();
 
-	// demo
-	void demo_imgui();
+    // demo
+    void demo_imgui();
 
-	// implot demo
-	void demo_implot();
-	void demo_test();
+    // implot demo
+    void demo_implot();
+    void demo_test();
 
-	// printers
-	void print_window_position();
+    // printers
+    void print_window_position();
 
-	// add custom callbacks
-	void add_callback(ShDrawCallbackPr);
+    // add custom callbacks
+    void add_callback(ShDrawCallbackPr);
 
-	// getters (some are desktop-only)
-	std::pair<int, int> get_window_position();
+    // seconds since the previous frame (0 on the first frame, spike-clamped)
+    [[nodiscard]] float dt() const { return _dt; }
+
+    // getters (some are desktop-only)
+    [[nodiscard]] std::pair<int, int> get_window_position() const;
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-	SDL_Window* get_window();
-	void set_window_icon(std::string icon_file);
-	void set_window_position(int x, int y);
-	void set_window_size(int x, int y);
+    [[nodiscard]] SDL_Window* get_window() const;
+    void set_window_icon(std::string icon_file);
+    void set_window_position(int x, int y);
+    void set_window_size(int x, int y);
 #endif
 
-	// event wrappers
-	void viewportEvent(ViewportEvent& event) override;
-	void keyPressEvent(KeyEvent& event) override;
-	void keyReleaseEvent(KeyEvent& event) override;
-	void pointerPressEvent(PointerEvent& event) override;
-	void pointerReleaseEvent(PointerEvent& event) override;
-	void pointerMoveEvent(PointerMoveEvent& event) override;
-	void scrollEvent(ScrollEvent& event) override;
-	void textInputEvent(TextInputEvent& event) override;
+    // event wrappers
+    void viewportEvent(ViewportEvent& event) override;
+    void keyPressEvent(KeyEvent& event) override;
+    void keyReleaseEvent(KeyEvent& event) override;
+    void pointerPressEvent(PointerEvent& event) override;
+    void pointerReleaseEvent(PointerEvent& event) override;
+    void pointerMoveEvent(PointerMoveEvent& event) override;
+    void scrollEvent(ScrollEvent& event) override;
+    void textInputEvent(TextInputEvent& event) override;
 };
 } // namespace smg

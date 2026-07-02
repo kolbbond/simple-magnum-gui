@@ -3,6 +3,9 @@
 
 #include "GuiBase.hh"
 
+using namespace Magnum;
+using namespace Magnum::Math::Literals;
+
 // example data to pass into callback
 struct data_ex {
 

@@ -17,13 +17,19 @@ PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 cd "$PROJECT_DIR"
 
-# Source Emscripten SDK (adjust path as needed)
-EMSDK_PATH="${EMSDK_PATH:-/home/ohr4/build/emsdk}"
-if [ -f "$EMSDK_PATH/emsdk_env.sh" ]; then
-    source "$EMSDK_PATH/emsdk_env.sh"
+# Activate Emscripten SDK.
+# Resolution order: an already-activated SDK on PATH, then $EMSDK_PATH, then $EMSDK
+# (the latter is exported by emsdk_env.sh). No path is hardcoded.
+if command -v emcc >/dev/null 2>&1; then
+    echo -e "${BLUE}Using emcc already on PATH${NC}"
+elif [ -n "${EMSDK_PATH:-}" ] && [ -f "${EMSDK_PATH}/emsdk_env.sh" ]; then
+    source "${EMSDK_PATH}/emsdk_env.sh"
+elif [ -n "${EMSDK:-}" ] && [ -f "${EMSDK}/emsdk_env.sh" ]; then
+    source "${EMSDK}/emsdk_env.sh"
 else
-    echo -e "${RED}Error: Emscripten SDK not found at $EMSDK_PATH${NC}"
-    echo "Set EMSDK_PATH environment variable to your emsdk installation"
+    echo -e "${RED}Error: Emscripten SDK not found.${NC}"
+    echo "Activate it first  (source /path/to/emsdk/emsdk_env.sh)"
+    echo "or set EMSDK_PATH to your emsdk installation directory."
     exit 1
 fi
 
