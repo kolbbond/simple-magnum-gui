@@ -21,11 +21,9 @@ using namespace Magnum::Math::Literals;
 namespace smg {
 
 GuiBase::GuiBase(const Arguments& arguments)
-    //: Platform::Application{ arguments, Configuration{}.setTitle("GuiBase").setWindowFlags(Configuration::WindowFlag::Resizable) } {
     : Platform::Application{ arguments, NoCreate } {
 
-    // background clear color (moved here from the header to keep the _rgbaf
-    // literal out of the public API)
+    // kept out of the header to keep the _rgbaf literal out of the public API
     _clearColor = 0x72909aff_rgbaf;
 
 
@@ -100,26 +98,23 @@ GuiBase::GuiBase(const Arguments& arguments)
 #endif
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-    // load window icon (desktop only - no window icon in browser)
-    // get raw icon data from resources
+    // load window icon (desktop only - no window icon in browser); non-fatal —
+    // a missing or broken icon must not abort construction of the whole app
     Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
-    if(rawData.isEmpty()) {
-        Error() << "Failed to load raw icon data from resource 'smg.jpg'.";
-        return;
-    }
-
-    // importer plugin
     PluginManager::Manager<Trade::AbstractImporter> manager;
     Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-    if(!importer || !importer->openData(rawData)) Fatal{} << "Can't open data with AnyImageImporter";
-
-    Containers::Optional<Trade::ImageData2D> image = importer->image2D(0);
-    if(!image) Fatal{} << "Importing the image failed";
-    _icon = importer->image2D(0);
-    if(!_icon) Fatal{} << "Importing the image failed";
-    if(_icon) {
-        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-        Platform::Sdl2Application::setWindowIcon(icon_view);
+    if(rawData.isEmpty()) {
+        Warning() << "smg: window icon resource 'smg.jpg' missing; skipping icon";
+    } else if(!importer || !importer->openData(rawData)) {
+        Warning() << "smg: AnyImageImporter could not open the window icon; skipping icon";
+    } else {
+        _icon = importer->image2D(0); // decode once
+        if(_icon) {
+            Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+            Platform::Sdl2Application::setWindowIcon(icon_view);
+        } else {
+            Warning() << "smg: decoding the window icon failed; skipping icon";
+        }
     }
 #endif
 
@@ -136,18 +131,9 @@ GuiBase::GuiBase(const Arguments& arguments)
 
     const Vector2 size = Vector2{ windowSize() } / dpiScaling();
 
-    // Add a font that actually looks acceptable on HiDPI screens. ImGui by
-    // default takes ownership of the passed data pointer and then frees it
-    // (using what? free()?), that's why the non-const pointer. We have to
-    // explicitly tell it to *not* do that, since the resources are always in
-    //       memory and on a static place.
-
+    // resources are static, so FontDataOwnedByAtlas=false below stops ImGui freeing them
     printf("%s --- SMG: ADD FONTS ---%s\n", SMG_KBLU, SMG_KNRM);
 
-    // we need a font config for each font
-    // @hey: add more font options so we can switch?
-    //       add additional pixels
-    //      add additional fonts (nerdfonts)? JetBrainsMono atleast
     Containers::ArrayView<const char> font;
     double num_pixels = 18.0f;
     std::vector<std::string> font_names = { "Roboto-Medium.ttf",
@@ -194,14 +180,10 @@ GuiBase::GuiBase(const Arguments& arguments)
     // lighter blue on hover
     style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.5f, 1.0f, 1.0f);
 
-    // create magnum imgui context
-    //_imgui = ImGuiIntegration::Context(Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
+    // wrap the existing ImGui context in Magnum's integration
     _imgui =
         ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
-    // create a context for implot
-    // might need to connect to imgui but idk
-    // ImPlot::SetImGuiContext(_imgui);
     printf("%s--- SMG: Creating implot context ---%s\n", SMG_KBLU, SMG_KNRM);
     ImPlot::CreateContext();
 #ifdef SMG_WITH_IMPLOT3D
@@ -209,9 +191,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 #endif
 
 #if !defined(MAGNUM_TARGET_WEBGL) && !defined(CORRADE_TARGET_ANDROID)
-    /* Have some sane speed, please */
-    // this is [ms] per frame?
-    // setMinimalLoopPeriod(16);
+    // cap the loop at ~16 ms/frame
     Nanoseconds nspf = 16.0_msec;
     setMinimalLoopPeriod(nspf);
 #endif
@@ -226,13 +206,9 @@ void GuiBase::drawBegin() {
     // start a new frame
     _imgui.newFrame();
 
-    // set default font
     ImGuiIO& io = ImGui::GetIO();
-    //_font_default = _fonts[0];
-    //io.FontDefault = _font_default;
 
-    /* Enable text input, if needed */
-    // get the input
+    // toggle text input to match what ImGui wants this frame
     if(io.WantTextInput && !isTextInputActive())
         startTextInput();
     else if(!io.WantTextInput && isTextInputActive())
@@ -288,30 +264,8 @@ void GuiBase::drawEvent() {
     }
     _last_frame = now;
 
-    //////////////////////////////////////////////////
-    // setup the drawing
-    // draws an imgui frame
     drawBegin();
-
-    // Do your drawing here?
-    // @hey, how do we add in custom functions from outside while utilizing
-    // the console api's from here ...
-    // add static function calls from outside???
-    //std::pair<int, int> pos = get_window_position();
-    //Vector2i window_size = windowSize();
-    //ImGui::Text("window position: (%i,%i)", pos.first, pos.second);
-    //ImGui::Text("window size: (%i,%i)", window_size.x(), window_size.y());
-    //ImGui::Text("fps: %0.3f\n", Magnum::Double(ImGui::GetIO().Framerate));
-    //ImGui::Text("ms/frame: %0.3f\n",
-    //1000.0 / Magnum::Double(ImGui::GetIO().Framerate));
-
-    //////////////////////////////////////////////////
-    // call back function?
-    // draws everything we need
     draw_callbacks();
-
-    // draw and reset
-    // swaps buffer to screen
     drawEnd();
 }
 
@@ -334,27 +288,15 @@ std::pair<int, int> GuiBase::get_window_position() const {
 }
 
 void GuiBase::add_callback(ShDrawCallbackPr callback) {
-    // add callback to list
-
-    // append
     _callback_list.push_back(callback);
 }
 
 void GuiBase::draw_callbacks() {
-    // draw callbacks from list
-
-    // check if list empty
     if(_callback_list.empty()) {
     } else {
-
-        // walk callbacks
         int num_callbacks = static_cast<int>(_callback_list.size());
         for(int i = 0; i < num_callbacks; i++) {
-
-            // get data pointer
             ShDrawCallbackPr mycallback = _callback_list[i];
-
-            // call the callback
             int flag = mycallback->draw();
             if(flag) printf("callback error!\n");
         }
@@ -363,20 +305,25 @@ void GuiBase::draw_callbacks() {
 
 // setters (desktop only)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-void GuiBase::set_window_icon(std::string icon_file) {
-    // importer plugin
+void GuiBase::set_window_icon(const std::string& icon_file) {
+    // a bad runtime path must not kill the app (this is a public setter, unlike
+    // the compiled-in startup icon) — log and keep the current icon
     PluginManager::Manager<Trade::AbstractImporter> manager;
     Containers::Pointer<Trade::AbstractImporter> importer = manager.loadAndInstantiate("AnyImageImporter");
-    if(!importer || !importer->openFile(icon_file)) Fatal{} << "Can't open file with AnyImageImporter";
-
-    // load image
-    _icon = importer->image2D(0);
-    if(!_icon) Fatal{} << "Importing the image failed";
-    if(_icon) {
-        Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
-        Platform::Sdl2Application::setWindowIcon(icon_view);
+    if(!importer || !importer->openFile(icon_file)) {
+        Warning() << "smg: could not open icon file" << icon_file.c_str() << "- ignoring";
+        return;
     }
+    _icon = importer->image2D(0);
+    if(!_icon) {
+        Warning() << "smg: decoding icon file failed" << icon_file.c_str() << "- ignoring";
+        return;
+    }
+    Magnum::ImageView2D icon_view{ _icon->format(), _icon->size(), _icon->data() };
+    Platform::Sdl2Application::setWindowIcon(icon_view);
 }
+
+SDL_Window* GuiBase::get_window() const { return _window; }
 
 void GuiBase::set_window_position(int x, int y) { SDL_SetWindowPosition(_window, x, y); }
 

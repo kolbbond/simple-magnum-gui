@@ -235,9 +235,15 @@ if(SMG_WITH_IMAGE_IMPORT)
     else()
         add_dependencies(smg AnyImageImporter StbImageImporter)
     endif()
-    target_compile_definitions(smg PUBLIC SMG_WITH_IMAGE_IMPORT
+    target_compile_definitions(smg PUBLIC SMG_WITH_IMAGE_IMPORT)
+    # runtime plugin dir: used only by SpriteSheet.cpp, and it's a build-tree path
+    # that must never leak into the installed interface -> keep it PRIVATE
+    target_compile_definitions(smg PRIVATE
         SMG_IMPORTER_DIR="${CMAKE_BINARY_DIR}/lib/magnum/importers")
 endif()
+
+# Public headers require C++17; propagate it to consumers via the exported interface
+target_compile_features(smg PUBLIC cxx_std_17)
 
 # Compiler warnings
 target_compile_options(smg PRIVATE
@@ -347,11 +353,28 @@ if(USE_SYSTEM_MAGNUM)
 else()
     # Use manual template when building deps from source
     # (CMake export doesn't work with add_subdirectory targets)
+
+    # Propagate the PUBLIC compile definitions/features the library was built with
+    # so installed consumers compile the *same* class layout. ScenePanel's members
+    # depend on SMG_WITH_BLOOM etc.; without these an installed consumer (goose)
+    # would compile a different sizeof(ScenePanel) than libsmg -> silent ABI break.
+    # Read straight off the target so this can't drift out of sync with the options.
+    get_target_property(_SMG_EXPORT_DEFS smg INTERFACE_COMPILE_DEFINITIONS)
+    if(NOT _SMG_EXPORT_DEFS)
+        set(_SMG_EXPORT_DEFS "")
+    endif()
+    get_target_property(_SMG_EXPORT_FEATURES smg INTERFACE_COMPILE_FEATURES)
+    if(NOT _SMG_EXPORT_FEATURES)
+        set(_SMG_EXPORT_FEATURES "")
+    endif()
+
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/cmake/smgTargets.cmake.in
         ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake
         @ONLY
     )
+    unset(_SMG_EXPORT_DEFS)
+    unset(_SMG_EXPORT_FEATURES)
 
     install(FILES
         ${CMAKE_CURRENT_BINARY_DIR}/smgTargets.cmake

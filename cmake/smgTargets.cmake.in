@@ -23,6 +23,10 @@ endif()
 set_target_properties(smg::smg PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@"
     INTERFACE_LINK_LIBRARIES "${_SMG_INTERFACE_LIBS}"
+    # PUBLIC defines/features the library was compiled with -- consumers MUST match
+    # these (ScenePanel's layout depends on SMG_WITH_BLOOM etc.) or they get UB.
+    INTERFACE_COMPILE_DEFINITIONS "@_SMG_EXPORT_DEFS@"
+    INTERFACE_COMPILE_FEATURES "@_SMG_EXPORT_FEATURES@"
 )
 
 # Set library location (platform-specific)

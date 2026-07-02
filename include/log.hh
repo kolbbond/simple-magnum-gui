@@ -63,14 +63,6 @@ public:
 	// new line
 	virtual void newl();
 
-	// horizontal line
-	/*
-	virtual void hline(const int width,
-		const char ch = '=',
-		const std::string& str1 = {},
-		const std::string& str2 = {});
-        */
-
 	// access to indentation
 	virtual int get_num_indent();
 
@@ -114,8 +106,7 @@ public:
 		std::vprintf(fmt, arg);
 		va_end(arg);
 
-		// increment indentation
-		assert(static_cast<int>(num_indent_) >= -incr);
+		// increment indentation, but never below zero
 		if(static_cast<int>(num_indent_) >= -incr) num_indent_ += incr;
 
 		// unlock

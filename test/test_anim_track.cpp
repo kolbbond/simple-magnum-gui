@@ -37,5 +37,15 @@ int main() {
     // anim_lerp generic
     CHECK(smgtest::approx(smg::anim_lerp(2.0f, 4.0f, 0.25f), 2.5f));
 
+    // duplicate-time keys keep insertion (FIFO) order: the first value added at
+    // t=1 ends the incoming segment, the second begins the outgoing segment
+    smg::Track<float> d;
+    d.add(0.0f, 0.0f);
+    d.add(1.0f, 100.0f); // first at t=1 -> terminates segment [0,1]
+    d.add(1.0f, 200.0f); // second at t=1 -> starts segment [1,2]
+    d.add(2.0f, 300.0f);
+    CHECK(smgtest::approx(d.sample(1.0f), 100.0f)); // step lands on the first t=1 key
+    CHECK(smgtest::approx(d.sample(1.5f), 250.0f)); // midpoint of 200->300, not 100->300
+
     TEST_RETURN();
 }

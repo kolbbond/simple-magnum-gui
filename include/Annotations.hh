@@ -1,6 +1,7 @@
 // telestration annotations: animatable 2D marks in normalized [0,1] image-space
 #pragma once
 
+#include <cassert>
 #include <cstddef>
 #include <string>
 #include <vector>
@@ -52,7 +53,16 @@ public:
         _annotations.push_back(a);
         return _annotations.size() - 1;
     }
-    [[nodiscard]] Annotation& at(std::size_t handle) { return _annotations[handle]; }
+    // handles are indices; add()/clear() invalidate previously returned references
+    [[nodiscard]] Annotation& at(std::size_t handle) {
+        assert(handle < _annotations.size());
+        return _annotations[handle];
+    }
+    [[nodiscard]] const Annotation& at(std::size_t handle) const {
+        assert(handle < _annotations.size());
+        return _annotations[handle];
+    }
+    [[nodiscard]] std::size_t size() const { return _annotations.size(); }
     void clear() { _annotations.clear(); }
     [[nodiscard]] Timeline& timeline() { return _timeline; }
 

@@ -27,5 +27,19 @@ int main() {
     CHECK(smgtest::approx(smg::anchor_offset(smg::Anchor::Center).y(), 0.0f));
     CHECK(smgtest::approx(smg::anchor_offset(smg::Anchor::BottomCenter).y(), 0.5f));
 
+    // degenerate grid must not divide by zero (regression: 0 % 0 SIGFPE)
+    const smg::SpriteGrid gz{ 0, 0 };
+    CHECK(gz.count() == 1); // clamped to a 1x1 grid
+    const Magnum::Range2D fz = gz.frame_uv(3);
+    CHECK(smgtest::approx(fz.min().x(), 0.0f));
+    CHECK(smgtest::approx(fz.max().x(), 1.0f));
+
+    // large elapsed time must not overflow float->int in frame_at
+    const smg::SpriteClip clip{ 0, 3, 24.0f }; // 4 frames
+    CHECK(clip.frame_at(0.0f) == 0);
+    CHECK(clip.frame_at(1.0f / 24.0f) == 1);
+    const int big = clip.frame_at(1.0e9f); // ~31 years at 24fps; must stay in [0,3]
+    CHECK(big >= 0 && big <= 3);
+
     TEST_RETURN();
 }

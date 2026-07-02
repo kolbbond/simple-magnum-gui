@@ -20,16 +20,21 @@ struct SpriteGrid {
     int cols{ 1 };
     int rows{ 1 };
 
-    [[nodiscard]] int count() const { return cols * rows; }
+    // clamped to >= 1 so a degenerate grid can't divide by zero
+    [[nodiscard]] int cols_safe() const { return cols < 1 ? 1 : cols; }
+    [[nodiscard]] int rows_safe() const { return rows < 1 ? 1 : rows; }
+    [[nodiscard]] int count() const { return cols_safe() * rows_safe(); }
 
     // normalized UV rect for a frame; out-of-range clamps to frame 0
     [[nodiscard]] Magnum::Range2D frame_uv(int index) const {
-        const int n = count();
+        const int c = cols_safe();
+        const int r = rows_safe();
+        const int n = c * r;
         const int i = (index < 0 || index >= n) ? 0 : index;
-        const int col = i % cols;
-        const int row = i / cols;
-        const float u = 1.0f / float(cols);
-        const float v = 1.0f / float(rows);
+        const int col = i % c;
+        const int row = i / c;
+        const float u = 1.0f / float(c);
+        const float v = 1.0f / float(r);
         return Magnum::Range2D{ { float(col) * u, float(row) * v }, { float(col + 1) * u, float(row + 1) * v } };
     }
 };
@@ -48,9 +53,11 @@ struct SpriteClip {
     [[nodiscard]] int frame_at(float t) const {
         const int span = last - first + 1;
         if(span <= 1 || fps <= 0.0f) return first;
-        const int step = int(std::floor(t * fps));
-        const int wrapped = ((step % span) + span) % span;
-        return first + wrapped;
+        // wrap in the float domain first: t*fps can exceed INT_MAX for long-running
+        // clocks, and float->int is UB past 2^31. fmod keeps the value in [0, span).
+        float phase = std::fmod(std::floor(t * fps), float(span));
+        if(phase < 0.0f) phase += float(span);
+        return first + int(phase);
     }
 };
 

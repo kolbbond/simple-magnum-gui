@@ -12,6 +12,9 @@ imgui.ini
 build-native
 build-wasm
 
+# out-of-tree build dirs (build-ci, build-full, etc.)
+build-*/
+
 # stray top-level clones — the real ones live under external/ as submodules
 /implot
 /implot3d

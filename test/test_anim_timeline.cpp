@@ -46,5 +46,18 @@ int main() {
     CHECK(smgtest::approx(lp.time(), 0.0f));
     CHECK(!lp.playing());
 
+    // reverse playback terminates at the start (symmetric with the end)
+    smg::Timeline rev{ 10.0f };
+    rev.seek(5.0f);
+    rev.set_speed(-1.0f);
+    rev.play();
+    rev.advance(100.0f);
+    CHECK(smgtest::approx(rev.time(), 0.0f));
+    CHECK(!rev.playing()); // regression: reverse used to keep playing forever
+
+    // a zero-duration non-looping timeline is finished (nothing to play)
+    smg::Timeline zero{ 0.0f };
+    CHECK(zero.finished());
+
     TEST_RETURN();
 }
