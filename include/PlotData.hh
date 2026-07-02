@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <cstddef>
+#include <type_traits>
 #include <vector>
 
 namespace smg {
@@ -78,6 +79,8 @@ template <class T>
 
 template <class T>
 [[nodiscard]] std::vector<T> normalize(const std::vector<T>& v) {
+    // integral T would truncate every non-max element to 0; force floating-point
+    static_assert(std::is_floating_point<T>::value, "smg::analysis::normalize requires a floating-point element type");
     std::vector<T> out(v.size());
     if(v.empty()) return out;
     const Stats<T> s = stats(v);

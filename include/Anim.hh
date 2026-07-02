@@ -28,8 +28,9 @@ class Track {
 public:
     void add(float time, const T& value, Easing ease = Easing::Linear) {
         const Keyframe<T> k{ time, value, ease };
+        // upper_bound => equal-time keys keep insertion (FIFO) order across the step
         typename std::vector<Keyframe<T>>::iterator pos =
-            std::lower_bound(_keys.begin(), _keys.end(), time, [](const Keyframe<T>& kf, float b) { return kf.time < b; });
+            std::upper_bound(_keys.begin(), _keys.end(), time, [](float b, const Keyframe<T>& kf) { return b < kf.time; });
         _keys.insert(pos, k);
     }
 
@@ -76,6 +77,7 @@ public:
             _playing = false;
         } else if(_time < 0.0f) {
             _time = 0.0f;
+            _playing = false; // reverse playback terminates at the start, symmetric with the end
         }
     }
 
@@ -96,7 +98,8 @@ public:
     [[nodiscard]] float time() const { return _time; }
     [[nodiscard]] float duration() const { return _duration; }
     [[nodiscard]] bool playing() const { return _playing; }
-    [[nodiscard]] bool finished() const { return !_loop && _duration > 0.0f && _time >= _duration; }
+    // a zero-duration non-looping timeline has nothing to play, so it counts as finished
+    [[nodiscard]] bool finished() const { return !_loop && _time >= _duration; }
 
 private:
     float _time{ 0.0f };

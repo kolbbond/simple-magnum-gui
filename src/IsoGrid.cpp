@@ -13,9 +13,10 @@ Magnum::Vector3 IsoGrid::to_world(const Magnum::Vector2i& cell) const {
 }
 
 Magnum::Vector2i IsoGrid::to_cell(const Magnum::Vector3& world) const {
+    const float ts = tile_size > 0.0f ? tile_size : 1.0f; // guard div-by-zero on a degenerate grid
     const float a = world.x();
     const float b = up == UpAxis::Y ? world.z() : world.y();
-    return Magnum::Vector2i{ int(std::lround(a / tile_size)), int(std::lround(b / tile_size)) };
+    return Magnum::Vector2i{ int(std::lround(a / ts)), int(std::lround(b / ts)) };
 }
 
 std::optional<Magnum::Vector3> ray_ground(const Camera::Ray& ray, UpAxis up) {

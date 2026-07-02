@@ -21,5 +21,11 @@ int main() {
     CHECK(smgtest::approx(wz.y(), 4.0f));
     CHECK(smgtest::approx(wz.z(), 0.0f));
 
+    // degenerate tile_size must not divide by zero in to_cell (regression)
+    const smg::IsoGrid gd{ 0.0f, smg::UpAxis::Y };
+    const Magnum::Vector2i cd = gd.to_cell(Magnum::Vector3{ 3.0f, 0.0f, 5.0f });
+    CHECK(cd.x() == 3); // falls back to unit tile
+    CHECK(cd.y() == 5);
+
     TEST_RETURN();
 }
