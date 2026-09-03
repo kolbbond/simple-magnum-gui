@@ -87,6 +87,22 @@ public:
     [[nodiscard]] const LightProperties& light() const { return _light; }
     void fit();
 
+    // bloom is a desktop-only post-pass; these are always callable and simply
+    // have no visual effect where it is unavailable
+    [[nodiscard]] static constexpr bool bloom_available() {
+#ifdef SMG_WITH_BLOOM
+        return true;
+#else
+        return false;
+#endif
+    }
+    void set_bloom_enabled(bool enabled) { _bloom_enabled = enabled; }
+    [[nodiscard]] bool bloom_enabled() const { return _bloom_enabled; }
+    void set_bloom_strength(float strength); // clamped to [0, 1]
+    [[nodiscard]] float bloom_strength() const { return _bloom_strength; }
+    void set_bloom_radius(float radius); // clamped to [0.001, 0.02]
+    [[nodiscard]] float bloom_radius() const { return _bloom_radius; }
+
     void draw(const char* title, const Magnum::Vector2i& size = Magnum::Vector2i{ 640, 480 });
 
 protected:
@@ -119,15 +135,17 @@ protected:
     Magnum::GL::Renderbuffer _depthMsaa{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _msaaFbo{ Magnum::NoCreate };
 
+    // settings live on every platform so the public API needs no #ifdef
+    bool _bloom_enabled{ true };
+    float _bloom_strength{ 0.3f };
+    float _bloom_radius{ 0.005f };
+
 #ifdef SMG_WITH_BLOOM
     // optional glow pass (desktop only): scene -> bloom -> _postFbo -> ImGui
     Magnum::GL::Texture2D& bloom_pass(const Magnum::Vector2i& size);
     std::shared_ptr<bloom::BloomRenderer> _bloom;
     Magnum::GL::Texture2D _postColor{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _postFbo{ Magnum::NoCreate };
-    bool _bloom_enabled{ true };
-    float _bloom_strength{ 0.3f };
-    float _bloom_radius{ 0.005f };
 #endif
 };
 
