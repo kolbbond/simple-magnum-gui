@@ -1,5 +1,7 @@
 #include "ScenePanel.hh"
 
+#include <algorithm>
+
 #include <Corrade/Utility/Assert.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/RenderbufferFormat.h>
@@ -207,6 +209,12 @@ void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
         _camera.zoom(-dy * 0.1f);
     if(io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
 }
+
+// clamped to the slider ranges in draw() so UI and API cannot diverge; a
+// consumer over the ABI boundary gets degradation rather than an abort
+void ScenePanel::set_bloom_strength(float strength) { _bloom_strength = std::clamp(strength, 0.0f, 1.0f); }
+
+void ScenePanel::set_bloom_radius(float radius) { _bloom_radius = std::clamp(radius, 0.001f, 0.02f); }
 
 #ifdef SMG_WITH_BLOOM
 Magnum::GL::Texture2D& ScenePanel::bloom_pass(const Magnum::Vector2i& size) {
