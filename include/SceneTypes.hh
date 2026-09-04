@@ -4,6 +4,7 @@
 #include <Corrade/Containers/ArrayView.h>
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Math/Matrix4.h>
 #include <Magnum/Math/Vector3.h>
 
 namespace smg {
@@ -31,6 +32,9 @@ struct Bounds {
 
 // compute an AABB over a vertex span
 [[nodiscard]] Bounds compute_bounds(Corrade::Containers::ArrayView<const Vertex> verts);
+
+// AABB enclosing b under m -- all 8 corners, since rotation tilts the box
+[[nodiscard]] Bounds transformed(const Bounds& b, const Magnum::Matrix4& m);
 
 // single Phong light + material defaults (ported from goose-gui)
 struct LightProperties {

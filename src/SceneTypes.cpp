@@ -25,6 +25,16 @@ Magnum::Vector3 Bounds::size() const { return max - min; }
 
 float Bounds::diagonal() const { return size().length(); }
 
+Bounds transformed(const Bounds& b, const Magnum::Matrix4& m) {
+    Bounds out;
+    if(b.empty()) return out;
+    for(int i = 0; i < 8; ++i) {
+        const Magnum::Vector3 corner{ (i & 1) ? b.max.x() : b.min.x(), (i & 2) ? b.max.y() : b.min.y(), (i & 4) ? b.max.z() : b.min.z() };
+        out.expand(m.transformPoint(corner));
+    }
+    return out;
+}
+
 Bounds compute_bounds(Corrade::Containers::ArrayView<const Vertex> verts) {
     Bounds b;
     for(const Vertex& v : verts) b.expand(v.position);

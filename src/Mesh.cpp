@@ -2,6 +2,7 @@
 
 #include <Corrade/Containers/Array.h>
 #include <Magnum/GL/Buffer.h>
+#include <Magnum/Math/Color.h>
 #include <Magnum/MeshTools/Compile.h>
 #include <Magnum/Shaders/GenericGL.h>
 #include <Magnum/Trade/MeshData.h>
@@ -19,6 +20,16 @@ Bounds compute_bounds(const Magnum::Trade::MeshData& data) {
 
 ShMeshPr Mesh::create(const Magnum::Trade::MeshData& data) {
     Magnum::GL::Mesh glmesh = Magnum::MeshTools::compile(data);
+
+    // Phong is compiled with VertexColor; a disabled attribute reads black, which
+    // would kill ambient and diffuse on every Primitives::*Solid() mesh
+    if(!data.hasAttribute(Magnum::Trade::MeshAttribute::Color)) {
+        const Corrade::Containers::Array<Magnum::Color3> white{ Corrade::DirectInit, data.vertexCount(), Magnum::Color3{ 1.0f } };
+        Magnum::GL::Buffer colorBuffer;
+        colorBuffer.setData(white);
+        glmesh.addVertexBuffer(std::move(colorBuffer), 0, Magnum::Shaders::GenericGL3D::Color3{});
+    }
+
     return std::make_shared<Mesh>(std::move(glmesh), compute_bounds(data));
 }
 
