@@ -59,6 +59,7 @@ set(unit_test_list
     test_anim_timeline.cpp
     test_annotation_math.cpp
     test_scene_bloom_api.cpp
+    test_scene_panel_abi.cpp
     test_error.cpp
     test_log.cpp
 )

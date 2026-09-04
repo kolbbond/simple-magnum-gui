@@ -266,4 +266,6 @@ void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
     ImGui::End();
 }
 
+std::size_t scene_panel_abi_size() { return sizeof(ScenePanel); }
+
 } // namespace smg
