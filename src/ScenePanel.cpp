@@ -74,8 +74,11 @@ void ScenePanel::clear() {
 
 void ScenePanel::fit() {
     Bounds scene;
-    for(const Object& o : _objects)
-        if(o.mesh) scene.expand(o.mesh->bounds());
+    for(const Object& o : _objects) {
+        if(!o.visible || !o.mesh) continue;
+        scene.expand(transformed(o.mesh->bounds(), o.transform));
+    }
+    for(const Sprite& s : _sprites) scene.expand(s.position);
     _camera.fit(scene);
     _fitted = true;
 }

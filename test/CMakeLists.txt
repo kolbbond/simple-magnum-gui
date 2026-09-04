@@ -44,6 +44,7 @@ endforeach()
 set(unit_test_list
     test_bounds.cpp
     test_camera.cpp
+    test_bounds_transform.cpp
     test_mesh_bounds.cpp
     test_primitives_axes.cpp
     test_primitives_grid.cpp
