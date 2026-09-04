@@ -21,7 +21,9 @@ if(@ENABLE_SCENEGRAPH@)
 endif()
 
 set_target_properties(smg::smg PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@"
+    # bloom headers are flat, so the subdir is on the path too -- keep in sync
+    # with the $<INSTALL_INTERFACE:> in CMakeLists.txt, which the export path uses
+    INTERFACE_INCLUDE_DIRECTORIES "${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@;${_IMPORT_PREFIX}/@CMAKE_INSTALL_INCLUDEDIR@/smg/bloom"
     INTERFACE_LINK_LIBRARIES "${_SMG_INTERFACE_LIBS}"
     # PUBLIC defines/features the library was compiled with -- consumers MUST match
     # these (ScenePanel's layout depends on SMG_WITH_BLOOM etc.) or they get UB.

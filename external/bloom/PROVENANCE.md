@@ -20,7 +20,8 @@ directly into the `smg` library (desktop only) and drives bloom from
 
 ## Local modifications
 
-None. The sources are byte-for-byte upstream. The shaders are loaded from the
+One comment only: `include/bloomrenderer.hh` notes that `initialize()` must
+be re-run on viewport resize. Sources are otherwise byte-for-byte upstream. The shaders are loaded from the
 Corrade resource group `"data"` (no collision with smg's `font` / `image`
 groups). If this is ever updated from upstream, re-copy the same file set and
 bump the commit hash above.

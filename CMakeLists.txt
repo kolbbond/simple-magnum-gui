@@ -11,6 +11,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 message(STATUS "Configuring ${PROJECT_NAME}")
 
+include(GNUInstallDirs)
+
 # Emscripten/WASM detection
 if(EMSCRIPTEN)
     message(STATUS "Building for Emscripten/WASM")
@@ -131,9 +133,11 @@ if(ENABLE_IMPLOT3D)
     )
 endif()
 
-# Bloom post-process (desktop only -- shaders require GL330)
+# Bloom post-process (desktop only -- shaders require GL330). The dir is set
+# unconditionally: headers install on every platform so consumers compile
+# without #ifdef, gated at runtime by ScenePanel::bloom_available().
+set(SMG_BLOOM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/bloom)
 if(NOT SMG_PLATFORM_WASM)
-    set(SMG_BLOOM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/external/bloom)
     list(APPEND smg_sources
         ${SMG_BLOOM_DIR}/src/bloomrenderer.cpp
         ${SMG_BLOOM_DIR}/src/bloomfbo.cpp
@@ -215,10 +219,14 @@ if(ENABLE_IMPLOT3D)
     target_compile_definitions(smg PUBLIC SMG_WITH_IMPLOT3D)
 endif()
 
-# Bloom: private include (ScenePanel forward-declares the renderer); public
-# define so consumers and the library agree on ScenePanel's layout.
+# Bloom: public include so consumers drive bloom::BloomRenderer from their own
+# pipeline; public define so they and the library agree on ScenePanel's layout.
+# Both interfaces are flat, so #include "bloomrenderer.hh" resolves either way.
+target_include_directories(smg PUBLIC
+    $<BUILD_INTERFACE:${SMG_BLOOM_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/smg/bloom>
+)
 if(NOT SMG_PLATFORM_WASM)
-    target_include_directories(smg PRIVATE $<BUILD_INTERFACE:${SMG_BLOOM_DIR}/include>)
     target_compile_definitions(smg PUBLIC SMG_WITH_BLOOM)
 endif()
 
@@ -278,7 +286,6 @@ if(ENABLE_EXAMPLES)
 endif()
 
 # Installation
-include(GNUInstallDirs)
 set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/smg)
 
 # Install the library target
@@ -309,6 +316,10 @@ install(FILES
 )
 install(FILES ${SMG_IMPLOT_DIR}/implot.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+)
+
+install(DIRECTORY ${SMG_BLOOM_DIR}/include/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg/bloom
 )
 
 if(ENABLE_IMPLOT3D)

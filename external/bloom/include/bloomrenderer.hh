@@ -102,7 +102,7 @@ namespace bloom{
 			Magnum::Float get_filter_radius()const;
 			Magnum::UnsignedInt get_mip_chain_length()const;
 
-			// initialization function
+			// initialization function -- re-run on every viewport resize; the mip chain is sized here
 			bool initialize(const Magnum::Vector2i viewport_size, const bool force = false);
 
 			// deinitialization
