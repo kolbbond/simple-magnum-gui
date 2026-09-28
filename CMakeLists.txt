@@ -177,6 +177,13 @@ endif()
 
 add_library(smg::smg ALIAS smg)
 
+# installed to lib/smg, deps to lib/ -> without this, consumers need LD_LIBRARY_PATH
+if(APPLE)
+    set_target_properties(smg PROPERTIES INSTALL_RPATH "@loader_path;@loader_path/..")
+elseif(UNIX)
+    set_target_properties(smg PROPERTIES INSTALL_RPATH "$ORIGIN;$ORIGIN/..")
+endif()
+
 # Link dependencies
 target_link_libraries(smg PUBLIC
     Corrade::Utility
