@@ -32,6 +32,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DENABLE_EXAMPLES=OFF
           -DSMG_BUILD_GUI_TESTS=OFF
+          -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/smg
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
@@ -40,3 +41,13 @@ jobs:
 
       - name: Unit tests (headless)
         run: ctest --test-dir build -L unit --output-on-failure
+
+      # the contract downstream projects rely on: install, then find_package(smg)
+      - name: Install
+        run: cmake --install build
+
+      - name: Consumer smoke test
+        run: |
+          cmake -S test/consumer -B build-consumer -G Ninja -DCMAKE_PREFIX_PATH=${{ runner.temp }}/smg
+          cmake --build build-consumer
+          ctest --test-dir build-consumer --output-on-failure
