@@ -23,11 +23,9 @@
 #include "SpriteSheet.hh"
 #include "SpriteTypes.hh"
 
-#ifdef SMG_WITH_BLOOM
 namespace bloom {
 class BloomRenderer;
 }
-#endif
 
 namespace smg {
 
@@ -135,18 +133,24 @@ protected:
     Magnum::GL::Renderbuffer _depthMsaa{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _msaaFbo{ Magnum::NoCreate };
 
-    // settings live on every platform so the public API needs no #ifdef
+    // bloom state is unconditional: sizeof(ScenePanel) must not depend on
+    // SMG_WITH_BLOOM, or a consumer TU built without it corrupts the object.
+    // Inert where bloom is unavailable -- _bloom stays null and nothing binds.
     bool _bloom_enabled{ true };
     float _bloom_strength{ 0.3f };
     float _bloom_radius{ 0.005f };
-
-#ifdef SMG_WITH_BLOOM
-    // optional glow pass (desktop only): scene -> bloom -> _postFbo -> ImGui
-    Magnum::GL::Texture2D& bloom_pass(const Magnum::Vector2i& size);
     std::shared_ptr<bloom::BloomRenderer> _bloom;
     Magnum::GL::Texture2D _postColor{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _postFbo{ Magnum::NoCreate };
+
+#ifdef SMG_WITH_BLOOM
+    // scene -> bloom -> _postFbo -> ImGui
+    Magnum::GL::Texture2D& bloom_pass(const Magnum::Vector2i& size);
 #endif
 };
+
+// sizeof(ScenePanel) as libsmg was compiled; compare against a consumer TU's own
+// sizeof to catch layout divergence from mismatched PUBLIC defines
+[[nodiscard]] std::size_t scene_panel_abi_size();
 
 } // namespace smg
