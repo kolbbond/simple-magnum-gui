@@ -6,11 +6,15 @@
 
 // Platform-specific application (must match DrawCallback.hh)
 #if defined(CORRADE_TARGET_EMSCRIPTEN)
-#include <Magnum/Platform/EmscriptenApplication.h>
-namespace smg { using Application = Magnum::Platform::EmscriptenApplication; }
+#    include <Magnum/Platform/EmscriptenApplication.h>
+namespace smg {
+using Application = Magnum::Platform::EmscriptenApplication;
+}
 #else
-#include <Magnum/Platform/Sdl2Application.h>
-namespace smg { using Application = Magnum::Platform::Sdl2Application; }
+#    include <Magnum/Platform/Sdl2Application.h>
+namespace smg {
+using Application = Magnum::Platform::Sdl2Application;
+}
 #endif
 
 namespace smg {

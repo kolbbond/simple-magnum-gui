@@ -20,8 +20,7 @@ using namespace Magnum::Math::Literals;
 
 namespace smg {
 
-GuiBase::GuiBase(const Arguments& arguments)
-    : Platform::Application{ arguments, NoCreate } {
+GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments, NoCreate } {
 
     // kept out of the header to keep the _rgbaf literal out of the public API
     _clearColor = 0x72909aff_rgbaf;
@@ -287,9 +286,7 @@ std::pair<int, int> GuiBase::get_window_position() const {
     return pos;
 }
 
-void GuiBase::add_callback(ShDrawCallbackPr callback) {
-    _callback_list.push_back(callback);
-}
+void GuiBase::add_callback(ShDrawCallbackPr callback) { _callback_list.push_back(callback); }
 
 void GuiBase::draw_callbacks() {
     if(_callback_list.empty()) {
