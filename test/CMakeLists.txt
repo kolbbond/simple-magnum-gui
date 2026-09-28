@@ -89,6 +89,7 @@ if(SMG_BUILD_GUI_TESTS)
         test_sprite_panel.cpp
         test_plot.cpp
         test_guibase_dt.cpp
+        test_callback_registry.cpp
         test_annotation_layer.cpp
     )
     foreach(srcfile ${gui_test_list})
