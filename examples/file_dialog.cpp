@@ -14,14 +14,13 @@ struct State {
     std::string picked;
 };
 
-int dialog_cb(void* data) {
-    State* s = reinterpret_cast<State*>(data);
+int dialog_cb(State& state) {
     ImGui::Begin("File Dialog");
-    if(ImGui::Button("Open File...")) s->dialog.open("Choose a file", ".cpp,.hh,.*");
+    if(ImGui::Button("Open File...")) state.dialog.open("Choose a file", ".cpp,.hh,.*");
     ImGui::SameLine();
-    if(ImGui::Button("Save File...")) s->dialog.save("Save as", ".*");
-    if(s->dialog.draw()) s->picked = s->dialog.path();
-    if(!s->picked.empty()) ImGui::Text("Picked: %s", s->picked.c_str());
+    if(ImGui::Button("Save File...")) state.dialog.save("Save as", ".*");
+    if(state.dialog.draw()) state.picked = state.dialog.path();
+    if(!state.picked.empty()) ImGui::Text("Picked: %s", state.picked.c_str());
     ImGui::End();
     return 0;
 }
@@ -29,15 +28,11 @@ int dialog_cb(void* data) {
 class FileDialogExample: public GuiBase {
 public:
     explicit FileDialogExample(const Arguments& arguments) : GuiBase(arguments) {
-        _cb = DrawCallback::create();
-        _cb->set_callback(dialog_cb);
-        _cb->set_data(&_state);
-        add_callback(_cb);
+        add_callback([this]() { return dialog_cb(_state); });
     }
 
 private:
     State _state;
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(FileDialogExample)

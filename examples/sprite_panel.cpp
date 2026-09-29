@@ -20,8 +20,8 @@ static ShSpriteSheetPr solid_sheet(unsigned char r, unsigned char g, unsigned ch
         1);
 }
 
-int sprite_callback(void* data) {
-    reinterpret_cast<ScenePanel*>(data)->draw("Iso Sprites", Vector2i{ 800, 600 });
+int sprite_callback(ScenePanel& panel) {
+    panel.draw("Iso Sprites", Vector2i{ 800, 600 });
     return 0;
 }
 
@@ -50,15 +50,11 @@ public:
         gp.tint = Color4{ 1.0f, 1.0f, 1.0f, 0.6f };
         _panel->add_sprite(glow, 0, grid.to_world({ 0, 0 }) + Vector3{ 0.0f, 1.0f, 0.0f }, gp);
 
-        _cb = DrawCallback::create();
-        _cb->set_callback(sprite_callback);
-        _cb->set_data(_panel.get());
-        add_callback(_cb);
+        add_callback([this]() { return sprite_callback(*_panel); });
     }
 
 private:
     ShScenePanelPr _panel;
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(SpriteExample)
