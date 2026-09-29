@@ -17,7 +17,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xorg-dev ccache
+            cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xorg-dev ccache \
+            xvfb libgl1-mesa-dri
 
       - name: ccache
         uses: actions/cache@v4
@@ -30,8 +31,8 @@ jobs:
         run: >
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
-          -DENABLE_EXAMPLES=OFF
-          -DSMG_BUILD_GUI_TESTS=OFF
+          -DENABLE_EXAMPLES=ON
+          -DSMG_BUILD_GUI_TESTS=ON
           -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/smg
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
@@ -41,6 +42,12 @@ jobs:
 
       - name: Unit tests (headless)
         run: ctest --test-dir build -L unit --output-on-failure
+
+      # software GL (llvmpipe) under a virtual X server; tests self-exit via SMG_TEST_FRAMES
+      - name: GUI tests (xvfb)
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: xvfb-run -a -s "-screen 0 1920x1080x24" ctest --test-dir build -L gui --output-on-failure
 
       # the contract downstream projects rely on: install, then find_package(smg)
       - name: Install
