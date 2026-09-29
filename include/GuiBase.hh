@@ -2,6 +2,7 @@
 #pragma once
 
 #include <chrono>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -21,6 +22,7 @@
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
+#include <Magnum/Math/Vector2.h>
 #include <Magnum/Shaders/VertexColorGL.h>
 #include <Magnum/Image.h>
 #include <Magnum/Trade/ImageData.h>
@@ -35,6 +37,14 @@
 #include "implot.h"
 
 namespace smg {
+
+// window/loop setup; namespace scope so it can default-construct as a GuiBase ctor argument
+struct GuiConfig {
+    std::string title = "smg";
+    Magnum::Vector2i size{ 1600, 1000 };
+    int samples = 4; // MSAA; falls back to none if the context can't provide it
+    long max_frames = 0; // exit after this many frames; 0 = until closed. `--smg-frames N` overrides
+};
 
 // base gui class, entry point for guis
 
@@ -52,13 +62,6 @@ protected:
     // logger (safe no-op default until the constructor installs a real Log)
     ShLogPr _lg = NullLog::create();
 
-    bool _showDemoWindow = true;
-    bool _showAnotherWindow = false;
-    Magnum::Color4 _clearColor; // initialized in constructor
-    Magnum::Float _floatValue = 0.0f;
-
-    int _samples = 4; // MSAA samples
-
     // font setting
     std::vector<Corrade::Containers::ArrayView<const char>> _fontData;
     std::vector<ImFont*> _fonts;
@@ -75,9 +78,12 @@ protected:
     std::chrono::steady_clock::time_point _last_frame{};
     bool _have_last_frame = false;
 
+    long _max_frames = 0;
+    long _frames = 0;
+
 public:
     // throws std::runtime_error if no window/GL context can be created
-    explicit GuiBase(const Arguments& arguments);
+    explicit GuiBase(const Arguments& arguments, const GuiConfig& config = GuiConfig{});
 
     ~GuiBase() {
         //	std::printf(" [X] GuiBase destructor [X] \n");
@@ -90,16 +96,6 @@ public:
     void drawBegin();
     void drawEnd();
     void draw_callbacks();
-
-    // demo
-    void demo_imgui();
-
-    // implot demo
-    void demo_implot();
-    void demo_test();
-
-    // printers
-    void print_window_position();
 
     // callbacks run in registration order; add/remove take effect from the next dispatch
     void add_callback(ShDrawCallbackPr callback);
