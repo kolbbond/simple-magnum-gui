@@ -76,7 +76,7 @@ protected:
     bool _have_last_frame = false;
 
 public:
-    // constructor
+    // throws std::runtime_error if no window/GL context can be created
     explicit GuiBase(const Arguments& arguments);
 
     ~GuiBase() {
@@ -101,8 +101,11 @@ public:
     // printers
     void print_window_position();
 
-    // add custom callbacks
-    void add_callback(ShDrawCallbackPr);
+    // callbacks run in registration order; add/remove take effect from the next dispatch
+    void add_callback(ShDrawCallbackPr callback);
+    ShDrawCallbackPr add_callback(DrawCallback::DrawFn fn); // returns the handle for remove_callback
+    bool remove_callback(const ShDrawCallbackPr& callback);
+    void clear_callbacks();
 
     // seconds since the previous frame (0 on the first frame, spike-clamped)
     [[nodiscard]] float dt() const { return _dt; }

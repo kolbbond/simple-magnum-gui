@@ -1,6 +1,9 @@
 #include <Corrade/configure.h> // For CORRADE_TARGET_EMSCRIPTEN
+#include <algorithm>
 #include <chrono>
 #include <iostream> // std::cerr / std::endl (no longer pulled in transitively)
+#include <stdexcept>
+#include <utility>
 #include <Magnum/Trade/Trade.h>
 #include <imgui.h>
 #include <Magnum/Math/Time.h>
@@ -20,8 +23,7 @@ using namespace Magnum::Math::Literals;
 
 namespace smg {
 
-GuiBase::GuiBase(const Arguments& arguments)
-    : Platform::Application{ arguments, NoCreate } {
+GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments, NoCreate } {
 
     // kept out of the header to keep the _rgbaf literal out of the public API
     _clearColor = 0x72909aff_rgbaf;
@@ -40,10 +42,7 @@ GuiBase::GuiBase(const Arguments& arguments)
     glConf.setSampleCount(0);
 
     // create window here (no MSAA fallback needed for WebGL)
-    if(!tryCreate(conf, glConf)) {
-        std::cerr << "Failed to create WebGL context!" << std::endl;
-        std::exit(1);
-    }
+    if(!tryCreate(conf, glConf)) { throw std::runtime_error("smg::GuiBase: failed to create WebGL context"); }
 #else
     // Desktop: try MSAA with fallback
     glConf.setSampleCount(_samples); // 4x MSAA
@@ -54,8 +53,7 @@ GuiBase::GuiBase(const Arguments& arguments)
 
         // fallback
         if(!tryCreate(conf, glConf.setSampleCount(0))) {
-            std::cerr << "Failed to create window without MSAA!" << std::endl;
-            std::exit(1);
+            throw std::runtime_error("smg::GuiBase: failed to create window, with or without MSAA");
         }
     }
 #endif
@@ -288,18 +286,30 @@ std::pair<int, int> GuiBase::get_window_position() const {
 }
 
 void GuiBase::add_callback(ShDrawCallbackPr callback) {
-    _callback_list.push_back(callback);
+    if(callback) _callback_list.push_back(std::move(callback));
 }
 
+ShDrawCallbackPr GuiBase::add_callback(DrawCallback::DrawFn fn) {
+    ShDrawCallbackPr callback = DrawCallback::create(std::move(fn));
+    _callback_list.push_back(callback);
+    return callback;
+}
+
+bool GuiBase::remove_callback(const ShDrawCallbackPr& callback) {
+    const auto it = std::find(_callback_list.begin(), _callback_list.end(), callback);
+    if(it == _callback_list.end()) return false;
+    _callback_list.erase(it);
+    return true;
+}
+
+void GuiBase::clear_callbacks() { _callback_list.clear(); }
+
+// dispatch over a copy: a handler may add/remove callbacks, and the copy keeps
+// every callback alive until this dispatch finishes
 void GuiBase::draw_callbacks() {
-    if(_callback_list.empty()) {
-    } else {
-        int num_callbacks = static_cast<int>(_callback_list.size());
-        for(int i = 0; i < num_callbacks; i++) {
-            ShDrawCallbackPr mycallback = _callback_list[i];
-            int flag = mycallback->draw();
-            if(flag) printf("callback error!\n");
-        }
+    const std::vector<ShDrawCallbackPr> callbacks = _callback_list;
+    for(const ShDrawCallbackPr& callback : callbacks) {
+        if(callback->draw() != 0) _lg->msg("callback error!\n");
     }
 }
 
@@ -334,21 +344,8 @@ void GuiBase::set_window_size(int w, int h) { SDL_SetWindowSize(_window, w, h); 
 void GuiBase::keyPressEvent(KeyEvent& event) {
     if(_imgui.handleKeyPressEvent(event)) return;
 
-    // check if list empty
-    if(_callback_list.empty()) {
-    } else {
-
-        // walk callbacks
-        int num_callbacks = static_cast<int>(_callback_list.size());
-        for(int i = 0; i < num_callbacks; i++) {
-
-            // get data pointer
-            ShDrawCallbackPr mycallback = _callback_list[i];
-
-            // call the callback
-            mycallback->keyPressEvent(event);
-        }
-    }
+    const std::vector<ShDrawCallbackPr> callbacks = _callback_list;
+    for(const ShDrawCallbackPr& callback : callbacks) callback->keyPressEvent(event);
 }
 
 void GuiBase::keyReleaseEvent(KeyEvent& event) {
@@ -367,21 +364,8 @@ void GuiBase::pointerMoveEvent(PointerMoveEvent& event) {
     // let imgui handle its own events
     if(_imgui.handlePointerMoveEvent(event)) return;
 
-    // check if list empty
-    if(_callback_list.empty()) {
-    } else {
-
-        // walk callbacks
-        int num_callbacks = static_cast<int>(_callback_list.size());
-        for(int i = 0; i < num_callbacks; i++) {
-
-            // get data pointer
-            ShDrawCallbackPr mycallback = _callback_list[i];
-
-            // call the callback
-            mycallback->pointerMoveEvent(event);
-        }
-    }
+    const std::vector<ShDrawCallbackPr> callbacks = _callback_list;
+    for(const ShDrawCallbackPr& callback : callbacks) callback->pointerMoveEvent(event);
 }
 
 void GuiBase::scrollEvent(ScrollEvent& event) {
@@ -391,22 +375,8 @@ void GuiBase::scrollEvent(ScrollEvent& event) {
         return;
     }
 
-    // check if list empty
-    if(_callback_list.empty()) {
-    } else {
-
-        // walk callbacks
-        int num_callbacks = static_cast<int>(_callback_list.size());
-        for(int i = 0; i < num_callbacks; i++) {
-
-            // get data pointer
-            ShDrawCallbackPr mycallback = _callback_list[i];
-
-            // call the callback
-            mycallback->ScrollEvent(event);
-            // if(flag) printf("callback error!\n");
-        }
-    }
+    const std::vector<ShDrawCallbackPr> callbacks = _callback_list;
+    for(const ShDrawCallbackPr& callback : callbacks) callback->ScrollEvent(event);
 }
 
 void GuiBase::textInputEvent(TextInputEvent& event) {
