@@ -3,6 +3,7 @@
 #include "IsoGrid.hh"
 #include "ScenePanel.hh"
 #include "SpriteSheet.hh"
+#include "gui_test_util.hh"
 
 #include <Corrade/Containers/ArrayView.h>
 #include <array>
@@ -12,8 +13,8 @@
 using namespace smg;
 
 // render one integrated frame (meshes + sprite pass), then exit cleanly
-int sprite_cb(void* data) {
-    reinterpret_cast<ScenePanel*>(data)->draw("Sprites", Magnum::Vector2i{ 320, 240 });
+int sprite_cb(ScenePanel& panel) {
+    panel.draw("Sprites", Magnum::Vector2i{ 320, 240 });
     std::printf("OK sprite panel frame\n");
     std::exit(0);
     return 0;
@@ -40,15 +41,12 @@ public:
             std::exit(1);
         }
 
-        _cb = DrawCallback::create();
-        _cb->set_callback(sprite_cb);
-        _cb->set_data(_panel.get());
-        add_callback(_cb);
+        add_callback([this]() { return sprite_cb(*_panel); });
+        smgtest::frame_limit(*this);
     }
 
 private:
     ShScenePanelPr _panel;
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(SpritePanelTest)

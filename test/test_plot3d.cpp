@@ -1,6 +1,7 @@
 // gui smoke test: render one frame of a 3D plot, then exit
 #include "GuiBase.hh"
 #include "Plot3D.hh"
+#include "gui_test_util.hh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -10,7 +11,7 @@ using namespace smg;
 
 static std::vector<float> g_x, g_y, g_z;
 
-int plot3d_cb(void* /*data*/) {
+int plot3d_cb() {
     ImGui::Begin("Plot3D");
     if(Plot3D p{ "orbit" }) {
         p.line("path", g_x, g_y, g_z);
@@ -30,13 +31,9 @@ public:
             g_y.push_back(float(i) * 0.5f);
             g_z.push_back(float(i) * 0.25f);
         }
-        _cb = DrawCallback::create();
-        _cb->set_callback(plot3d_cb);
-        add_callback(_cb);
+        add_callback(plot3d_cb);
+        smgtest::frame_limit(*this);
     }
-
-private:
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(Plot3DTest)

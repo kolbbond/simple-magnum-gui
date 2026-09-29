@@ -26,110 +26,89 @@ using namespace Magnum::Math::Literals;
 // use data as void pointer in callback
 class Data_ex {
 public:
-	std::string name = std::string("example");
+    std::string name = std::string("example");
 
-	// mesh and shaders
-	GL::Mesh _mesh;
-	Shaders::PhongGL _shader;
+    // mesh and shaders
+    GL::Mesh _mesh;
+    Shaders::PhongGL _shader;
 
-	// 3D transformations
-	Matrix4 _transformation;
-	Matrix4 _projection;
-	Color3 _color;
+    // 3D transformations
+    Matrix4 _transformation;
+    Matrix4 _projection;
+    Color3 _color;
 };
 typedef std::shared_ptr<class Data_ex> ShDataPr;
 
-int callback_fun(void* indata) {
-	// example callback fun
+int callback_fun(const ShDataPr& mydata) {
+    static bool hidden = false;
 
-	// cast our data to be meaningful
-	// deference a cast to our shared pointer ...
-	ShDataPr mydata = *static_cast<ShDataPr*>(indata);
+    ImGui::Begin("Hello Window");
+    ImGui::Text("my message is: %s", mydata->name.c_str());
 
-	static bool hidden = false;
+    // check buttons
+    if(ImGui::Button("hidden cube")) { hidden ^= true; }
 
-	ImGui::Begin("Hello Window");
-	ImGui::Text("my message is: %s", mydata->name.c_str());
+    if(ImGui::Button("Another Window")) {}
 
-	// check buttons
-	if(ImGui::Button("hidden cube")) {
-		hidden ^= true;
-	}
+    // hidden triangle
+    if(hidden) {
 
-	if(ImGui::Button("Another Window")) {
-	}
+        GL::defaultFramebuffer.clear(GL::FramebufferClear::Depth);
+        mydata->_shader.setLightPositions({ { 1.4f, 1.0f, 0.75f, 0.0f } });
+        mydata->_shader.setDiffuseColor(mydata->_color);
+        mydata->_shader.setAmbientColor(Color3::fromHsv({ mydata->_color.hue(), 1.0f, 0.0f }));
+        mydata->_shader.setTransformationMatrix(mydata->_transformation);
+        mydata->_shader.setNormalMatrix(mydata->_transformation.normalMatrix());
+        mydata->_shader.setProjectionMatrix(mydata->_projection);
+        mydata->_shader.draw(mydata->_mesh);
+    }
 
-	// hidden triangle
-	if(hidden) {
+    // text at end
 
-		GL::defaultFramebuffer.clear(GL::FramebufferClear::Depth);
-		mydata->_shader.setLightPositions({{1.4f, 1.0f, 0.75f, 0.0f}});
-		mydata->_shader.setDiffuseColor(mydata->_color);
-		mydata->_shader.setAmbientColor(Color3::fromHsv({mydata->_color.hue(), 1.0f, 0.0f}));
-		mydata->_shader.setTransformationMatrix(mydata->_transformation);
-		mydata->_shader.setNormalMatrix(mydata->_transformation.normalMatrix());
-		mydata->_shader.setProjectionMatrix(mydata->_projection);
-		mydata->_shader.draw(mydata->_mesh);
-	}
+    ImGui::Text(
+        "Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
+    ImGui::End();
 
-	// text at end
-
-	ImGui::Text("Application average %.3f ms/frame (%.1f FPS)",
-				1000.0 / Double(ImGui::GetIO().Framerate),
-				Double(ImGui::GetIO().Framerate));
-	ImGui::End();
-
-	// 0 means success
-	return 0;
+    // 0 means success
+    return 0;
 }
 
 int main(int argc, char** argv) {
-	ShLogPr lg = Log::create();
-	lg->msg("%sbegin main%s\n", SMG_KYEL, SMG_KNRM);
+    ShLogPr lg = Log::create();
+    lg->msg("%sbegin main%s\n", SMG_KYEL, SMG_KNRM);
 
-	// make our application class
-	// this starts the gl context too
-	lg->msg("make guibase application\n");
-	GuiBase gui({argc, argv});
+    // make our application class
+    // this starts the gl context too
+    lg->msg("make guibase application\n");
+    GuiBase gui({ argc, argv });
 
-	// proper z order and discard triangles away from camera
-	GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
-	GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
+    // proper z order and discard triangles away from camera
+    GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
+    GL::Renderer::enable(GL::Renderer::Feature::FaceCulling);
 
-	// make the data structure
-	ShDataPr mydata = std::make_shared<Data_ex>();
-	mydata->name = "heymom";
+    // make the data structure
+    ShDataPr mydata = std::make_shared<Data_ex>();
+    mydata->name = "heymom";
 
-	lg->msg("%smaking cube%s\n", SMG_KYEL, SMG_KNRM);
+    lg->msg("%smaking cube%s\n", SMG_KYEL, SMG_KNRM);
 
-	// make our cube mesh and initial rotation
-	mydata->_mesh = MeshTools::compile(Primitives::cubeSolid());
-	mydata->_transformation = Matrix4::rotationX(30.0_degf) * Matrix4::rotationY(40.0_degf);
+    // make our cube mesh and initial rotation
+    mydata->_mesh = MeshTools::compile(Primitives::cubeSolid());
+    mydata->_transformation = Matrix4::rotationX(30.0_degf) * Matrix4::rotationY(40.0_degf);
 
-	// setup perspective projection
-	mydata->_projection = Matrix4::perspectiveProjection(
-							  35.0_degf, Vector2{gui.windowSize()}.aspectRatio(), 0.01f, 100.0f) *
-						  Matrix4::translation(Vector3::zAxis(-10.0f));
-	mydata->_color = Color3::fromHsv({35.0_degf, 1.0f, 1.0f});
+    // setup perspective projection
+    mydata->_projection = Matrix4::perspectiveProjection(35.0_degf, Vector2{ gui.windowSize() }.aspectRatio(), 0.01f, 100.0f) *
+        Matrix4::translation(Vector3::zAxis(-10.0f));
+    mydata->_color = Color3::fromHsv({ 35.0_degf, 1.0f, 1.0f });
 
-	// make our call back
-	ShDrawCallbackPr mycb = DrawCallback::create();
-	mycb->set_callback(callback_fun);
+    gui.add_callback([&mydata]() { return callback_fun(mydata); });
 
-	// reference the data here
-	mycb->set_data((void*)&mydata);
+    // exec calls mainloopiteration a bunch
+    // this checks events and draws
+    lg->msg("%sevent loop%s\n", SMG_KYEL, SMG_KNRM);
+    bool done = false;
+    while(!done) { done = !gui.mainLoopIteration(); }
 
-	// set callback into our gui
-	gui.add_callback(mycb);
-
-	// exec calls mainloopiteration a bunch
-	// this checks events and draws
-	lg->msg("%sevent loop%s\n", SMG_KYEL, SMG_KNRM);
-	bool done = false;
-	while(!done) {
-		done = !gui.mainLoopIteration();
-	}
-
-	// exit
-	gui.exit();
+    // exit
+    gui.exit();
 }

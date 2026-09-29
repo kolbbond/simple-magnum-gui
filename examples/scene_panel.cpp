@@ -7,10 +7,8 @@
 using namespace Magnum;
 using namespace smg;
 
-// draw callback: render the panel each frame
-int scene_callback(void* data) {
-    ScenePanel* panel = reinterpret_cast<ScenePanel*>(data);
-    panel->draw("3D Scene", Vector2i{ 800, 600 });
+int scene_callback(ScenePanel& panel) {
+    panel.draw("3D Scene", Vector2i{ 800, 600 });
     return 0;
 }
 
@@ -26,15 +24,11 @@ public:
         // overbright sphere so the bloom glow is clearly visible
         _panel->add_sphere(Matrix4::translation({ 0.0f, 1.6f, 0.0f }) * Matrix4::scaling(Vector3{ 0.4f }), Color3{ 3.0f });
 
-        _cb = DrawCallback::create();
-        _cb->set_callback(scene_callback);
-        _cb->set_data(_panel.get());
-        add_callback(_cb);
+        add_callback([this]() { return scene_callback(*_panel); });
     }
 
 private:
     ShScenePanelPr _panel;
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(SceneExample)

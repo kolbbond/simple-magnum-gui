@@ -1,6 +1,7 @@
 // gui smoke test: render one frame of 2D plots, then exit
 #include "GuiBase.hh"
 #include "Plot.hh"
+#include "gui_test_util.hh"
 
 #include <cstdio>
 #include <cstdlib>
@@ -10,7 +11,7 @@ using namespace smg;
 
 static std::vector<float> g_x, g_y;
 
-int plot_cb(void* /*data*/) {
+int plot_cb() {
     ImGui::Begin("Plots");
     if(Plot p{ "signals" }) {
         p.line("y", g_y);
@@ -31,13 +32,9 @@ public:
             g_x.push_back(float(i));
             g_y.push_back(float(i) * 0.5f);
         }
-        _cb = DrawCallback::create();
-        _cb->set_callback(plot_cb);
-        add_callback(_cb);
+        add_callback(plot_cb);
+        smgtest::frame_limit(*this);
     }
-
-private:
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(PlotTest)
