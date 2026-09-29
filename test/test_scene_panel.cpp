@@ -2,19 +2,21 @@
 // run manually (opens a window); registered with ctest like the other GUI tests.
 #include "GuiBase.hh"
 #include "ScenePanel.hh"
+#include "gui_test_util.hh"
 
 #include <Magnum/Math/Matrix4.h>
 
 using namespace Magnum;
 using namespace smg;
 
-int panel_cb(void* data) {
-    reinterpret_cast<ScenePanel*>(data)->draw("smoke", Vector2i{ 640, 480 });
+int panel_cb(ScenePanel& panel) {
+    panel.draw("smoke", Vector2i{ 640, 480 });
     return 0;
 }
 
 int main(int argc, char** argv) {
     GuiBase gui({ argc, argv });
+    smgtest::frame_limit(gui);
 
     ScenePanel panel;
     panel.add_axes();
@@ -22,10 +24,7 @@ int main(int argc, char** argv) {
     panel.add_sphere(Matrix4::translation({ 2.0f, 0.0f, 0.0f }));
     panel.add_grid();
 
-    ShDrawCallbackPr cb = DrawCallback::create();
-    cb->set_callback(panel_cb);
-    cb->set_data(&panel);
-    gui.add_callback(cb);
+    gui.add_callback([&panel]() { return panel_cb(panel); });
 
     bool done = false;
     while(!done) done = !gui.mainLoopIteration();

@@ -2,6 +2,7 @@
 #include "Annotations.hh"
 #include "GuiBase.hh"
 #include "SpriteSheet.hh" // reuse from_pixels to make a background texture
+#include "gui_test_util.hh"
 
 #include <array>
 #include <cstdio>
@@ -12,7 +13,7 @@ using namespace smg;
 static AnnotationLayer* g_layer = nullptr;
 static Magnum::GL::Texture2D* g_bg = nullptr;
 
-int anno_cb(void* /*data*/) {
+int anno_cb() {
     g_layer->timeline().advance(0.016f); // ~60fps step
     g_layer->draw("Telestration", *g_bg, Magnum::Vector2i{ 320, 240 });
     std::printf("OK annotation frame\n");
@@ -57,15 +58,13 @@ public:
         _layer.add(label);
 
         g_layer = &_layer;
-        _cb = DrawCallback::create();
-        _cb->set_callback(anno_cb);
-        add_callback(_cb);
+        add_callback(anno_cb);
+        smgtest::frame_limit(*this);
     }
 
 private:
     ShSpriteSheetPr _sheet;
     AnnotationLayer _layer;
-    ShDrawCallbackPr _cb;
 };
 
 MAGNUM_APPLICATION_MAIN(AnnoTest)

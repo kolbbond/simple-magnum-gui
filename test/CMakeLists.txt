@@ -1,11 +1,11 @@
 # testing
 message(STATUS "testing")
 
-# Two classes of tests:
-#   unit -- headless, no GL context, safe for CI:         ctest -L unit
-#   gui  -- construct GuiBase/ScenePanel, need a display: ctest -L gui (opt-in)
-# Default CI invocation is `ctest -L unit`; never run unlabeled ctest in CI as
-# it would pick up the interactive GUI demos (which return 0 regardless).
+# Three classes of tests:
+#   unit -- headless, no GL context:                          ctest -L unit
+#   gui  -- need a display; exit after SMG_TEST_FRAMES frames: xvfb-run ctest -L gui
+#   demo -- raw Magnum/SDL, interactive until closed; never run unattended
+# Never run unlabeled ctest in CI: it would pick up the demos.
 
 option(SMG_BUILD_GUI_TESTS "Build the interactive GUI smoke tests (need a display)" ON)
 
@@ -27,6 +27,10 @@ function(smg_add_test name srcfile label)
     endif()
     add_test(NAME ${name} COMMAND ${name})
     set_tests_properties(${name} PROPERTIES LABELS "${label}")
+    # gui tests must terminate unattended (see gui_test_util.hh)
+    if(label STREQUAL "gui")
+        set_tests_properties(${name} PROPERTIES ENVIRONMENT "SMG_TEST_FRAMES=30" TIMEOUT 60)
+    endif()
 endfunction()
 
 # --- headless unit tests, Corrade TestSuite harness ------------------------
@@ -70,11 +74,19 @@ endforeach()
 
 # --- interactive GUI smoke tests (opt-in, need a display) ------------------
 if(SMG_BUILD_GUI_TESTS)
-    set(gui_test_list
+    # raw Magnum/SDL sanity demos: not smg code, loop until closed -> never in CI
+    set(demo_test_list
         test_magnum_sdl2.cpp
         test_magnum_application_main.cpp
         test_magnum_imgui.cpp
         test_magnum_implot.cpp
+    )
+    foreach(srcfile ${demo_test_list})
+        string(REPLACE ".cpp" "" name ${srcfile})
+        smg_add_test(${name} ${srcfile} "demo")
+    endforeach()
+
+    set(gui_test_list
         test_maptotexture.cpp
         test_smg_guibase.cpp
         test_smg_guibase_looped.cpp
