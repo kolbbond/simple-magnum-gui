@@ -59,8 +59,12 @@ bool set_click_through(SDL_Window* window, bool on) {
         if(!(layered && (flags & (LWA_ALPHA | LWA_COLORKEY)))) ex &= ~static_cast<LONG_PTR>(WS_EX_LAYERED);
     }
     SetWindowLongPtrW(hwnd, GWL_EXSTYLE, ex);
-    // re-apply whatever attributes it had (none: zero flags keep the framebuffer alpha in charge)
-    if(on) SetLayeredWindowAttributes(hwnd, key, alpha, flags);
+    // a freshly layered window shows nothing until it has attributes; full opacity leaves the
+    // framebuffer alpha (blur-behind) in charge
+    if(on) {
+        if(layered) SetLayeredWindowAttributes(hwnd, key, alpha, flags);
+        else SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+    }
     return true;
 }
 
