@@ -18,6 +18,7 @@ else()
         scene_panel.cpp
         file_dialog.cpp
         sprite_panel.cpp
+        sysinfo.cpp
     )
 endif()
 
@@ -68,3 +69,7 @@ endforeach()
 
 message(STATUS "end of example creation")
 
+# sysinfo reads per-core load, clocks, network and adapters through these
+if(TARGET sysinfo AND WIN32)
+    target_link_libraries(sysinfo iphlpapi powrprof dxgi)
+endif()
