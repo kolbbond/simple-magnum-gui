@@ -419,3 +419,8 @@ if(WIN32 AND TARGET SDL2::SDL2)
         VERBATIM
     )
 endif()
+
+# standalone examples package (cpack)
+if(ENABLE_EXAMPLES AND NOT SMG_PLATFORM_WASM)
+    include(PackageExamples)
+endif()

@@ -58,6 +58,10 @@ foreach(srcfile ${example_list})
             target_sources(${name} PRIVATE ${icon_conf})
             set_property(TARGET ${name} PROPERTY WIN32_EXECUTABLE_ICON ${icon_file})
         endif()
+
+        # end-user examples package (cmake/PackageExamples.cmake)
+        install(TARGETS ${name} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT examples)
+        set_property(GLOBAL APPEND PROPERTY SMG_EXAMPLE_TARGETS ${name})
     endif()
 
 endforeach()

@@ -1,0 +1,25 @@
+# generated from cmake/deploy_examples.cmake.in: copies the DLLs the smg examples load into
+# <prefix>/bin at install time. System DLLs (Windows dir, api-ms-*) are left to the OS.
+
+if(POLICY CMP0207)
+    cmake_policy(SET CMP0207 NEW)
+endif()
+
+set(_executables "@SMG_DEPLOY_EXECUTABLES@")
+set(_directories "@SMG_DEPLOY_DIRECTORIES@")
+
+file(GET_RUNTIME_DEPENDENCIES
+    EXECUTABLES ${_executables}
+    DIRECTORIES ${_directories}
+    RESOLVED_DEPENDENCIES_VAR _resolved
+    UNRESOLVED_DEPENDENCIES_VAR _unresolved
+    PRE_EXCLUDE_REGEXES "^api-ms-" "^ext-ms-" "^(opengl32|glu32|dbghelp)\\.dll$"
+    POST_EXCLUDE_REGEXES "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\]" "[/\\\\]System32[/\\\\]"
+)
+
+foreach(_dll ${_unresolved})
+    message(WARNING "smg examples: could not find ${_dll}; the package may not start")
+endforeach()
+
+file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_BINDIR@" TYPE SHARED_LIBRARY
+    FOLLOW_SYMLINK_CHAIN FILES ${_resolved})
