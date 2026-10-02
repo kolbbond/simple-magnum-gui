@@ -86,6 +86,27 @@ void SDLCALL messageHook(void*, void*, unsigned int message, Uint64 wParam, Sint
 }
 #endif
 
+// widgets the OS must not treat as drag handle, in ImGui coordinates, refreshed every frame
+struct DragState {
+    std::vector<ImVec4> widgets; // min.xy, max.xy
+    ImVec2 imguiSize{ 1.0f, 1.0f };
+};
+
+// the OS drags a borderless window when the hit test says so; works at any DPI scale, unlike
+// moving it by hand from mouse deltas
+SDL_HitTestResult SDLCALL hitTest(SDL_Window* window, const SDL_Point* p, void* data) {
+    const DragState* state = static_cast<const DragState*>(data);
+    int w = 0;
+    int h = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    if(w <= 0 || h <= 0) return SDL_HITTEST_NORMAL;
+    const float x = static_cast<float>(p->x) * state->imguiSize.x / static_cast<float>(w);
+    const float y = static_cast<float>(p->y) * state->imguiSize.y / static_cast<float>(h);
+    for(const ImVec4& r : state->widgets)
+        if(x >= r.x && x <= r.z && y >= r.y && y <= r.w) return SDL_HITTEST_NORMAL;
+    return SDL_HITTEST_DRAGGABLE;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -135,8 +156,8 @@ int main(int argc, char** argv) {
     std::vector<float> xs;
     float load = 0.0f;
     float accum = 0.0f;
-    bool dragging = false;
-    int dragWindowX = 0, dragWindowY = 0, dragMouseX = 0, dragMouseY = 0;
+    DragState drag;
+    SDL_SetWindowHitTest(gui.get_window(), hitTest, &drag);
 
     gui.add_callback([&]() {
 #if defined(_WIN32)
@@ -172,6 +193,8 @@ int main(int argc, char** argv) {
         ImGui::SetWindowFontScale(1.0f);
         ImGui::SameLine(ImGui::GetWindowWidth() - 36.0f);
         if(ImGui::SmallButton("x")) gui.exit();
+        drag.widgets.clear();
+        drag.widgets.push_back(ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
 
         ImGui::Text("CPU %3.0f %%   %.0f fps", load, ImGui::GetIO().Framerate);
         ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0, 0, 0, 0));
@@ -192,25 +215,10 @@ int main(int argc, char** argv) {
 
         bool clickThrough = gui.click_through();
         if(ImGui::Checkbox("click-through", &clickThrough)) gui.set_click_through(clickThrough);
+        drag.widgets.push_back(ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
+        drag.imguiSize = ImGui::GetIO().DisplaySize;
         ImGui::SameLine();
         ImGui::TextDisabled(hotkey ? "Ctrl+Alt+O toggles" : "(no global hotkey here)");
-
-        // drag the borderless window by its panel
-        if(ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && !ImGui::IsAnyItemHovered()) {
-            dragging = true;
-            SDL_GetWindowPosition(gui.get_window(), &dragWindowX, &dragWindowY);
-            SDL_GetGlobalMouseState(&dragMouseX, &dragMouseY);
-        }
-        if(dragging) {
-            if(!ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                dragging = false;
-            } else {
-                int mx = 0;
-                int my = 0;
-                SDL_GetGlobalMouseState(&mx, &my);
-                gui.set_window_position(dragWindowX + mx - dragMouseX, dragWindowY + my - dragMouseY);
-            }
-        }
 
         ImGui::End();
         return 0;
