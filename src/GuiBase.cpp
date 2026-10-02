@@ -1,7 +1,7 @@
 #include <Corrade/configure.h> // For CORRADE_TARGET_EMSCRIPTEN
+#include <Corrade/Utility/Arguments.h>
 #include <algorithm>
 #include <chrono>
-#include <iostream> // std::cerr / std::endl (no longer pulled in transitively)
 #include <stdexcept>
 #include <utility>
 #include <Magnum/Trade/Trade.h>
@@ -23,18 +23,20 @@ using namespace Magnum::Math::Literals;
 
 namespace smg {
 
-GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments, NoCreate } {
+GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
+    : Platform::Application{ arguments, NoCreate }, _max_frames(config.max_frames) {
 
-    // kept out of the header to keep the _rgbaf literal out of the public API
-    _clearColor = 0x72909aff_rgbaf;
+    // prefixed, so Magnum's own --magnum-* options and positional args pass through untouched
+    Utility::Arguments args{ "smg" };
+    args.addOption("frames", "0").setHelp("frames", "exit after N frames (0 = run until closed)", "N");
+    args.parse(arguments.argc, arguments.argv);
+    const long frames_flag = args.value<long>("frames");
+    if(frames_flag > 0) _max_frames = frames_flag;
 
-
-    // configuration for multisampling
     Configuration conf;
     conf.setWindowFlags(Configuration::WindowFlag::Resizable);
-    conf.setSize({ 1600, 1000 });
-    conf.setTitle("GuiBase");
-    setWindowTitle("GuiBase");
+    conf.setSize(config.size);
+    conf.setTitle(config.title);
     GLConfiguration glConf;
 
 #if defined(CORRADE_TARGET_EMSCRIPTEN)
@@ -44,58 +46,21 @@ GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments,
     // create window here (no MSAA fallback needed for WebGL)
     if(!tryCreate(conf, glConf)) { throw std::runtime_error("smg::GuiBase: failed to create WebGL context"); }
 #else
-    // Desktop: try MSAA with fallback
-    glConf.setSampleCount(_samples); // 4x MSAA
-
-    // create window here
+    glConf.setSampleCount(config.samples);
     if(!tryCreate(conf, glConf)) {
-        std::cerr << "Failed to create window with MSAA!" << std::endl;
-
-        // fallback
+        Warning() << "smg: no window with" << config.samples << "x MSAA, retrying without";
         if(!tryCreate(conf, glConf.setSampleCount(0))) {
             throw std::runtime_error("smg::GuiBase: failed to create window, with or without MSAA");
         }
     }
 #endif
 
-    // check properties
-    GLint glSampleBuffers = 0, glSamples = 0;
-    glGetIntegerv(GL_SAMPLE_BUFFERS, &glSampleBuffers); // 1 means MSAA buffer exists
-    glGetIntegerv(GL_SAMPLES, &glSamples); // sample count (e.g., 2 or 4)
-#if !defined(CORRADE_TARGET_EMSCRIPTEN)
-    GLint glMaxSamples = 0;
-    glGetIntegerv(GL_MAX_SAMPLES, &glMaxSamples); // hardware upper bound (not available in WebGL)
-    Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples << "GL_MAX_SAMPLES =" << glMaxSamples;
-#else
-    Magnum::Debug{} << "GL_SAMPLE_BUFFERS =" << glSampleBuffers << "GL_SAMPLES =" << glSamples;
-#endif
-
-    // create a log?
     _lg = Log::create();
 
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
-    // SDL-specific initialization (desktop only)
-    int sdlBuf = 0, sdlSamp = 0;
-    SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &sdlBuf);
-    SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &sdlSamp);
-    std::printf("SDL: MULTISAMPLEBUFFERS=%d MULTISAMPLESAMPLES=%d\n", sdlBuf, sdlSamp);
-
-    // display display stats
-    int num_displays = SDL_GetNumVideoDisplays();
-    _lg->msg("number of displays: %s%i%s\n", SMG_KRED, num_displays, SMG_KNRM);
-    std::vector<SDL_Rect> displayBounds;
-    for(int i = 0; i < num_displays; i++) {
-        displayBounds.push_back(SDL_Rect());
-        SDL_GetDisplayBounds(i, &displayBounds.back());
-        _lg->msg("display %i bounds: %s(%i,%i)%s\n", i, SMG_KRED, displayBounds[i].x, displayBounds[i].y, SMG_KNRM);
-    }
-
-    // get the created window and override the position
     _window = Platform::Sdl2Application::window();
     SDL_SetWindowPosition(_window, 0, 0);
-#endif
 
-#if !defined(CORRADE_TARGET_EMSCRIPTEN)
     // load window icon (desktop only - no window icon in browser); non-fatal —
     // a missing or broken icon must not abort construction of the whole app
     Magnum::Containers::ArrayView<const char> rawData = Magnum::Utility::Resource{ "image" }.getRaw("smg.jpg");
@@ -116,22 +81,11 @@ GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments,
     }
 #endif
 
-    // start an imgui context
-    printf("Creating imgui context\n");
-    Vector2i window_size = windowSize();
-
-    // override?
-    window_size[0] = 1920;
-    window_size[1] = 1080;
-    printf("window size: (%i,%i)\n", window_size[0], window_size[1]);
-
     ImGui::CreateContext();
 
     const Vector2 size = Vector2{ windowSize() } / dpiScaling();
 
     // resources are static, so FontDataOwnedByAtlas=false below stops ImGui freeing them
-    printf("%s --- SMG: ADD FONTS ---%s\n", SMG_KBLU, SMG_KNRM);
-
     Containers::ArrayView<const char> font;
     double num_pixels = 18.0f;
     std::vector<std::string> font_names = { "Roboto-Medium.ttf",
@@ -141,8 +95,6 @@ GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments,
         "Karla-Regular.ttf",
         "JetBrainsMonoNerdFont-Regular.ttf" };
 
-    // each font
-    printf("Adding Fonts\n");
     ImGuiIO& io = ImGui::GetIO();
 
     // Enable docking
@@ -182,7 +134,6 @@ GuiBase::GuiBase(const Arguments& arguments) : Platform::Application{ arguments,
     _imgui =
         ImGuiIntegration::Context(*ImGui::GetCurrentContext(), Vector2{ windowSize() } / dpiScaling(), windowSize(), framebufferSize());
 
-    printf("%s--- SMG: Creating implot context ---%s\n", SMG_KBLU, SMG_KNRM);
     ImPlot::CreateContext();
 #ifdef SMG_WITH_IMPLOT3D
     ImPlot3D::CreateContext();
@@ -265,16 +216,8 @@ void GuiBase::drawEvent() {
     drawBegin();
     draw_callbacks();
     drawEnd();
-}
 
-void GuiBase::print_window_position() {
-#if !defined(CORRADE_TARGET_EMSCRIPTEN)
-    // debug
-    int x;
-    int y;
-    SDL_GetWindowPosition(_window, &x, &y);
-    _lg->msg("window (x,y): %s(%i,%i)%s\n", SMG_KBLU, x, y, SMG_KNRM);
-#endif
+    if(_max_frames > 0 && ++_frames >= _max_frames) exit();
 }
 
 std::pair<int, int> GuiBase::get_window_position() const {
@@ -381,54 +324,6 @@ void GuiBase::scrollEvent(ScrollEvent& event) {
 
 void GuiBase::textInputEvent(TextInputEvent& event) {
     if(_imgui.handleTextInputEvent(event)) return;
-}
-
-//////////////////////////////////////////////////
-// demos
-
-// imgui demo for reference
-void GuiBase::demo_imgui() {
-    // reference
-
-    /* 1. Show a simple window.
-Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appear in
-a window called "Debug" automatically */
-    {
-        ImGui::Text("Hello, world!");
-        ImGui::SliderFloat("Float", &_floatValue, 0.0f, 1.0f);
-        if(ImGui::ColorEdit3("Clear Color", _clearColor.data())) GL::Renderer::setClearColor(_clearColor);
-        if(ImGui::Button("Test Window")) _showDemoWindow ^= true;
-        if(ImGui::Button("Another Window")) _showAnotherWindow ^= true;
-        ImGui::Text(
-            "Application average %.3f ms/frame (%.1f FPS)", 1000.0 / Double(ImGui::GetIO().Framerate), Double(ImGui::GetIO().Framerate));
-    }
-
-    /* 2. Show another simple window, now using an explicit Begin/End pair */
-    if(_showAnotherWindow) {
-        ImGui::SetNextWindowSize(ImVec2(500, 100), ImGuiCond_FirstUseEver);
-        ImGui::Begin("Another Window", &_showAnotherWindow);
-        ImGui::Text("Hello");
-        ImGui::End();
-    }
-
-    /* 3. Show the ImGui demo window. Most of the sample code is in
-ImGui::ShowDemoWindow() */
-    if(_showDemoWindow) {
-        ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
-        ImGui::ShowDemoWindow();
-    }
-}
-
-void GuiBase::demo_implot() {
-    // reference
-    /* 4. Show ImPlot Demo */
-    ImGui::Begin("ImPlot Demo");
-    ImPlot::ShowDemoWindow();
-    ImGui::End();
-}
-
-void GuiBase::demo_test() {
-    // test for me???
 }
 
 void GuiBase::viewportEvent(ViewportEvent& event) {

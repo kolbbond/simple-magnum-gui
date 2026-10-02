@@ -103,6 +103,7 @@ if(SMG_BUILD_GUI_TESTS)
         test_guibase_dt.cpp
         test_scene_panel_gl_state.cpp
         test_callback_registry.cpp
+        test_guibase_config.cpp
         test_annotation_layer.cpp
     )
     foreach(srcfile ${gui_test_list})

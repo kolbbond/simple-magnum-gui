@@ -72,14 +72,18 @@ void ScenePanel::clear() {
     _fitted = false;
 }
 
-void ScenePanel::fit() {
+Bounds ScenePanel::scene_bounds() const {
     Bounds scene;
     for(const Object& o : _objects) {
         if(!o.visible || !o.mesh) continue;
         scene.expand(transformed(o.mesh->bounds(), o.transform));
     }
     for(const Sprite& s : _sprites) scene.expand(s.position);
-    _camera.fit(scene);
+    return scene;
+}
+
+void ScenePanel::fit() {
+    _camera.fit(scene_bounds());
     _fitted = true;
 }
 
@@ -241,6 +245,8 @@ void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
         ensure_gl();
         ensure_fbo(size);
         if(!_fitted) fit();
+        // objects may be added/moved after fit; keep auto near/far tracking them
+        _camera.set_scene_bounds(scene_bounds());
         render_scene(size);
 #ifdef SMG_WITH_BLOOM
         if(_bloom_enabled) shown = &bloom_pass(size);
