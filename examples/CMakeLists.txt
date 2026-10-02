@@ -20,6 +20,7 @@ else()
         sprite_panel.cpp
         sysinfo.cpp
         overlay.cpp
+        visualizer.cpp
     )
 endif()
 
