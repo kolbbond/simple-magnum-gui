@@ -60,5 +60,48 @@ int main() {
     const Magnum::Vector3 d = (iso.eye() - iso.pivot()).normalized();
     CHECK(smgtest::approx(d.y(), 0.4472f, 1e-2f));
 
+    // auto clip: every corner of a big scene stays inside NDC depth after fit, zoom-out, pan, ortho zoom-in
+    {
+        Camera big;
+        Bounds huge;
+        huge.expand(Magnum::Vector3{ -800.0f, -50.0f, -1200.0f });
+        huge.expand(Magnum::Vector3{ 900.0f, 60.0f, 700.0f });
+        const auto all_in_depth = [&huge](const Camera& c) {
+            const Magnum::Matrix4 vp = c.projection(1.0f) * c.view();
+            for(int i = 0; i < 8; ++i) {
+                const Magnum::Vector3 p{
+                    (i & 1) ? huge.max.x() : huge.min.x(), (i & 2) ? huge.max.y() : huge.min.y(), (i & 4) ? huge.max.z() : huge.min.z()
+                };
+                const Magnum::Vector4 h = vp * Magnum::Vector4{ p, 1.0f };
+                const float z = h.z() / h.w();
+                if(h.w() <= 0.0f || z < -1.0f || z > 1.0f) return false;
+            }
+            return true;
+        };
+        big.fit(huge);
+        CHECK(all_in_depth(big));
+        big.zoom(-20.0f);
+        CHECK(all_in_depth(big));
+        big.pan(300.0f, -200.0f);
+        CHECK(all_in_depth(big));
+        big.set_projection(Camera::Projection::Orthographic);
+        big.zoom(60.0f); // eye ends up inside the scene
+        CHECK(all_in_depth(big));
+
+        const Magnum::Vector2 r = big.clip_range();
+        CHECK(r.x() < r.y());
+
+        // manual clip overrides auto
+        big.set_clip(0.5f, 50.0f);
+        CHECK(!big.auto_clip());
+        CHECK(smgtest::approx(big.clip_range().x(), 0.5f));
+        CHECK(smgtest::approx(big.clip_range().y(), 50.0f));
+    }
+
+    // no scene bounds yet -> the manual defaults
+    Camera fresh;
+    CHECK(smgtest::approx(fresh.clip_range().x(), 0.05f));
+    CHECK(smgtest::approx(fresh.clip_range().y(), 500.0f));
+
     TEST_RETURN();
 }

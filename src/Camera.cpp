@@ -17,6 +17,8 @@ constexpr float kOrbitRate = 0.01f; // radians per pixel
 constexpr float kPanRate = 0.0015f; // pivot units per pixel, scaled by distance
 constexpr float kZoomRate = 0.1f;
 constexpr float kPitchLimit = 1.55f; // ~89 deg
+constexpr float kClipPad = 1.01f; // radius slack so silhouettes don't touch the planes
+constexpr float kMinNearRatio = 1e-4f; // far/near <= 1e4 keeps 24-bit depth usable
 } // namespace
 
 Camera::Camera() = default;
@@ -34,14 +36,36 @@ Magnum::Vector3 Camera::eye() const {
 
 Magnum::Matrix4 Camera::view() const { return Magnum::Matrix4::lookAt(eye(), _pivot, up_vector()).invertedRigid(); }
 
+void Camera::set_scene_bounds(const Bounds& b) {
+    if(b.empty()) {
+        _scene_radius = 0.0f;
+        return;
+    }
+    _scene_center = b.center();
+    _scene_radius = b.diagonal() * 0.5f;
+}
+
+Magnum::Vector2 Camera::clip_range() const {
+    if(!_auto_clip || _scene_radius <= 0.0f) return Magnum::Vector2{ _near, _far };
+    const float r = _scene_radius * kClipPad;
+    // view-axis depth of the scene centre; pan shifts it laterally, which doesn't change depth
+    const Magnum::Vector3 e = eye();
+    const float d = Magnum::Math::dot(_scene_center - e, (_pivot - e).normalized());
+    // ortho depth is linear and may start behind the eye, so zooming in never near-clips
+    if(_projection == Projection::Orthographic) return Magnum::Vector2{ d - r, d + r };
+    const float far = std::max(d + r, 2.0f * _near); // scene behind the eye: keep near < far
+    return Magnum::Vector2{ std::max(d - r, far * kMinNearRatio), far };
+}
+
 Magnum::Matrix4 Camera::projection(float aspect) const {
+    const Magnum::Vector2 clip = clip_range();
     if(_projection == Projection::Orthographic) {
         // match the perspective framing at pivot depth so fit()/zoom() stay meaningful
         const float halfFov = float(Magnum::Rad{ Magnum::Deg{ _fov_deg } } * 0.5f);
         const float height = 2.0f * _distance * std::tan(halfFov);
-        return Magnum::Matrix4::orthographicProjection(Magnum::Vector2{ height * aspect, height }, _near, _far);
+        return Magnum::Matrix4::orthographicProjection(Magnum::Vector2{ height * aspect, height }, clip.x(), clip.y());
     }
-    return Magnum::Matrix4::perspectiveProjection(Magnum::Deg{ _fov_deg }, aspect, _near, _far);
+    return Magnum::Matrix4::perspectiveProjection(Magnum::Deg{ _fov_deg }, aspect, clip.x(), clip.y());
 }
 
 void Camera::iso() {
@@ -84,6 +108,7 @@ void Camera::zoom(float delta) {
 
 void Camera::fit(const Bounds& b, float margin) {
     if(b.empty()) return;
+    set_scene_bounds(b);
     _pivot = b.center();
     const float radius = std::max(b.diagonal() * 0.5f, 1e-3f);
     const float halfFov = float(Magnum::Rad{ Magnum::Deg{ _fov_deg } } * 0.5f);

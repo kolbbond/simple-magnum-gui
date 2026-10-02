@@ -43,10 +43,17 @@ public:
     [[nodiscard]] float distance() const { return _distance; }
 
     void set_fov_deg(float d) { _fov_deg = d; }
+    // manual near/far; disables auto clip
     void set_clip(float n, float f) {
         _near = n;
         _far = f;
+        _auto_clip = false;
     }
+    // auto clip derives near/far each frame from the scene bounds so fit/zoom/pan never clip it
+    void set_auto_clip(bool on) { _auto_clip = on; }
+    [[nodiscard]] bool auto_clip() const { return _auto_clip; }
+    void set_scene_bounds(const Bounds& b);
+    [[nodiscard]] Magnum::Vector2 clip_range() const; // effective {near, far}
     void set_up_axis(UpAxis a) { _up = a; }
     [[nodiscard]] UpAxis up_axis() const { return _up; }
 
@@ -60,6 +67,9 @@ private:
     float _fov_deg{ 45.0f };
     float _near{ 0.05f };
     float _far{ 500.0f };
+    bool _auto_clip{ true };
+    Magnum::Vector3 _scene_center{ 0.0f };
+    float _scene_radius{ 0.0f }; // 0 = unknown -> manual near/far
     UpAxis _up{ UpAxis::Y };
     Projection _projection{ Projection::Perspective };
 };

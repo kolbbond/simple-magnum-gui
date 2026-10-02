@@ -84,6 +84,7 @@ public:
     [[nodiscard]] LightProperties& light() { return _light; }
     [[nodiscard]] const LightProperties& light() const { return _light; }
     void fit();
+    [[nodiscard]] Bounds scene_bounds() const; // world AABB of visible objects + sprites
 
     // bloom is a desktop-only post-pass; these are always callable and simply
     // have no visual effect where it is unavailable
