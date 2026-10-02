@@ -44,6 +44,12 @@ struct GuiConfig {
     Magnum::Vector2i size{ 1600, 1000 };
     int samples = 4; // MSAA; falls back to none if the context can't provide it
     long max_frames = 0; // exit after this many frames; 0 = until closed. `--smg-frames N` overrides
+
+    // desktop overlays. transparent: the window is blended by the framebuffer alpha, which drawBegin
+    // clears to 0, so only what you draw shows (Windows; elsewhere the window stays opaque)
+    bool transparent = false;
+    bool borderless = false;
+    bool always_on_top = false;
 };
 
 // base gui class, entry point for guis
@@ -81,6 +87,9 @@ protected:
     long _max_frames = 0;
     long _frames = 0;
 
+    bool _transparent = false; // window actually composited by alpha
+    bool _click_through = false;
+
 public:
     // throws std::runtime_error if no window/GL context can be created
     explicit GuiBase(const Arguments& arguments, const GuiConfig& config = GuiConfig{});
@@ -113,6 +122,12 @@ public:
     void set_window_icon(const std::string& icon_file);
     void set_window_position(int x, int y);
     void set_window_size(int x, int y);
+
+    // mouse input goes to whatever is below the window; the window then gets no mouse events,
+    // so pair it with a way back (a global hotkey, a tray icon). false where unsupported (non-Windows)
+    bool set_click_through(bool on);
+    [[nodiscard]] bool click_through() const { return _click_through; }
+    [[nodiscard]] bool transparent() const { return _transparent; }
 #endif
 
     // event wrappers

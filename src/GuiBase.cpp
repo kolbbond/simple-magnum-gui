@@ -12,6 +12,7 @@
 #include <Magnum/Trade/AbstractImporter.h>
 
 #include "GuiBase.hh"
+#include "WindowPlatform.hh"
 
 #ifdef SMG_WITH_IMPLOT3D
 #    include "implot3d.h"
@@ -34,10 +35,14 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     if(frames_flag > 0) _max_frames = frames_flag;
 
     Configuration conf;
-    conf.setWindowFlags(Configuration::WindowFlag::Resizable);
+    Configuration::WindowFlags flags = Configuration::WindowFlag::Resizable;
+    if(config.borderless) flags |= Configuration::WindowFlag::Borderless;
+    if(config.always_on_top) flags |= Configuration::WindowFlag::AlwaysOnTop;
+    conf.setWindowFlags(flags);
     conf.setSize(config.size);
     conf.setTitle(config.title);
     GLConfiguration glConf;
+    if(config.transparent) glConf.setColorBufferSize({ 8, 8, 8, 8 });
 
 #if defined(CORRADE_TARGET_EMSCRIPTEN)
     // WebGL: disable MSAA - not reliably supported
@@ -60,6 +65,10 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
     _window = Platform::Sdl2Application::window();
     SDL_SetWindowPosition(_window, 0, 0);
+    if(config.transparent) {
+        _transparent = detail::enable_transparency(_window);
+        if(!_transparent) Warning() << "smg: transparent windows are not supported here; the window stays opaque";
+    }
 
     // load window icon (desktop only - no window icon in browser); non-fatal —
     // a missing or broken icon must not abort construction of the whole app
@@ -150,6 +159,8 @@ void GuiBase::drawBegin() {
     // setup the drawing state
     // clear buffer
 
+    // a panel may have changed the clear color; the compositor shows whatever alpha is left here
+    if(_transparent) GL::Renderer::setClearColor(Color4{ 0.0f, 0.0f, 0.0f, 0.0f });
     GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
     // start a new frame
@@ -181,7 +192,13 @@ just enable blending and scissor test in the constructor. */
     // you'll need this exact behavior for the rest of your scene. If not, set
     // this only for the drawFrame() call.
     GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
-    GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    if(_transparent) {
+        // alpha accumulates coverage, so over the cleared (0,0,0,0) the result is premultiplied, as DWM expects
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha,
+            GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    } else {
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+    }
 
     // draw the frame to background buffer
     _imgui.drawFrame();
@@ -281,6 +298,12 @@ SDL_Window* GuiBase::get_window() const { return _window; }
 void GuiBase::set_window_position(int x, int y) { SDL_SetWindowPosition(_window, x, y); }
 
 void GuiBase::set_window_size(int w, int h) { SDL_SetWindowSize(_window, w, h); }
+
+bool GuiBase::set_click_through(bool on) {
+    if(!detail::set_click_through(_window, on)) return false;
+    _click_through = on;
+    return true;
+}
 #endif
 
 // event handling for imgui

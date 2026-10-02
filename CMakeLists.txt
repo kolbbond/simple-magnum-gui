@@ -144,6 +144,7 @@ if(NOT SMG_PLATFORM_WASM)
         ${SMG_BLOOM_DIR}/src/bloomdownsample.cpp
         ${SMG_BLOOM_DIR}/src/bloomupsample.cpp
         ${SMG_BLOOM_DIR}/src/bloomfinal.cpp
+        src/WindowPlatform.cpp
     )
     corrade_add_resource(smg_RESOURCE_bloom "${SMG_BLOOM_DIR}/resources.conf")
 endif()
@@ -206,6 +207,9 @@ if(SMG_PLATFORM_WASM)
     target_link_libraries(smg PUBLIC Magnum::EmscriptenApplication)
 else()
     target_link_libraries(smg PUBLIC Magnum::Sdl2Application)
+    if(WIN32)
+        target_link_libraries(smg PRIVATE dwmapi) # transparent windows
+    endif()
 endif()
 
 # Include directories
