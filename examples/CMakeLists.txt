@@ -18,6 +18,9 @@ else()
         scene_panel.cpp
         file_dialog.cpp
         sprite_panel.cpp
+        sysinfo.cpp
+        overlay.cpp
+        visualizer.cpp
     )
 endif()
 
@@ -58,9 +61,22 @@ foreach(srcfile ${example_list})
             target_sources(${name} PRIVATE ${icon_conf})
             set_property(TARGET ${name} PROPERTY WIN32_EXECUTABLE_ICON ${icon_file})
         endif()
+
+        # end-user examples package (cmake/PackageExamples.cmake)
+        install(TARGETS ${name} RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT examples)
+        set_property(GLOBAL APPEND PROPERTY SMG_EXAMPLE_TARGETS ${name})
     endif()
 
 endforeach()
 
 message(STATUS "end of example creation")
 
+# sysinfo reads per-core load, clocks, network and adapters through these
+if(TARGET sysinfo AND WIN32)
+    target_link_libraries(sysinfo iphlpapi powrprof dxgi)
+endif()
+
+# the overlay is a desktop widget: no console window behind it
+if(TARGET overlay AND MSVC)
+    target_link_options(overlay PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
+endif()
