@@ -1,4 +1,5 @@
 #include "ScenePanel.hh"
+#include "GuiBase.hh"
 
 #include <algorithm>
 
@@ -199,7 +200,7 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
             Magnum::GL::FramebufferBlitFilter::Nearest);
     }
 #endif
-    Magnum::GL::defaultFramebuffer.bind();
+    GuiBase::main_framebuffer().bind(); // the window, or the off-screen target when hidden
 }
 
 void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
@@ -235,7 +236,7 @@ Magnum::GL::Texture2D& ScenePanel::bloom_pass(const Magnum::Vector2i& size) {
     _postFbo.bind();
     _postFbo.clearColor(0, Magnum::Color4{ 0.0f });
     _bloom->render_final(_color);
-    Magnum::GL::defaultFramebuffer.bind();
+    GuiBase::main_framebuffer().bind(); // the window, or the off-screen target when hidden
     return _postColor;
 }
 #endif
