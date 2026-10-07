@@ -22,6 +22,8 @@ else()
         overlay.cpp
         visualizer.cpp
         files.cpp
+        csvplot.cpp
+        diskusage.cpp
     )
 endif()
 
