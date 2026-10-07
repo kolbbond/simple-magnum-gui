@@ -14,6 +14,7 @@ Everything they need is in bin/, so the folder can be copied or unzipped anywher
   bin\sysinfo.exe        system monitor: CPU per core, threads, memory, processes, disks, network, GPU
   bin\overlay.exe        transparent always-on-top HUD; drag to move, Ctrl+Alt+O toggles click-through
   bin\visualizer.exe     audio spectrum + waveform from the default input; --wav file.wav, --tone
+  bin\files.exe          fast file browser: filter, recursive search, text/image preview
 
 Requires an OpenGL 3.3 capable GPU driver.
 Every example accepts:
