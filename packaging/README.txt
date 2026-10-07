@@ -16,4 +16,8 @@ Everything they need is in bin/, so the folder can be copied or unzipped anywher
   bin\visualizer.exe     audio spectrum + waveform from the default input; --wav file.wav, --tone
 
 Requires an OpenGL 3.3 capable GPU driver.
-Every example accepts --smg-frames N to exit after N frames.
+Every example accepts:
+  --smg-frames N           exit after N frames
+  --smg-screenshot F.png   save the last frame (default after 60 frames) and exit
+  --smg-record DIR         save every frame as DIR/frame_00000.png
+  --smg-hidden             render off-screen, no window
