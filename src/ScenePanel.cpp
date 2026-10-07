@@ -1,10 +1,8 @@
 #include "ScenePanel.hh"
-#include "GuiBase.hh"
 
 #include <algorithm>
 
 #include <Corrade/Utility/Assert.h>
-#include <Magnum/GL/DefaultFramebuffer.h>
 #include <Magnum/GL/RenderbufferFormat.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/GL/TextureFormat.h>
@@ -13,6 +11,7 @@
 
 #include <imgui.h>
 
+#include "GlStateGuard.hh"
 #include "IsoGrid.hh"
 #include "Primitives.hh"
 #include "SpriteRenderer.hh"
@@ -200,7 +199,6 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
             Magnum::GL::FramebufferBlitFilter::Nearest);
     }
 #endif
-    GuiBase::main_framebuffer().bind(); // the window, or the off-screen target when hidden
 }
 
 void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
@@ -236,23 +234,24 @@ Magnum::GL::Texture2D& ScenePanel::bloom_pass(const Magnum::Vector2i& size) {
     _postFbo.bind();
     _postFbo.clearColor(0, Magnum::Color4{ 0.0f });
     _bloom->render_final(_color);
-    GuiBase::main_framebuffer().bind(); // the window, or the off-screen target when hidden
     return _postColor;
 }
 #endif
 
 void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
-    ensure_gl();
-    ensure_fbo(size);
-    if(!_fitted) fit();
-    // objects may be added/moved after fit; keep auto near/far tracking them
-    _camera.set_scene_bounds(scene_bounds());
-    render_scene(size);
-
     Magnum::GL::Texture2D* shown = &_color;
+    {
+        const GlStateGuard restore;
+        ensure_gl();
+        ensure_fbo(size);
+        if(!_fitted) fit();
+        // objects may be added/moved after fit; keep auto near/far tracking them
+        _camera.set_scene_bounds(scene_bounds());
+        render_scene(size);
 #ifdef SMG_WITH_BLOOM
-    if(_bloom_enabled) shown = &bloom_pass(size);
+        if(_bloom_enabled) shown = &bloom_pass(size);
 #endif
+    }
 
     ImGui::Begin(title);
     Magnum::ImGuiIntegration::image(*shown, Magnum::Vector2{ size });
