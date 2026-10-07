@@ -21,6 +21,7 @@ else()
         sysinfo.cpp
         overlay.cpp
         visualizer.cpp
+        files.cpp
     )
 endif()
 
