@@ -117,6 +117,7 @@ set(smg_sources
     src/SpriteSheet.cpp
     src/SpriteRenderer.cpp
     src/Annotations.cpp
+    src/Capture.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp

@@ -11,6 +11,16 @@
 #include <Magnum/PixelFormat.h>
 #include <Magnum/Trade/AbstractImporter.h>
 
+#include <cstdio>
+#include <cstring>
+#include <vector>
+#include <filesystem>
+#include <system_error>
+#include <Corrade/Containers/StridedArrayView.h>
+#include <Magnum/GL/RenderbufferFormat.h>
+#include <Magnum/Math/Color.h>
+
+#include "Capture.hh"
 #include "GuiBase.hh"
 #include "WindowPlatform.hh"
 
@@ -24,20 +34,38 @@ using namespace Magnum::Math::Literals;
 
 namespace smg {
 
+namespace {
+// main_framebuffer() is static so panels reach it without a GuiBase reference
+GL::Framebuffer* s_offscreen = nullptr;
+} // namespace
+
 GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     : Platform::Application{ arguments, NoCreate }, _max_frames(config.max_frames) {
 
     // prefixed, so Magnum's own --magnum-* options and positional args pass through untouched
     Utility::Arguments args{ "smg" };
     args.addOption("frames", "0").setHelp("frames", "exit after N frames (0 = run until closed)", "N");
-    args.parse(arguments.argc, arguments.argv);
+    args.addOption("screenshot", "").setHelp("screenshot", "save the last frame (of --smg-frames, default 60) and exit", "FILE");
+    args.addOption("record", "").setHelp("record", "save every frame as DIR/frame_00000.png", "DIR");
+    // prefixed Arguments only take valued options, so the --smg-hidden flag is pulled out first
+    bool hidden_flag = false;
+    std::vector<char*> argv;
+    for(int i = 0; i < arguments.argc; ++i) {
+        if(std::strcmp(arguments.argv[i], "--smg-hidden") == 0) hidden_flag = true;
+        else argv.push_back(arguments.argv[i]);
+    }
+    args.parse(static_cast<int>(argv.size()), argv.data());
     const long frames_flag = args.value<long>("frames");
     if(frames_flag > 0) _max_frames = frames_flag;
+    _cli_shot = args.value<std::string>("screenshot");
+    if(!_cli_shot.empty() && _max_frames == 0) _max_frames = 60;
+    const bool hidden = config.hidden || hidden_flag;
 
     Configuration conf;
     Configuration::WindowFlags flags = Configuration::WindowFlag::Resizable;
     if(config.borderless) flags |= Configuration::WindowFlag::Borderless;
     if(config.always_on_top) flags |= Configuration::WindowFlag::AlwaysOnTop;
+    if(hidden) flags |= Configuration::WindowFlag::Hidden;
     conf.setWindowFlags(flags);
     conf.setSize(config.size);
     conf.setTitle(config.title);
@@ -65,6 +93,19 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
 #if !defined(CORRADE_TARGET_EMSCRIPTEN)
     _window = Platform::Sdl2Application::window();
     SDL_SetWindowPosition(_window, 0, 0);
+    if(hidden) {
+        // a hidden window's default framebuffer has no pixels to read back on every driver
+        const Vector2i size = framebufferSize();
+        _offscreen_color.emplace();
+        _offscreen_color->setStorage(GL::RenderbufferFormat::RGBA8, size);
+        _offscreen_depth.emplace();
+        _offscreen_depth->setStorage(GL::RenderbufferFormat::Depth24Stencil8, size);
+        _offscreen.emplace(Range2Di{ {}, size });
+        _offscreen->attachRenderbuffer(GL::Framebuffer::ColorAttachment{ 0 }, *_offscreen_color)
+            .attachRenderbuffer(GL::Framebuffer::BufferAttachment::DepthStencil, *_offscreen_depth);
+        s_offscreen = &*_offscreen;
+    }
+    if(const std::string record = args.value<std::string>("record"); !record.empty()) start_recording(record);
     if(config.transparent) {
         _transparent = detail::enable_transparency(_window);
         if(!_transparent) Warning() << "smg: transparent windows are not supported here; the window stays opaque";
@@ -161,7 +202,8 @@ void GuiBase::drawBegin() {
 
     // a panel may have changed the clear color; the compositor shows whatever alpha is left here
     if(_transparent) GL::Renderer::setClearColor(Color4{ 0.0f, 0.0f, 0.0f, 0.0f });
-    GL::defaultFramebuffer.clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
+    main_framebuffer().bind();
+    main_framebuffer().clear(GL::FramebufferClear::Color | GL::FramebufferClear::Depth);
 
     // start a new frame
     _imgui.newFrame();
@@ -211,6 +253,7 @@ different state after. */
     GL::Renderer::enable(GL::Renderer::Feature::DepthTest);
 
     // swap background buffers and redraw to screen
+    capture_pending(true);
     swapBuffers();
     redraw();
 }
@@ -230,11 +273,67 @@ void GuiBase::drawEvent() {
     }
     _last_frame = now;
 
+    // the CLI screenshot lands on the last frame
+    if(!_cli_shot.empty() && _max_frames > 0 && _frames == _max_frames - 1) screenshot(_cli_shot);
+
     drawBegin();
     draw_callbacks();
+    capture_pending(false); // shots without the UI
     drawEnd();
 
     if(_max_frames > 0 && ++_frames >= _max_frames) exit();
+}
+
+GuiBase::~GuiBase() {
+    if(_offscreen && s_offscreen == &*_offscreen) s_offscreen = nullptr;
+    this->exit();
+}
+
+GL::AbstractFramebuffer& GuiBase::main_framebuffer() {
+    if(s_offscreen) return *s_offscreen;
+    return GL::defaultFramebuffer;
+}
+
+Vector2i GuiBase::framebuffer_size() const { return _offscreen ? _offscreen->viewport().size() : framebufferSize(); }
+
+void GuiBase::screenshot(const std::string& path, bool with_ui) {
+    _shot_path = path;
+    _shot_with_ui = with_ui;
+}
+
+void GuiBase::start_recording(const std::string& dir, int every, bool with_ui) {
+    std::error_code ec;
+    std::filesystem::create_directories(std::filesystem::u8path(dir), ec);
+    _record_dir = dir;
+    _record_every = std::max(every, 1);
+    _record_with_ui = with_ui;
+    _record_index = 0;
+}
+
+Image2D GuiBase::grab() {
+    Image2D image = main_framebuffer().read(Range2Di{ {}, framebuffer_size() }, { PixelFormat::RGBA8Unorm });
+    if(!_transparent) {
+        // an opaque window's alpha is whatever the UI blended into it
+        for(Containers::StridedArrayView1D<Color4ub> row : image.pixels<Color4ub>())
+            for(Color4ub& p : row) p.a() = 255;
+    }
+    return image;
+}
+
+void GuiBase::capture_pending(bool ui_drawn) {
+    const bool shot = !_shot_path.empty() && _shot_with_ui == ui_drawn;
+    const bool frame = recording() && _record_with_ui == ui_drawn && _frames % _record_every == 0;
+    if(!shot && !frame) return;
+    const Image2D image = grab();
+    if(shot) {
+        if(save_image(image, _shot_path)) std::printf("smg: saved %s\n", _shot_path.c_str());
+        _shot_path.clear();
+    }
+    if(frame) {
+        char name[32];
+        std::snprintf(name, sizeof(name), "frame_%05ld.png", _record_index++);
+        save_image(image, (std::filesystem::u8path(_record_dir) / name).u8string());
+    }
 }
 
 std::pair<int, int> GuiBase::get_window_position() const {

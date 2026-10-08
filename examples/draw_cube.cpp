@@ -53,7 +53,7 @@ int callback_fun(const ShDataPr& mydata) {
     // hidden triangle
     if(hidden) {
 
-        GL::defaultFramebuffer.clear(GL::FramebufferClear::Depth);
+        GuiBase::main_framebuffer().clear(GL::FramebufferClear::Depth);
         mydata->_shader.setLightPositions({ { 1.4f, 1.0f, 0.75f, 0.0f } });
         mydata->_shader.setDiffuseColor(mydata->_color);
         mydata->_shader.setAmbientColor(Color3::fromHsv({ mydata->_color.hue(), 1.0f, 0.0f }));

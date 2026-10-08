@@ -18,7 +18,10 @@
 #    include "SDL_video.h"
 #endif
 
+#include <Corrade/Containers/Optional.h>
 #include <Magnum/GL/DefaultFramebuffer.h>
+#include <Magnum/GL/Framebuffer.h>
+#include <Magnum/GL/Renderbuffer.h>
 #include <Magnum/GL/Renderer.h>
 #include <Magnum/ImGuiIntegration/Context.hpp>
 #include <Magnum/Math/Color.h>
@@ -50,6 +53,10 @@ struct GuiConfig {
     bool transparent = false;
     bool borderless = false;
     bool always_on_top = false;
+
+    // no visible window: draw into an off-screen framebuffer of `size` (tests, CI, batch
+    // screenshots). `--smg-hidden` sets it
+    bool hidden = false;
 };
 
 // base gui class, entry point for guis
@@ -90,14 +97,26 @@ protected:
     bool _transparent = false; // window actually composited by alpha
     bool _click_through = false;
 
+    // hidden mode target, plus pending captures (taken at the end of a frame)
+    Corrade::Containers::Optional<Magnum::GL::Renderbuffer> _offscreen_color;
+    Corrade::Containers::Optional<Magnum::GL::Renderbuffer> _offscreen_depth;
+    Corrade::Containers::Optional<Magnum::GL::Framebuffer> _offscreen;
+    std::string _shot_path;
+    bool _shot_with_ui = true;
+    std::string _cli_shot;
+    std::string _record_dir;
+    int _record_every = 1;
+    bool _record_with_ui = true;
+    long _record_index = 0;
+
+    void capture_pending(bool ui_drawn);
+
+
 public:
     // throws std::runtime_error if no window/GL context can be created
     explicit GuiBase(const Arguments& arguments, const GuiConfig& config = GuiConfig{});
 
-    ~GuiBase() {
-        //	std::printf(" [X] GuiBase destructor [X] \n");
-        this->exit();
-    };
+    ~GuiBase();
 
     // draw callbacks
     // main draw event loop (called every iteration)
@@ -111,6 +130,22 @@ public:
     ShDrawCallbackPr add_callback(DrawCallback::DrawFn fn); // returns the handle for remove_callback
     bool remove_callback(const ShDrawCallbackPr& callback);
     void clear_callbacks();
+
+    // the framebuffer the app draws into: the window's, or the off-screen one when hidden. Bind
+    // this, not GL::defaultFramebuffer, after rendering into your own framebuffers
+    static Magnum::GL::AbstractFramebuffer& main_framebuffer();
+    [[nodiscard]] Magnum::Vector2i framebuffer_size() const;
+    [[nodiscard]] bool hidden() const { return bool(_offscreen); }
+
+    // capture: screenshot() is taken at the end of the current frame (with_ui = false leaves out
+    // the ImGui layer); recording writes dir/frame_00000.png every `every` frames until stopped.
+    // `--smg-screenshot out.png` (on the last of `--smg-frames`, default 60) and `--smg-record dir`
+    void screenshot(const std::string& path, bool with_ui = true);
+    void start_recording(const std::string& dir, int every = 1, bool with_ui = true);
+    void stop_recording() { _record_dir.clear(); }
+    [[nodiscard]] bool recording() const { return !_record_dir.empty(); }
+    // the main framebuffer now, RGBA8; alpha is forced opaque unless the window is transparent
+    Magnum::Image2D grab();
 
     // seconds since the previous frame (0 on the first frame, spike-clamped)
     [[nodiscard]] float dt() const { return _dt; }
