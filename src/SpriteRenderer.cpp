@@ -71,7 +71,15 @@ void SpriteRenderer::draw_one(Magnum::Shaders::FlatGL3D& shader,
     shader.draw(_quad);
 }
 
-void SpriteRenderer::draw(const std::vector<Sprite>& sprites, const Magnum::Matrix4& view, const Magnum::Matrix4& projection) {
+void SpriteRenderer::draw(const std::vector<Sprite>& sprites,
+    const Magnum::Matrix4& view,
+    const Magnum::Matrix4& projection,
+    const Magnum::Vector4& clip_plane) {
+    // whole-sprite cull: a billboard straddling the plane is kept or dropped by its anchor
+    const auto shown = [&clip_plane](const Sprite& s) {
+        return s.params.visible && Magnum::Math::dot(clip_plane, Magnum::Vector4{ s.position, 1.0f }) <= 0.0f;
+    };
+
     const Magnum::Matrix4 camWorld = view.invertedRigid();
     const Magnum::Vector3 right = camWorld[0].xyz().normalized();
     const Magnum::Vector3 up = camWorld[1].xyz().normalized();
@@ -80,14 +88,14 @@ void SpriteRenderer::draw(const std::vector<Sprite>& sprites, const Magnum::Matr
     // pass 1: alpha-masked sprites, depth write on, no sorting needed
     _alphaMask.setAlphaMask(0.5f);
     for(const Sprite& s : sprites) {
-        if(!s.params.visible || s.params.blend != SpriteBlend::AlphaMask) continue;
+        if(!shown(s) || s.params.blend != SpriteBlend::AlphaMask) continue;
         draw_one(_alphaMask, s, view, projection, right, up, fwd);
     }
 
     // pass 2: blended/additive sprites, back-to-front, depth test on but no depth write
     std::vector<const Sprite*> blended;
     for(const Sprite& s : sprites) {
-        if(s.params.visible && s.params.blend != SpriteBlend::AlphaMask) blended.push_back(&s);
+        if(shown(s) && s.params.blend != SpriteBlend::AlphaMask) blended.push_back(&s);
     }
     if(blended.empty()) return;
 

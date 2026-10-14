@@ -13,8 +13,6 @@
 #include <Magnum/Magnum.h>
 #include <Magnum/Math/Color.h>
 #include <Magnum/Math/Matrix4.h>
-#include <Magnum/Shaders/PhongGL.h>
-#include <Magnum/Shaders/VertexColorGL.h>
 
 #include "Camera.hh"
 #include "IsoGrid.hh"
@@ -30,6 +28,19 @@ class BloomRenderer;
 namespace smg {
 
 class SpriteRenderer;
+class SectionPhongGL;
+class SectionVertexColorGL;
+
+// clips away the half-space the normal points into: kept where dot(normalize(normal), p) <= offset
+struct SectionPlane {
+    Magnum::Vector3 normal{ 1.0f, 0.0f, 0.0f };
+    float offset{ 0.0f };
+    bool enabled{ false };
+    Magnum::Color3 cap_color{ 0.85f, 0.35f, 0.25f }; // exposed interior (back faces)
+
+    // world-space plane equation; (0,0,0,-1) when disabled or degenerate, which keeps everything
+    [[nodiscard]] Magnum::Vector4 equation() const;
+};
 
 typedef std::shared_ptr<class ScenePanel> ShScenePanelPr;
 
@@ -83,6 +94,8 @@ public:
     [[nodiscard]] const Camera& camera() const { return _camera; }
     [[nodiscard]] LightProperties& light() { return _light; }
     [[nodiscard]] const LightProperties& light() const { return _light; }
+    [[nodiscard]] SectionPlane& section() { return _section; }
+    [[nodiscard]] const SectionPlane& section() const { return _section; }
     void fit();
     [[nodiscard]] Bounds scene_bounds() const; // world AABB of visible objects + sprites
 
@@ -119,11 +132,14 @@ protected:
     mutable Magnum::Vector2 _image_min{ 0.0f, 0.0f }; // last drawn image top-left, screen px
 
     void handle_input(const Magnum::Vector2& image_size);
+    void draw_section_controls();
+
+    SectionPlane _section;
 
     bool _gl_ready{ false };
     Magnum::Vector2i _fbo_size{ 0, 0 };
-    Magnum::Shaders::PhongGL _phong{ Magnum::NoCreate };
-    Magnum::Shaders::VertexColorGL3D _vcolor{ Magnum::NoCreate };
+    std::shared_ptr<SectionPhongGL> _phong;
+    std::shared_ptr<SectionVertexColorGL> _vcolor;
     Magnum::GL::Texture2D _color{ Magnum::NoCreate };
     Magnum::GL::Renderbuffer _depth{ Magnum::NoCreate };
     Magnum::GL::Framebuffer _fbo{ Magnum::NoCreate };

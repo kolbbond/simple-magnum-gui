@@ -24,6 +24,9 @@ public:
         // overbright sphere so the bloom glow is clearly visible
         _panel->add_sphere(Matrix4::translation({ 0.0f, 1.6f, 0.0f }) * Matrix4::scaling(Vector3{ 0.4f }), Color3{ 3.0f });
 
+        // tick "Section" in the panel to cut the cube and sphere through their centres
+        _panel->section().normal = Vector3::zAxis();
+
         add_callback([this]() { return scene_callback(*_panel); });
     }
 

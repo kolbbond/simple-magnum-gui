@@ -1,6 +1,7 @@
 #include "ScenePanel.hh"
 
 #include <algorithm>
+#include <array>
 
 #include <Corrade/Utility/Assert.h>
 #include <Magnum/GL/RenderbufferFormat.h>
@@ -14,6 +15,7 @@
 #include "GlStateGuard.hh"
 #include "IsoGrid.hh"
 #include "Primitives.hh"
+#include "SectionShaders.hh"
 #include "SpriteRenderer.hh"
 
 #ifdef SMG_WITH_BLOOM
@@ -21,6 +23,12 @@
 #endif
 
 namespace smg {
+
+Magnum::Vector4 SectionPlane::equation() const {
+    const float len = normal.length();
+    if(!enabled || len <= 0.0f) return Magnum::Vector4{ 0.0f, 0.0f, 0.0f, -1.0f };
+    return Magnum::Vector4{ normal / len, -offset };
+}
 
 ScenePanel::ScenePanel() = default;
 
@@ -89,8 +97,8 @@ void ScenePanel::fit() {
 
 void ScenePanel::ensure_gl() {
     if(_gl_ready) return;
-    _phong = Magnum::Shaders::PhongGL{ Magnum::Shaders::PhongGL::Configuration{}.setFlags(Magnum::Shaders::PhongGL::Flag::VertexColor) };
-    _vcolor = Magnum::Shaders::VertexColorGL3D{};
+    _phong = std::make_shared<SectionPhongGL>();
+    _vcolor = std::make_shared<SectionVertexColorGL>();
     _sprite_renderer = std::make_shared<SpriteRenderer>();
     _gl_ready = true;
 }
@@ -163,30 +171,37 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
 #endif
 
     Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::DepthTest);
-    Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::FaceCulling);
+    // a cut solid shows its back faces through the opening; they draw as the cap
+    if(_section.enabled)
+        Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
+    else
+        Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::FaceCulling);
+
+    // plane equations transform by the inverse transpose
+    const Magnum::Vector4 plane = view.inverted().transposed() * _section.equation();
+    _phong->set_projection(proj)
+        .set_light_direction(_light.position)
+        .set_ambient(_light.ambient)
+        .set_specular(_light.specular)
+        .set_shininess(_light.shininess)
+        .set_section(plane)
+        .set_cap_color(_section.cap_color);
+    _vcolor->set_projection(proj).set_section(plane);
 
     for(Object& o : _objects) {
         if(!o.visible || !o.mesh) continue;
         const Magnum::Matrix4 tv = view * o.transform;
         if(o.wireframe) {
             // unlit, vertex-coloured lines/wireframe
-            _vcolor.setTransformationProjectionMatrix(proj * tv).draw(o.mesh->gl());
+            _vcolor->set_transformation(tv).draw(o.mesh->gl());
         } else {
-            _phong.setTransformationMatrix(tv)
-                .setNormalMatrix(tv.normalMatrix())
-                .setProjectionMatrix(proj)
-                .setLightPositions({ Magnum::Vector4{ _light.position, 0.0f } })
-                .setAmbientColor(_light.ambient)
-                .setDiffuseColor(o.color)
-                .setSpecularColor(_light.specular)
-                .setShininess(_light.shininess)
-                .draw(o.mesh->gl());
+            _phong->set_transformation(tv).set_normal_matrix(tv.normalMatrix()).set_diffuse(o.color).draw(o.mesh->gl());
         }
     }
 
     // sprites share the depth buffer; quads are double-sided, so drop face culling
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
-    if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj);
+    if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj, _section.equation());
 
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
 #ifndef CORRADE_TARGET_EMSCRIPTEN
@@ -214,6 +229,43 @@ void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
     else if(ImGui::IsMouseDragging(ImGuiMouseButton_Right))
         _camera.zoom(-dy * 0.1f);
     if(io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
+}
+
+void ScenePanel::draw_section_controls() {
+    ImGui::Checkbox("Section", &_section.enabled);
+    if(!_section.enabled) return;
+
+    // UI edits axis-aligned planes; an arbitrary API-set normal shows as its dominant axis
+    const Magnum::Vector3 a = Magnum::Math::abs(_section.normal);
+    int axis = a.x() >= a.y() && a.x() >= a.z() ? 0 : (a.y() >= a.z() ? 1 : 2);
+    bool flip = _section.normal[axis] < 0.0f;
+    bool changed = false;
+    const std::array<const char*, 3> labels{ "X", "Y", "Z" };
+    for(int i = 0; i < int(labels.size()); ++i) {
+        ImGui::SameLine();
+        changed |= ImGui::RadioButton(labels[std::size_t(i)], &axis, i);
+    }
+    ImGui::SameLine();
+    changed |= ImGui::Checkbox("flip", &flip);
+    if(changed) {
+        _section.normal = Magnum::Vector3{};
+        _section.normal[axis] = flip ? -1.0f : 1.0f;
+    }
+
+    const Bounds b = scene_bounds();
+    float lo = -1.0f;
+    float hi = 1.0f;
+    if(!b.empty()) {
+        const Magnum::Vector3 n = _section.normal.normalized();
+        // extent of the AABB along n: center projection +- half-size projected on |n|
+        const float c = Magnum::Math::dot(n, b.center());
+        const float r = Magnum::Math::dot(Magnum::Math::abs(n), b.size() * 0.5f);
+        lo = c - r;
+        hi = c + r;
+    }
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(160.0f);
+    ImGui::SliderFloat("offset", &_section.offset, lo, hi);
 }
 
 // clamped to the slider ranges in draw() so UI and API cannot diverge; a
@@ -269,6 +321,7 @@ void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
         ImGui::SliderFloat("radius", &_bloom_radius, 0.001f, 0.02f, "%.4f");
     }
 #endif
+    draw_section_controls();
     ImGui::End();
 }
 

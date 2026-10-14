@@ -113,6 +113,7 @@ set(smg_sources
     src/Mesh.cpp
     src/Primitives.cpp
     src/ScenePanel.cpp
+    src/SectionShaders.cpp
     src/IsoGrid.cpp
     src/SpriteSheet.cpp
     src/SpriteRenderer.cpp

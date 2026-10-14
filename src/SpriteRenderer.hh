@@ -16,8 +16,12 @@ class SpriteRenderer {
 public:
     SpriteRenderer();
 
-    // draw all visible sprites; expects DepthTest already enabled by the caller
-    void draw(const std::vector<Sprite>& sprites, const Magnum::Matrix4& view, const Magnum::Matrix4& projection);
+    // draw all visible sprites; expects DepthTest already enabled by the caller.
+    // sprites whose position is on the positive side of the world-space clip plane are skipped
+    void draw(const std::vector<Sprite>& sprites,
+        const Magnum::Matrix4& view,
+        const Magnum::Matrix4& projection,
+        const Magnum::Vector4& clip_plane = Magnum::Vector4{ 0.0f, 0.0f, 0.0f, -1.0f });
 
 private:
     void draw_one(Magnum::Shaders::FlatGL3D& shader,
