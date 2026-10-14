@@ -1,5 +1,6 @@
 #include <Corrade/configure.h> // For CORRADE_TARGET_EMSCRIPTEN
 #include <Corrade/Utility/Arguments.h>
+#include <Corrade/Utility/Resource.h>
 #include <algorithm>
 #include <chrono>
 #include <stdexcept>
@@ -28,6 +29,13 @@
 #    include "implot3d.h"
 #endif
 
+// static smg (WASM) drops unreferenced resource objects at link time; registering again is a no-op.
+// CORRADE_RESOURCE_INITIALIZE must be expanded outside any namespace.
+static void smg_initialize_resources() {
+    CORRADE_RESOURCE_INITIALIZE(smg_RESOURCE_fonts)
+    CORRADE_RESOURCE_INITIALIZE(smg_RESOURCE_images)
+}
+
 // Implementation-local convenience; the public header no longer leaks these.
 using namespace Magnum;
 using namespace Magnum::Math::Literals;
@@ -41,6 +49,7 @@ GL::Framebuffer* s_offscreen = nullptr;
 
 GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     : Platform::Application{ arguments, NoCreate }, _max_frames(config.max_frames) {
+    smg_initialize_resources();
 
     // prefixed, so Magnum's own --magnum-* options and positional args pass through untouched
     Utility::Arguments args{ "smg" };

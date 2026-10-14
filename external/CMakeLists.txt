@@ -9,6 +9,8 @@ if(EMSCRIPTEN)
     # Use EmscriptenApplication for WASM builds
     set(MAGNUM_WITH_EMSCRIPTENAPPLICATION ON CACHE BOOL "" FORCE)
     set(MAGNUM_WITH_SDL2APPLICATION OFF CACHE BOOL "" FORCE)
+    # Magnum defaults to WebGL 1 here, but we link WebGL 2 only; a mismatch aborts at context creation
+    set(MAGNUM_TARGET_GLES2 OFF CACHE BOOL "" FORCE)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -s USE_WEBGL2=1 -s ALLOW_MEMORY_GROWTH=1")
 else()
     # Desktop: use SDL2Application
