@@ -59,13 +59,16 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     if(frames_flag > 0) _max_frames = frames_flag;
     _cli_shot = args.value<std::string>("screenshot");
     if(!_cli_shot.empty() && _max_frames == 0) _max_frames = 60;
-    const bool hidden = config.hidden || hidden_flag;
+    [[maybe_unused]] const bool hidden = config.hidden || hidden_flag;
 
     Configuration conf;
     Configuration::WindowFlags flags = Configuration::WindowFlag::Resizable;
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+    // the browser owns the canvas: no borders, z-order or hidden state
     if(config.borderless) flags |= Configuration::WindowFlag::Borderless;
     if(config.always_on_top) flags |= Configuration::WindowFlag::AlwaysOnTop;
     if(hidden) flags |= Configuration::WindowFlag::Hidden;
+#endif
     conf.setWindowFlags(flags);
     conf.setSize(config.size);
     conf.setTitle(config.title);
