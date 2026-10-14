@@ -201,7 +201,7 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
 
     // sprites share the depth buffer; quads are double-sided, so drop face culling
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::FaceCulling);
-    if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj);
+    if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj, _section.equation());
 
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
 #ifndef CORRADE_TARGET_EMSCRIPTEN
