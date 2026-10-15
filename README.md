@@ -4,6 +4,8 @@ A small C++ GUI toolkit on [Magnum](https://github.com/mosra/magnum) + [Dear ImG
 open a window, hand it a lambda, and draw ImGui widgets, [ImPlot](https://github.com/epezent/implot)
 plots and OpenGL scenes. Good for quick tools, debugging views and data visualization.
 
+**[Try it in the browser](https://kolbbond.github.io/simple-magnum-gui/)** — WebAssembly demos, WebGL 2 required.
+
 ![smg example](assets/smg_example.png)
 
 | | |
@@ -104,7 +106,9 @@ EMSDK_PATH=/path/to/emsdk ./scripts/build_wasm.sh
 
 Output (the WASM build dir) lands in `build-wasm/`. The build forces a static
 library (`BUILD_SHARED_LIBS=OFF`) and uses `EmscriptenApplication` instead of
-SDL2 (see `GuiBase.hh`).
+SDL2 (see `GuiBase.hh`). The `wasm` workflow builds the demos on every PR and publishes them to
+[GitHub Pages](https://kolbbond.github.io/simple-magnum-gui/) on master; to try them locally, serve
+`build-wasm/bin` (e.g. `python3 -m http.server -d build-wasm/bin`) and open `index.html`.
 
 ## Usage
 
@@ -165,8 +169,9 @@ otherwise.
 | `overlay` | transparent always-on-top HUD; drag to move, Ctrl+Alt+O toggles click-through |
 
 All of them use only smg's own dependencies (plus OS system libraries). `ctest -L example` renders
-each one hidden and saves `build/examples/shots/<name>.png`. On WebAssembly only `guibase` is built
-so far; the others rely on threads, the filesystem or OS APIs that a browser doesn't offer.
+each one hidden and saves `build/examples/shots/<name>.png`. On WebAssembly only `guibase`,
+`scene_panel` and `sprite_panel` are built ([live demos](https://kolbbond.github.io/simple-magnum-gui/));
+the others rely on threads, the filesystem or OS APIs that a browser doesn't offer.
 
 ### Windows package
 
