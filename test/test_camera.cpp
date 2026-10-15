@@ -23,6 +23,15 @@ int main() {
     CHECK(smgtest::approx(ndc.x(), 0.0f));
     CHECK(smgtest::approx(ndc.y(), 0.0f));
 
+    // a single point re-centres but keeps the distance, instead of collapsing onto the point
+    Camera point_cam;
+    const float default_distance = point_cam.distance();
+    Bounds point;
+    point.expand(Magnum::Vector3{ 2.0f, 0.0f, 0.0f });
+    point_cam.fit(point);
+    CHECK(smgtest::approx(point_cam.pivot().x(), 2.0f));
+    CHECK(smgtest::approx(point_cam.distance(), default_distance));
+
     // orbit preserves distance from pivot
     const float d0 = (cam.eye() - cam.pivot()).length();
     cam.orbit(30.0f, 12.0f);

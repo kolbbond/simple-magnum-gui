@@ -21,7 +21,6 @@ namespace {
 // exposes the pre-bloom scene target for readback
 class ProbePanel: public smg::ScenePanel {
 public:
-    void skip_fit() { _fitted = true; } // a lone sprite has degenerate bounds; keep the default camera
     Magnum::Color3ub center() {
         const Magnum::Vector2i c = _fbo_size / 2;
         const Magnum::Image2D img = _fbo.read({ c, c + Magnum::Vector2i{ 1 } }, { Magnum::PixelFormat::RGBA8Unorm });
@@ -54,7 +53,8 @@ int main(int argc, char** argv) {
 
     smg::GuiBase gui({ argc, argv });
     std::shared_ptr<ProbePanel> panel = std::make_shared<ProbePanel>();
-    panel->add_cube(); // [-1, 1]^3; fit() centres the pivot, so the image centre ray hits the origin
+    // [-1, 1]^3; fit() centres the pivot, so the image centre ray hits the origin
+    panel->add_cube({}, Magnum::Color3{ 1.0f, 0.0f, 0.0f });
     panel->set_bloom_enabled(false);
 
     std::shared_ptr<ProbePanel> sprites = std::make_shared<ProbePanel>();
@@ -70,8 +70,7 @@ int main(int argc, char** argv) {
         0,
         Magnum::Vector3{ 0.0f },
         centered);
-    sprites->set_bloom_enabled(false);
-    sprites->skip_fit();
+    sprites->set_bloom_enabled(false); // auto-fit must frame a lone sprite by its size
 
     const Magnum::Color3 clear{ 0.12f, 0.12f, 0.14f };
     const Magnum::Color3 cap = panel->section().cap_color;
@@ -88,9 +87,11 @@ int main(int argc, char** argv) {
             s.offset = -5.0f; // whole cube clipped
         }
 
+        if(frame == 0) panel->draw("section", { 0, 150 }); // collapsed host: must not abort
         panel->draw("section", { 200, 150 });
         const Magnum::Color3ub px = panel->center();
-        if(frame == 0) CHECK(!near(px, cap) && !near(px, clear));
+        // ambient and diffuse both carry the object colour: red stays red, not a grey floor
+        if(frame == 0) CHECK(int(px.r()) > int(px.g()) + 40 && px.g() == px.b());
         if(frame == 1) CHECK(near(px, cap));
         if(frame == 2) CHECK(near(px, clear));
 

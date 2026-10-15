@@ -110,7 +110,9 @@ void Camera::fit(const Bounds& b, float margin) {
     if(b.empty()) return;
     set_scene_bounds(b);
     _pivot = b.center();
-    const float radius = std::max(b.diagonal() * 0.5f, 1e-3f);
+    // a single point has no extent to frame; keep the current distance
+    if(b.diagonal() <= 0.0f) return;
+    const float radius = b.diagonal() * 0.5f;
     const float halfFov = float(Magnum::Rad{ Magnum::Deg{ _fov_deg } } * 0.5f);
     _distance = (radius * margin) / std::tan(halfFov);
 }
