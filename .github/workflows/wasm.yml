@@ -36,7 +36,7 @@ jobs:
           for demo in guibase scene_panel sprite_panel; do
             cp build-wasm/bin/$demo.html build-wasm/bin/$demo.js build-wasm/bin/$demo.wasm site/
           done
-          cp docs/web/index.html site/
+          cp build-wasm/bin/index.html site/
 
       - uses: actions/upload-pages-artifact@v3
         with:

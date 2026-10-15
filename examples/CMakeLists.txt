@@ -42,6 +42,9 @@ if(EMSCRIPTEN)
         "--shell-file ${CMAKE_SOURCE_DIR}/docs/web/shell.html"
     )
     string(REPLACE ";" " " WASM_LINK_FLAGS_STR "${WASM_LINK_FLAGS}")
+
+    # demo landing page, so build-wasm/bin is servable as-is
+    configure_file(${CMAKE_SOURCE_DIR}/docs/web/index.html ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/index.html COPYONLY)
 endif()
 
 # walk over source files
