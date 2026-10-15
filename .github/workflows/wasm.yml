@@ -1,0 +1,57 @@
+name: wasm
+
+# builds the browser demos on every PR; master pushes publish them to GitHub Pages
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wasm-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: 6.0.6
+          actions-cache-folder: emsdk-cache
+
+      - name: Build
+        run: scripts/build_wasm.sh
+
+      - name: Assemble site
+        run: |
+          mkdir -p site
+          for demo in guibase scene_panel sprite_panel; do
+            cp build-wasm/bin/$demo.html build-wasm/bin/$demo.js build-wasm/bin/$demo.wasm site/
+          done
+          cp docs/web/index.html site/
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

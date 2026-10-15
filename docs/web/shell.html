@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>simple-magnum-gui</title>
+<style>
+  html, body { margin: 0; height: 100%; overflow: hidden; background: #1e1e24; }
+  /* EmscriptenApplication sizes the framebuffer from the canvas' CSS size */
+  #canvas { display: block; width: 100vw; height: 100vh; outline: none; }
+  #bar { position: fixed; top: 8px; right: 12px; font: 13px system-ui, sans-serif; color: #999; }
+  #bar a { color: #7fb3ff; text-decoration: none; }
+  #status { position: fixed; inset: 0; display: grid; place-items: center; font: 15px system-ui, sans-serif; color: #aaa; pointer-events: none; }
+</style>
+</head>
+<body>
+<canvas id="canvas" tabindex="-1" oncontextmenu="event.preventDefault()"></canvas>
+<div id="bar"><a href="./">&larr; demos</a></div>
+<div id="status">Loading&hellip;</div>
+<script>
+  var statusEl = document.getElementById('status'); // not 'status': that is window.status
+  var Module = {
+    canvas: document.getElementById('canvas'),
+    setStatus: function(text) { statusEl.textContent = text; statusEl.style.display = text ? 'grid' : 'none'; },
+    onAbort: function(what) { Module.setStatus('Failed to start: ' + what + ' (WebGL 2 required)'); },
+  };
+</script>
+{{{ SCRIPT }}}
+</body>
+</html>

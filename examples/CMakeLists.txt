@@ -5,9 +5,11 @@ message(STATUS "compile examples")
 
 # add the test files
 if(EMSCRIPTEN)
-    # Only guibase uses MAGNUM_APPLICATION_MAIN, others use mainLoopIteration()
+    # browser demos: no local files, threads or OS windowing
     set(example_list
         guibase.cpp
+        scene_panel.cpp
+        sprite_panel.cpp
     )
 else()
     set(example_list
@@ -37,6 +39,7 @@ if(EMSCRIPTEN)
         "-s MIN_WEBGL_VERSION=2"
         "-s MAX_WEBGL_VERSION=2"
         "--bind"
+        "--shell-file ${CMAKE_SOURCE_DIR}/docs/web/shell.html"
     )
     string(REPLACE ";" " " WASM_LINK_FLAGS_STR "${WASM_LINK_FLAGS}")
 endif()
@@ -54,6 +57,7 @@ foreach(srcfile ${example_list})
         set_target_properties(${name} PROPERTIES
             SUFFIX ".html"
             LINK_FLAGS "${WASM_LINK_FLAGS_STR}"
+            LINK_DEPENDS "${CMAKE_SOURCE_DIR}/docs/web/shell.html"
         )
     else()
         # Desktop: add icon

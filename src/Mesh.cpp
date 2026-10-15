@@ -48,7 +48,7 @@ ShMeshPr Mesh::create(Corrade::Containers::ArrayView<const Vertex> verts,
         Magnum::Shaders::GenericGL3D::Color3{});
 
     if(!indices.isEmpty()) {
-        Magnum::GL::Buffer indexBuffer;
+        Magnum::GL::Buffer indexBuffer{ Magnum::GL::Buffer::TargetHint::ElementArray }; // WebGL fixes a buffer's target at first bind
         indexBuffer.setData(indices);
         glmesh.setCount(static_cast<Magnum::Int>(indices.size()))
             .setIndexBuffer(std::move(indexBuffer), 0, Magnum::MeshIndexType::UnsignedInt);

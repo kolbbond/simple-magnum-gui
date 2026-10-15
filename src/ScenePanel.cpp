@@ -107,27 +107,15 @@ void ScenePanel::ensure_fbo(const Magnum::Vector2i& size) {
     if(_fbo_size == size && _color.id() != 0) return;
     _fbo_size = size;
     _color = Magnum::GL::Texture2D{};
-#ifdef CORRADE_TARGET_EMSCRIPTEN
-    // WebGL2: RGBA8 texture format and multisampled renderbuffers are not available;
-    // use RGBA and disable MSAA.
-    _use_msaa = false;
-    _color.setStorage(1, Magnum::GL::TextureFormat::RGBA, size)
-        .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
-        .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear);
-    _depth = Magnum::GL::Renderbuffer{};
-    _depth.setStorage(Magnum::GL::RenderbufferFormat::DepthStencil, size);
-#else
     _color.setStorage(1, Magnum::GL::TextureFormat::RGBA8, size)
         .setMinificationFilter(Magnum::GL::SamplerFilter::Linear)
         .setMagnificationFilter(Magnum::GL::SamplerFilter::Linear);
     _depth = Magnum::GL::Renderbuffer{};
     _depth.setStorage(Magnum::GL::RenderbufferFormat::Depth24Stencil8, size);
-#endif
     _fbo = Magnum::GL::Framebuffer{ Magnum::Range2Di::fromSize({}, size) };
     _fbo.attachTexture(Magnum::GL::Framebuffer::ColorAttachment{ 0 }, _color, 0)
         .attachRenderbuffer(Magnum::GL::Framebuffer::BufferAttachment::DepthStencil, _depth);
     CORRADE_INTERNAL_ASSERT(_fbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
-#ifndef CORRADE_TARGET_EMSCRIPTEN
     if(_use_msaa) {
         _colorMsaa = Magnum::GL::Renderbuffer{};
         _colorMsaa.setStorageMultisample(_samples, Magnum::GL::RenderbufferFormat::RGBA8, size);
@@ -138,7 +126,6 @@ void ScenePanel::ensure_fbo(const Magnum::Vector2i& size) {
             .attachRenderbuffer(Magnum::GL::Framebuffer::BufferAttachment::DepthStencil, _depthMsaa);
         CORRADE_INTERNAL_ASSERT(_msaaFbo.checkStatus(Magnum::GL::FramebufferTarget::Draw) == Magnum::GL::Framebuffer::Status::Complete);
     }
-#endif
 
 #ifdef SMG_WITH_BLOOM
     // color-only target for the post-bloom composite (no depth needed)
@@ -161,14 +148,7 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
 
     Magnum::GL::Framebuffer& target = _use_msaa ? _msaaFbo : _fbo;
     target.bind();
-#ifdef CORRADE_TARGET_EMSCRIPTEN
-    // WebGL1 (GLES2): clearColor/clearDepth on Framebuffer not available; use Renderer
-    Magnum::GL::Renderer::setClearColor(Magnum::Color4{ 0.12f, 0.12f, 0.14f, 1.0f });
-    Magnum::GL::Renderer::setClearDepth(1.0f);
-    target.clear(Magnum::GL::FramebufferClear::Color | Magnum::GL::FramebufferClear::Depth);
-#else
     target.clearColor(0, Magnum::Color4{ 0.12f, 0.12f, 0.14f, 1.0f }).clearDepth(1.0f);
-#endif
 
     Magnum::GL::Renderer::enable(Magnum::GL::Renderer::Feature::DepthTest);
     // a cut solid shows its back faces through the opening; they draw as the cap
@@ -204,7 +184,6 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
     if(_sprite_renderer && !_sprites.empty()) _sprite_renderer->draw(_sprites, view, proj, _section.equation());
 
     Magnum::GL::Renderer::disable(Magnum::GL::Renderer::Feature::DepthTest);
-#ifndef CORRADE_TARGET_EMSCRIPTEN
     if(_use_msaa) {
         Magnum::GL::Framebuffer::blit(_msaaFbo,
             _fbo,
@@ -213,7 +192,6 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
             Magnum::GL::FramebufferBlit::Color,
             Magnum::GL::FramebufferBlitFilter::Nearest);
     }
-#endif
 }
 
 void ScenePanel::handle_input(const Magnum::Vector2& image_size) {

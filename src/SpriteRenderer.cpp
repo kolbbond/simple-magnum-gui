@@ -33,7 +33,7 @@ SpriteRenderer::SpriteRenderer() {
 
     Magnum::GL::Buffer vb;
     vb.setData(verts);
-    Magnum::GL::Buffer ib;
+    Magnum::GL::Buffer ib{ Magnum::GL::Buffer::TargetHint::ElementArray };
     ib.setData(indices);
 
     _quad = Magnum::GL::Mesh{};
