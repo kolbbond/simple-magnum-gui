@@ -86,7 +86,13 @@ Bounds ScenePanel::scene_bounds() const {
         if(!o.visible || !o.mesh) continue;
         scene.expand(transformed(o.mesh->bounds(), o.transform));
     }
-    for(const Sprite& s : _sprites) scene.expand(s.position);
+    for(const Sprite& s : _sprites) {
+        if(!s.params.visible) continue;
+        // billboards turn with the camera; |size| bounds the quad for any anchor and view
+        const Magnum::Vector3 r{ s.params.size.length() };
+        scene.expand(s.position - r);
+        scene.expand(s.position + r);
+    }
     return scene;
 }
 
@@ -161,7 +167,6 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
     const Magnum::Vector4 plane = view.inverted().transposed() * _section.equation();
     _phong->set_projection(proj)
         .set_light_direction(_light.position)
-        .set_ambient(_light.ambient)
         .set_specular(_light.specular)
         .set_shininess(_light.shininess)
         .set_section(plane)
@@ -175,7 +180,12 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
             // unlit, vertex-coloured lines/wireframe
             _vcolor->set_transformation(tv).draw(o.mesh->gl());
         } else {
-            _phong->set_transformation(tv).set_normal_matrix(tv.normalMatrix()).set_diffuse(o.color).draw(o.mesh->gl());
+            // like Magnum's Phong, the shader leaves material colour to the caller for both terms
+            _phong->set_transformation(tv)
+                .set_normal_matrix(tv.normalMatrix())
+                .set_ambient(_light.ambient * o.color)
+                .set_diffuse(_light.diffuse * o.color)
+                .draw(o.mesh->gl());
         }
     }
 
@@ -269,6 +279,12 @@ Magnum::GL::Texture2D& ScenePanel::bloom_pass(const Magnum::Vector2i& size) {
 #endif
 
 void ScenePanel::draw(const char* title, const Magnum::Vector2i& size) {
+    // a collapsed or minimised host reports 0; a zero-size FBO is incomplete and asserts
+    if(size.x() <= 0 || size.y() <= 0) {
+        ImGui::Begin(title);
+        ImGui::End();
+        return;
+    }
     Magnum::GL::Texture2D* shown = &_color;
     {
         const GlStateGuard restore;
