@@ -164,6 +164,7 @@ otherwise.
 | `csvplot` | drop CSV files and plot columns: auto-detected delimiter/header, overlaid or stacked plots, value cursor, follows files that are still being written |
 | `diskusage` | where the space went: background scan, size-sorted tree and nested treemap, biggest file types |
 | `files` | fast file browser: instant filter, recursive search, text/image preview |
+| `fview` | results viewer: images and CSV data as a thumbnail grid, lightbox with zoom/pan and pixel readout, live refresh while a run writes output |
 | `sysinfo` | system monitor: per-core CPU, threads, memory, processes, disks, network, GPUs |
 | `visualizer` | audio spectrum, radial view and waveform from the default input, a WAV, or `--tone` |
 | `overlay` | transparent always-on-top HUD; drag to move, Ctrl+Alt+O toggles click-through |
