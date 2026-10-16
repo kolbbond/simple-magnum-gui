@@ -5,7 +5,8 @@
 // A file opens its folder with that file in the lightbox.
 // -r includes subfolders, -i shows images only.
 // Keys: Enter or click open, arrows step, Esc close, Backspace up, F5 rescan, Ctrl+wheel tile size,
-// Ctrl+C copy image (Ctrl+Shift+C its path); right-click a tile for the same.
+// Ctrl+C copy image (+ file on Windows), Ctrl+Shift+C copy path (right-click a tile for both), Ctrl+V paste
+// image/files into the folder (Windows), Ctrl+L path. On Windows a Linux path (~/run, /home/me/run) opens in WSL.
 
 #include <algorithm>
 #include <atomic>
@@ -49,6 +50,22 @@
 #include "GuiBase.hh"
 #include "imgui.h"
 #include "implot.h"
+
+#include <SDL_clipboard.h>
+
+#include "Capture.hh"
+
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    include <windows.h>
+#    include <shellapi.h>
+#    include <shlobj.h> // DROPFILES
+#endif
 
 #if defined(__linux__)
 #    include <csignal>
@@ -138,6 +155,136 @@ bool isImageExt(const std::string& e) {
 }
 
 bool isDataExt(const std::string& e) { return e == "csv" || e == "tsv" || e == "dat"; }
+
+// Places: home folders and drives, plus WSL distributions on Windows. A WSL distro's files are the
+// share \\wsl.localhost\<distro>\ (Windows starts the distro on first access), so the native viewer
+// reads them like any folder; Linux paths typed or passed in ("/home/me/run", "~/run") map to it.
+struct Place {
+    std::string label;
+    fs::path path;
+};
+
+struct Distro {
+    std::string name;
+    unsigned uid = 1000;
+    bool isDefault = false;
+};
+
+#if defined(_WIN32)
+std::string narrow(const std::wstring& w) { return fs::path(w).u8string(); }
+
+std::wstring regString(HKEY key, const wchar_t* sub, const wchar_t* value) {
+    wchar_t buf[512] = {};
+    DWORD size = sizeof(buf);
+    if(RegGetValueW(key, sub, value, RRF_RT_REG_SZ, nullptr, buf, &size) != ERROR_SUCCESS) return {};
+    return buf;
+}
+
+// registered distributions, from the registry (no wsl.exe launch)
+std::vector<Distro> wslDistros() {
+    std::vector<Distro> out;
+    const wchar_t* lxss = L"Software\\Microsoft\\Windows\\CurrentVersion\\Lxss";
+    HKEY root = nullptr;
+    if(RegOpenKeyExW(HKEY_CURRENT_USER, lxss, 0, KEY_READ, &root) != ERROR_SUCCESS) return out;
+    const std::wstring defaultId = regString(HKEY_CURRENT_USER, lxss, L"DefaultDistribution");
+    wchar_t id[128];
+    for(DWORD i = 0;; ++i) {
+        DWORD len = 128;
+        if(RegEnumKeyExW(root, i, id, &len, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+        Distro d;
+        d.name = narrow(regString(root, id, L"DistributionName"));
+        DWORD uid = 0;
+        DWORD size = sizeof(uid);
+        if(RegGetValueW(root, id, L"DefaultUid", RRF_RT_REG_DWORD, nullptr, &uid, &size) == ERROR_SUCCESS) d.uid = uid;
+        d.isDefault = defaultId == id;
+        if(!d.name.empty()) out.push_back(d);
+    }
+    RegCloseKey(root);
+    std::stable_sort(out.begin(), out.end(), [](const Distro& a, const Distro& b) { return a.isDefault > b.isDefault; });
+    return out;
+}
+
+fs::path wslRoot(const std::string& distro) { return fs::u8path("\\\\wsl.localhost\\" + distro + "\\"); }
+
+// the default user's home, from the distro's own /etc/passwd
+fs::path wslHome(const Distro& d) {
+    std::ifstream passwd(wslRoot(d.name) / "etc" / "passwd");
+    const std::string uid = ":" + std::to_string(d.uid) + ":";
+    for(std::string line; std::getline(passwd, line);) {
+        // name:x:uid:gid:gecos:home:shell
+        const std::size_t first = line.find(':');
+        const std::size_t second = first == std::string::npos ? first : line.find(':', first + 1);
+        if(second == std::string::npos || line.compare(second, uid.size(), uid) != 0) continue;
+        std::size_t pos = 0;
+        for(int field = 0; field < 5 && pos != std::string::npos; ++field) pos = line.find(':', pos + 1);
+        if(pos == std::string::npos) break;
+        const std::string home = line.substr(pos + 1, line.find(':', pos + 1) - pos - 1);
+        const std::size_t rel = home.find_first_not_of('/');
+        if(rel == std::string::npos) return wslRoot(d.name);
+        return wslRoot(d.name) / fs::u8path(home.substr(rel)).make_preferred();
+    }
+    return wslRoot(d.name) / "home";
+}
+#else
+std::vector<Distro> wslDistros() { return {}; }
+#endif
+
+std::vector<Place> places() {
+    std::vector<Place> out;
+#if defined(_WIN32)
+    const char* home = std::getenv("USERPROFILE");
+#else
+    const char* home = std::getenv("HOME");
+#endif
+    if(home) {
+        const fs::path h = fs::u8path(home);
+        out.push_back({ "Home", h });
+        for(const char* sub : { "Desktop", "Documents", "Downloads", "Pictures" }) {
+            std::error_code ec;
+            if(fs::is_directory(h / sub, ec)) out.push_back({ sub, h / sub });
+        }
+    }
+#if defined(_WIN32)
+    wchar_t drives[256] = {};
+    const DWORD n = GetLogicalDriveStringsW(255, drives);
+    for(const wchar_t* d = drives; d < drives + n && *d; d += std::wcslen(d) + 1) out.push_back({ narrow(d), fs::path(d) });
+#else
+    out.push_back({ "/", fs::path("/") });
+#endif
+    return out;
+}
+
+// \\?\UNC\server\share and \\?\C:\ (what canonical() returns for network paths) back to plain form
+fs::path cleanPath(const fs::path& p) {
+    const std::string s = utf8(p);
+    if(s.rfind("\\\\?\\UNC\\", 0) == 0) return fs::u8path("\\\\" + s.substr(8));
+    if(s.rfind("\\\\?\\", 0) == 0) return fs::u8path(s.substr(4));
+    return p;
+}
+
+bool isWslPath(const fs::path& p) {
+    const std::string s = toLower(utf8(p));
+    return s.rfind("\\\\wsl.localhost\\", 0) == 0 || s.rfind("\\\\wsl$\\", 0) == 0;
+}
+
+// a user-typed or command-line location; on Windows, Linux paths go to the default WSL distro
+fs::path resolveInput(const std::string& in) {
+#if defined(_WIN32)
+    if(!in.empty() && (in[0] == '/' || in[0] == '~')) {
+        const std::vector<Distro> distros = wslDistros();
+        if(!distros.empty()) {
+            const Distro& d = distros.front();
+            if(in[0] == '~') {
+                const std::string rest = in.size() > 2 ? in.substr(2) : std::string();
+                return rest.empty() ? wslHome(d) : wslHome(d) / fs::u8path(rest).make_preferred();
+            }
+            const std::string rest = in.substr(in.find_first_not_of('/') == std::string::npos ? in.size() : in.find_first_not_of('/'));
+            return rest.empty() ? wslRoot(d.name) : wslRoot(d.name) / fs::u8path(rest).make_preferred();
+        }
+    }
+#endif
+    return fs::u8path(in);
+}
 
 std::string extensionOf(const fs::path& p) {
     const std::string e = toLower(utf8(p.extension()));
@@ -433,6 +580,123 @@ Magnum::GL::Texture2D makeTexture(const Pixels& p, bool crispZoom) {
     return texture;
 }
 
+// Clipboard. Windows: a copied image goes out as a bitmap (pastes into chat, slides, Paint) plus the
+// file itself (pastes into Explorer); a pasted bitmap or file list comes back in. Elsewhere only the
+// path is copied, as text.
+#if defined(_WIN32)
+HGLOBAL globalCopy(const void* data, std::size_t n) {
+    HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE, n);
+    if(!h) return nullptr;
+    std::memcpy(GlobalLock(h), data, n);
+    GlobalUnlock(h);
+    return h;
+}
+
+// rgba rows run bottom-up (Magnum's convention), as in a DIB with positive height
+bool copyToClipboard(const Pixels* image, const fs::path& file) {
+    if(!OpenClipboard(nullptr)) return false;
+    EmptyClipboard();
+    if(image && !image->rgba.empty()) {
+        BITMAPINFOHEADER bih = {};
+        bih.biSize = sizeof(bih);
+        bih.biWidth = image->size.x();
+        bih.biHeight = image->size.y();
+        bih.biPlanes = 1;
+        bih.biBitCount = 32;
+        bih.biCompression = BI_RGB;
+        std::vector<std::uint8_t> dib(sizeof(bih) + image->rgba.size());
+        std::memcpy(dib.data(), &bih, sizeof(bih));
+        std::uint8_t* px = dib.data() + sizeof(bih);
+        for(std::size_t i = 0; i < image->rgba.size(); i += 4) {
+            px[i + 0] = image->rgba[i + 2];
+            px[i + 1] = image->rgba[i + 1];
+            px[i + 2] = image->rgba[i + 0];
+            px[i + 3] = image->rgba[i + 3];
+        }
+        if(HGLOBAL h = globalCopy(dib.data(), dib.size())) SetClipboardData(CF_DIB, h);
+    }
+    const std::wstring w = file.wstring();
+    std::vector<std::uint8_t> drop(sizeof(DROPFILES) + (w.size() + 2) * sizeof(wchar_t), 0); // double-NUL list
+    DROPFILES* df = reinterpret_cast<DROPFILES*>(drop.data());
+    df->pFiles = sizeof(DROPFILES);
+    df->fWide = TRUE;
+    std::memcpy(drop.data() + sizeof(DROPFILES), w.c_str(), w.size() * sizeof(wchar_t));
+    if(HGLOBAL h = globalCopy(drop.data(), drop.size())) SetClipboardData(CF_HDROP, h);
+    CloseClipboard();
+    return true;
+}
+
+// a 24/32-bit clipboard bitmap (screenshots, "copy image") as bottom-up RGBA
+bool clipboardImage(Pixels& out) {
+    if(!IsClipboardFormatAvailable(CF_DIB) || !OpenClipboard(nullptr)) return false;
+    bool ok = false;
+    if(HANDLE h = GetClipboardData(CF_DIB)) {
+        const std::uint8_t* base = static_cast<const std::uint8_t*>(GlobalLock(h));
+        const BITMAPINFOHEADER* bih = reinterpret_cast<const BITMAPINFOHEADER*>(base);
+        const int bpp = bih->biBitCount;
+        if(base && (bpp == 24 || bpp == 32) && (bih->biCompression == BI_RGB || bih->biCompression == BI_BITFIELDS)) {
+            const int w = bih->biWidth;
+            const int hgt = std::abs(bih->biHeight);
+            const bool topDown = bih->biHeight < 0;
+            // BITFIELDS with the plain header carries three colour masks after it
+            const std::size_t masks = bih->biCompression == BI_BITFIELDS && bih->biSize == sizeof(BITMAPINFOHEADER) ? 12 : 0;
+            const std::uint8_t* bits = base + bih->biSize + masks;
+            const std::size_t stride = ((static_cast<std::size_t>(w) * bpp + 31) / 32) * 4;
+            out.size = { w, hgt };
+            out.rgba.assign(static_cast<std::size_t>(w) * hgt * 4, 255);
+            bool anyAlpha = false;
+            for(int y = 0; y < hgt; ++y) {
+                const std::uint8_t* row = bits + stride * static_cast<std::size_t>(topDown ? hgt - 1 - y : y);
+                for(int x = 0; x < w; ++x) {
+                    const std::uint8_t* s = row + static_cast<std::size_t>(x) * (bpp / 8);
+                    std::uint8_t* d = &out.rgba[(static_cast<std::size_t>(y) * w + x) * 4];
+                    d[0] = s[2];
+                    d[1] = s[1];
+                    d[2] = s[0];
+                    if(bpp == 32) {
+                        d[3] = s[3];
+                        anyAlpha = anyAlpha || s[3] != 0;
+                    }
+                }
+            }
+            // most 32-bit clipboard bitmaps leave alpha at 0 and mean opaque
+            if(bpp == 32 && !anyAlpha)
+                for(std::size_t i = 3; i < out.rgba.size(); i += 4) out.rgba[i] = 255;
+            ok = w > 0 && hgt > 0;
+        }
+        GlobalUnlock(h);
+    }
+    CloseClipboard();
+    return ok;
+}
+
+std::vector<fs::path> clipboardFiles() {
+    std::vector<fs::path> files;
+    if(!IsClipboardFormatAvailable(CF_HDROP) || !OpenClipboard(nullptr)) return files;
+    if(HANDLE h = GetClipboardData(CF_HDROP)) {
+        HDROP drop = static_cast<HDROP>(GlobalLock(h));
+        const UINT n = drop ? DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0) : 0;
+        for(UINT i = 0; i < n; ++i) {
+            std::wstring name(DragQueryFileW(drop, i, nullptr, 0) + 1, L'\0');
+            DragQueryFileW(drop, i, name.data(), static_cast<UINT>(name.size()));
+            name.resize(name.size() - 1);
+            files.emplace_back(name);
+        }
+        GlobalUnlock(h);
+    }
+    CloseClipboard();
+    return files;
+}
+#endif
+
+// name.ext, or name (2).ext, ... so a paste never overwrites
+fs::path freeName(const fs::path& dir, const std::string& stem, const std::string& ext) {
+    std::error_code ec;
+    fs::path p = dir / fs::u8path(stem + ext);
+    for(int i = 2; fs::exists(p, ec); ++i) p = dir / fs::u8path(stem + " (" + std::to_string(i) + ")" + ext);
+    return p;
+}
+
 struct Job {
     fs::path path;
     std::string key;
@@ -573,6 +837,7 @@ struct Full {
     std::string error;
 };
 
+#if defined(__linux__)
 // formats the clipboard tools (and Windows' Image.FromFile) take as-is
 std::string clipboardMime(const std::string& ext) {
     if(ext == "png") return "image/png";
@@ -582,7 +847,6 @@ std::string clipboardMime(const std::string& ext) {
     return {};
 }
 
-#if defined(__linux__)
 std::string findInPath(const char* name) {
     const char* path = std::getenv("PATH");
     std::stringstream dirs(path ? path : "");
@@ -729,7 +993,6 @@ private:
         _buffer.clear();
     }
 };
-#endif
 
 // SDL2's clipboard is text-only, so images go through the platform's own tool: PowerShell on WSL
 // (WSLg doesn't bridge images), wl-copy on Wayland, xclip on X11. Copies run off the UI thread
@@ -768,9 +1031,7 @@ private:
     std::string _status;
     std::chrono::steady_clock::time_point _when{};
     std::atomic<bool> _busy{ false };
-#if defined(__linux__)
     PowerShell _powershell; // worker thread only
-#endif
 
     std::string copyNow(const fs::path& link) {
         std::error_code ec;
@@ -779,7 +1040,6 @@ private:
         const std::string mime = clipboardMime(extensionOf(file));
         if(mime.empty()) return "copying images supports png, jpg, bmp and gif";
         const std::string done = "copied " + utf8(link.filename());
-#if defined(__linux__)
         if(std::getenv("WSL_DISTRO_NAME")) {
             std::string windowsPath;
             const std::string wslpath = findInPath("wslpath");
@@ -800,11 +1060,9 @@ private:
             return run({ xclip, "-selection", "clipboard", "-t", mime, "-i", file.string() }, nullptr, nullptr) == 0 ? done
                                                                                                                      : "xclip failed";
         return "install wl-clipboard or xclip to copy images";
-#else
-        return "copying images isn't supported on this platform yet";
-#endif
     }
 };
+#endif
 
 enum class SortKey { Name, Date, Size, Type };
 
@@ -843,7 +1101,9 @@ private:
     Full _full;
     Scanner _scanner;
     Worker _worker;
+#if defined(__linux__)
     ImageClipboard _clipboard;
+#endif
     bool _recursive = false;
     bool _imagesOnly = false;
     bool _live = true;
@@ -862,13 +1122,21 @@ private:
     bool _fitOpen = true;
     int _dataX = 0; // lightbox x column, -1 = row index
     bool _logY = false;
+    std::vector<Place> _places = places();
+    std::vector<Distro> _distros = wslDistros();
+    char _pathBuf[1024] = {};
+    bool _focusPath = false;
+    Corrade::PluginManager::Manager<Magnum::Trade::AbstractImporter> _clipImporters; // the worker's lives on its thread
+    std::string _notice;
+    float _noticeTime = 0.0f;
 
     void navigate(fs::path dir) {
         std::error_code ec;
-        fs::path canon = fs::weakly_canonical(dir, ec);
+        fs::path canon = cleanPath(fs::weakly_canonical(dir, ec));
         if(ec) canon = std::move(dir);
         if(!fs::is_directory(canon, ec)) return;
         _root = canon;
+        std::snprintf(_pathBuf, sizeof(_pathBuf), "%s", utf8(_root).c_str());
         _listing = Listing{};
         _listing.root = _root;
         _view.clear();
@@ -894,8 +1162,10 @@ private:
             _viewDirty = true;
         }
         _rescanClock += ImGui::GetIO().DeltaTime;
-        // a flag change while a scan runs is picked up by the next one
-        if((_live && _rescanClock >= 1.0f) || !_scanned) {
+        // a flag change while a scan runs is picked up by the next one. Every listing of a WSL folder
+        // crosses into the VM, so those rescan less often
+        const float interval = isWslPath(_root) ? 3.0f : 1.0f;
+        if((_live && _rescanClock >= interval) || !_scanned) {
             if(!_scanner.busy()) rescan();
         }
     }
@@ -993,16 +1263,108 @@ private:
         _dataX = 0;
     }
 
-    void copyImage(const Item& it) {
-        if(it.kind == Kind::Image)
-            _clipboard.copy(it.path);
-        else
-            _clipboard.report("data files copy as a path: Ctrl+Shift+C");
+    void notify(std::string message) {
+        _notice = std::move(message);
+        _noticeTime = 4.0f;
     }
 
-    void copyPath(const Item& it) {
-        ImGui::SetClipboardText(utf8(it.path).c_str());
-        _clipboard.report("copied path of " + it.name);
+    // the lightbox item, else the selected tile
+    const Item* current() {
+        const int i = indexOf(_open.empty() ? _selected : _open);
+        return i < 0 ? nullptr : &item(i);
+    }
+
+    bool decodeForCopy(const fs::path& path, Pixels& out) {
+        std::error_code ec;
+        fs::path source = fs::canonical(path, ec);
+        if(ec) source = path;
+        Corrade::Containers::Pointer<Magnum::Trade::AbstractImporter> importer = _clipImporters.loadAndInstantiate("AnyImageImporter");
+        if(!importer || !importer->openFile(utf8(source))) return false;
+        Corrade::Containers::Optional<Magnum::Trade::ImageData2D> image = importer->image2D(0);
+        return image && toRgba8(*image, FullSide, out);
+    }
+
+    // Ctrl+C: the image (and the file); Ctrl+Shift+C: the path as text
+    void copy(bool pathOnly) {
+        const Item* it = current();
+        if(!it) return;
+        if(pathOnly) {
+            SDL_SetClipboardText(utf8(it->path).c_str());
+            notify("copied path");
+            return;
+        }
+#if defined(_WIN32)
+        Pixels decoded;
+        const Pixels* image = nullptr;
+        if(it->kind == Kind::Image) {
+            // the lightbox already holds the decoded pixels
+            if(_full.key == it->key && !_full.pixels.rgba.empty())
+                image = &_full.pixels;
+            else if(decodeForCopy(it->path, decoded))
+                image = &decoded;
+        }
+        if(!copyToClipboard(image, it->path))
+            notify("clipboard busy, try again");
+        else if(image)
+            notify("copied image " + std::to_string(image->size.x()) + " x " + std::to_string(image->size.y()));
+        else
+            notify("copied file");
+#elif defined(__linux__)
+        // async; progress shows through _clipboard.status()
+        if(it->kind == Kind::Image) {
+            _clipboard.copy(it->path);
+            return;
+        }
+        SDL_SetClipboardText(utf8(it->path).c_str());
+        notify("copied path");
+#else
+        SDL_SetClipboardText(utf8(it->path).c_str());
+        notify("copied path");
+#endif
+    }
+
+    // Ctrl+V: copied files are copied into this folder; a bitmap is saved here as PNG
+    void paste() {
+#if defined(_WIN32)
+        const std::vector<fs::path> files = clipboardFiles();
+        if(!files.empty()) {
+            int copied = 0;
+            for(const fs::path& f : files) {
+                std::error_code ec;
+                if(!fs::is_regular_file(f, ec)) continue;
+                const fs::path dst = freeName(_root, utf8(f.stem()), utf8(f.extension()));
+                if(fs::copy_file(f, dst, ec)) {
+                    ++copied;
+                    _selected = utf8(dst);
+                }
+            }
+            notify("pasted " + std::to_string(copied) + " file(s)");
+            rescan();
+            return;
+        }
+        Pixels image;
+        if(clipboardImage(image)) {
+            const std::time_t now = std::time(nullptr);
+            char stem[48];
+            std::strftime(stem, sizeof(stem), "pasted %Y-%m-%d %H%M%S", std::localtime(&now));
+            const fs::path dst = freeName(_root, stem, ".png");
+            const Magnum::ImageView2D view{ Magnum::PixelFormat::RGBA8Unorm,
+                image.size,
+                Corrade::Containers::ArrayView<const void>{ image.rgba.data(), image.rgba.size() } };
+            if(smg::save_image(view, utf8(dst))) {
+                _selected = utf8(dst);
+                _scrollToSelected = true;
+                notify("pasted " + utf8(dst.filename()));
+                rescan();
+            } else {
+                notify("could not save " + utf8(dst.filename()));
+            }
+            return;
+        }
+        notify("clipboard has no image or files");
+#else
+        notify("paste is Windows-only for now");
+#endif
     }
 
     void handleKeys() {
@@ -1010,13 +1372,8 @@ private:
         if(io.WantTextInput) return;
         const int n = static_cast<int>(_view.size());
         if(ImGui::IsKeyPressed(ImGuiKey_F5)) rescan();
-        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C)) {
-            const int at = indexOf(_open.empty() ? _selected : _open);
-            if(at >= 0 && io.KeyShift)
-                copyPath(item(at));
-            else if(at >= 0)
-                copyImage(item(at));
-        }
+        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C, false)) copy(io.KeyShift);
+        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_V, false)) paste();
         if(!_open.empty()) {
             const int i = indexOf(_open);
             if(ImGui::IsKeyPressed(ImGuiKey_Escape))
@@ -1051,10 +1408,18 @@ private:
     void drawBreadcrumbs() {
         fs::path acc;
         std::string prev;
+        // MSVC splits \\wsl.localhost\Ubuntu\home as "\\wsl.localhost", "\", "Ubuntu", "home":
+        // show that as "Ubuntu: / home"
+        int skip = isWslPath(_root) ? 2 : 0;
         for(const fs::path& part : _root) {
             acc /= part;
-            const std::string label = utf8(part);
+            std::string label = utf8(part);
             if(label.empty()) continue;
+            if(skip > 0) {
+                --skip;
+                continue;
+            }
+            if(isWslPath(_root) && prev.empty()) label += ":";
             if(!prev.empty()) {
                 ImGui::SameLine(0.0f, 2.0f);
                 // the root button already reads "/"
@@ -1074,7 +1439,43 @@ private:
         }
     }
 
+    void drawPlaces() {
+        if(ImGui::Button("Go to")) ImGui::OpenPopup("##places");
+        if(!ImGui::BeginPopup("##places")) return;
+        for(const Place& p : _places)
+            if(ImGui::MenuItem(p.label.c_str())) navigate(p.path);
+#if defined(_WIN32)
+        if(!_distros.empty()) {
+            ImGui::SeparatorText("WSL");
+            for(const Distro& d : _distros) {
+                ImGui::PushID(d.name.c_str());
+                const std::string home = d.name + (d.isDefault ? "  ~  (default)" : "  ~");
+                // reading the distro's passwd starts it if it is stopped, so only on click
+                if(ImGui::MenuItem(home.c_str())) navigate(wslHome(d));
+                if(ImGui::MenuItem((d.name + "  /").c_str())) navigate(wslRoot(d.name));
+                ImGui::PopID();
+            }
+        }
+#endif
+        ImGui::EndPopup();
+    }
+
+    void drawPathBox() {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1);
+        if(_focusPath) {
+            ImGui::SetKeyboardFocusHere();
+            _focusPath = false;
+        }
+        const char* hint = _distros.empty() ? "path (Ctrl+L)" : "path, or a Linux path like ~/run for WSL (Ctrl+L)";
+        if(ImGui::InputTextWithHint("##path", hint, _pathBuf, sizeof(_pathBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+            navigate(resolveInput(_pathBuf));
+    }
+
     void drawToolbar() {
+        if(ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) _focusPath = true;
+        drawPlaces();
+        drawPathBox();
         drawBreadcrumbs();
 
         const char* sorts[] = { "name", "date", "size", "type" };
@@ -1238,8 +1639,8 @@ private:
             ImGui::EndTooltip();
         }
         if(ImGui::BeginPopup("##menu")) {
-            if(ImGui::MenuItem("Copy image", "Ctrl+C", false, it.kind == Kind::Image)) copyImage(it);
-            if(ImGui::MenuItem("Copy path", "Ctrl+Shift+C")) copyPath(it);
+            if(ImGui::MenuItem(it.kind == Kind::Image ? "Copy image" : "Copy file", "Ctrl+C")) copy(false);
+            if(ImGui::MenuItem("Copy path", "Ctrl+Shift+C")) copy(true);
             ImGui::EndPopup();
         }
         ImGui::PopID();
@@ -1287,8 +1688,7 @@ private:
         ImGui::SameLine();
         if(ImGui::Button("fit")) _fitOpen = true;
         ImGui::SameLine();
-        if(it.kind == Kind::Image && ImGui::Button("copy")) copyImage(it);
-        if(it.kind == Kind::Data && ImGui::Button("copy path")) copyPath(it);
+        if(ImGui::Button("copy")) copy(false);
         ImGui::SetItemTooltip("Ctrl+C image, Ctrl+Shift+C path");
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
@@ -1425,11 +1825,18 @@ private:
             ImGui::SameLine();
             ImGui::TextDisabled("   scanning");
         }
+        if(_noticeTime > 0.0f) {
+            _noticeTime -= ImGui::GetIO().DeltaTime;
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.55f, std::min(1.0f, _noticeTime)), "   %s", _notice.c_str());
+        }
+#if defined(__linux__)
         const std::string clip = _clipboard.status();
         if(!clip.empty()) {
             ImGui::SameLine();
             ImGui::TextDisabled("   %s", clip.c_str());
         }
+#endif
     }
 };
 
@@ -1454,7 +1861,7 @@ int main(int argc, char** argv) {
         else if(a.rfind("--smg-", 0) == 0 || a.rfind("--magnum-", 0) == 0)
             ++i; // skip their values
         else if(a[0] != '-')
-            start = fs::u8path(a);
+            start = resolveInput(a); // on Windows "/home/me/run" or "~/run" opens in WSL
     }
 
     smg::GuiConfig config;
