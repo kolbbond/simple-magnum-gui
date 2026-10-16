@@ -1,5 +1,6 @@
 # generated from cmake/deploy_examples.cmake.in: copies the DLLs the smg examples load into
-# <prefix>/bin at install time. System DLLs (Windows dir, api-ms-*) are left to the OS.
+# <prefix>/bin at install time. System libraries (Windows dir, api-ms-*, /usr and /lib on Unix) are
+# left to the OS; bundled libGL/libdrm/libstdc++ break GPU drivers.
 
 if(POLICY CMP0207)
     cmake_policy(SET CMP0207 NEW)
@@ -14,7 +15,7 @@ file(GET_RUNTIME_DEPENDENCIES
     RESOLVED_DEPENDENCIES_VAR _resolved
     UNRESOLVED_DEPENDENCIES_VAR _unresolved
     PRE_EXCLUDE_REGEXES "^api-ms-" "^ext-ms-" "^(opengl32|glu32|dbghelp)\\.dll$"
-    POST_EXCLUDE_REGEXES "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\]" "[/\\\\]System32[/\\\\]"
+    POST_EXCLUDE_REGEXES "[/\\\\][Ww][Ii][Nn][Dd][Oo][Ww][Ss][/\\\\]" "[/\\\\]System32[/\\\\]" "^/(usr/)?lib(32|64)?/" "^/usr/"
 )
 
 foreach(_dll ${_unresolved})
@@ -23,3 +24,19 @@ endforeach()
 
 file(INSTALL DESTINATION "${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_BINDIR@" TYPE SHARED_LIBRARY
     FOLLOW_SYMLINK_CHAIN FILES ${_resolved})
+
+# ELF copies still carry the build tree's RPATH; point them at each other instead
+if(CMAKE_HOST_UNIX AND NOT CMAKE_HOST_APPLE AND NOT CMAKE_VERSION VERSION_LESS 3.21)
+    foreach(_lib ${_resolved})
+        get_filename_component(_real "${_lib}" REALPATH)
+        get_filename_component(_name "${_real}" NAME)
+        set(_copy "$ENV{DESTDIR}${CMAKE_INSTALL_PREFIX}/@CMAKE_INSTALL_BINDIR@/${_name}")
+        # READ_ELF leaves the variables untouched when there is no entry
+        unset(_runpath)
+        unset(_rpath)
+        file(READ_ELF "${_copy}" RUNPATH _runpath RPATH _rpath)
+        if(_runpath OR _rpath)
+            file(RPATH_SET FILE "${_copy}" NEW_RPATH "$ORIGIN")
+        endif()
+    endforeach()
+endif()
