@@ -18,7 +18,7 @@ endif
 CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
 CMAKE_EXTRA_FLAGS ?=
 
-.PHONY: all configure build clean install test
+.PHONY: all configure build clean install test install-tools uninstall-tools
 
 all: build
 
@@ -42,3 +42,18 @@ install: build
 
 test: build
 	cd $(BUILD_DIR) && ctest --output-on-failure
+
+# example programs as tools: bin/smg-<name> under PREFIX, with private libs in lib/smg-tools
+PREFIX ?= $(HOME)/.local
+TOOLS ?= fview csvplot files diskusage sysinfo
+
+install-tools: build
+	@for t in $(TOOLS); do $(CMAKE) --install $(BUILD_DIR) --component tool-$$t --prefix "$(PREFIX)" || exit 1; done
+
+# removes every smg tool link in PREFIX/bin and the lib/smg-tools they point into
+uninstall-tools:
+	@dir=""; for l in "$(PREFIX)"/bin/*; do \
+		[ -L "$$l" ] || continue; t=$$(readlink "$$l"); \
+		case "$$t" in */smg-tools/bin/*) dir=$$(cd "$$(dirname "$$l")/$$(dirname "$$t")/.." && pwd); rm -f "$$l"; echo "removed $$l";; esac; \
+	done; \
+	if [ -n "$$dir" ] && [ "$$(basename "$$dir")" = smg-tools ]; then rm -rf "$$dir"; echo "removed $$dir"; fi

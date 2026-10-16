@@ -180,6 +180,20 @@ the others rely on threads, the filesystem or OS APIs that a browser doesn't off
 installer: the examples plus every DLL and Magnum plugin they load, runnable on a machine without
 any of the dependencies installed.
 
+### Installing examples as tools (Linux)
+
+```bash
+make install-tools                                  # fview csvplot files diskusage sysinfo -> ~/.local
+make install-tools TOOLS="fview csvplot" PREFIX=/opt/smg
+make uninstall-tools                                # same PREFIX
+```
+
+Each tool installs as `bin/smg-<name>` (a link into `lib/smg-tools/`, which holds private copies of
+the smg/Magnum libraries and plugins), so it keeps working after the build tree is gone and never
+shadows another `bin/<name>`. Under the hood it's one install component per example:
+`cmake --install build --component tool-fview --prefix ~/.local`. `-DSMG_TOOL_PREFIX=` changes the
+name prefix.
+
 ## Acknowledgements
 
 - **Bloom effect** — the `ScenePanel` glow uses

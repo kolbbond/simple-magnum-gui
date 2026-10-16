@@ -8,7 +8,7 @@ if(NOT _smg_examples)
 endif()
 
 # where to look for the examples' DLLs: our own output, every prefix we found packages in, vcpkg
-set(_smg_dll_dirs "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+set(_smg_dll_dirs "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}")
 foreach(_prefix ${CMAKE_PREFIX_PATH})
     file(TO_CMAKE_PATH "${_prefix}" _prefix) # a -D path from cmd.exe has backslashes
     list(APPEND _smg_dll_dirs "${_prefix}/bin" "${_prefix}/lib")
