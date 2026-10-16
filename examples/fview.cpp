@@ -4,7 +4,8 @@
 //   fview [folder | file] [-r] [-i]
 // A file opens its folder with that file in the lightbox.
 // -r includes subfolders, -i shows images only.
-// Keys: Enter or click open, arrows step, Esc close, Backspace up, F5 rescan, Ctrl+wheel tile size.
+// Keys: Enter or click open, arrows step, Esc close, Backspace up, F5 rescan, Ctrl+wheel tile size,
+// Ctrl+C copy image (Ctrl+Shift+C its path); right-click a tile for the same.
 
 #include <algorithm>
 #include <atomic>
@@ -48,6 +49,14 @@
 #include "GuiBase.hh"
 #include "imgui.h"
 #include "implot.h"
+
+#if defined(__linux__)
+#    include <csignal>
+#    include <fcntl.h>
+#    include <poll.h>
+#    include <sys/wait.h>
+#    include <unistd.h>
+#endif
 
 namespace fs = std::filesystem;
 
@@ -564,6 +573,239 @@ struct Full {
     std::string error;
 };
 
+// formats the clipboard tools (and Windows' Image.FromFile) take as-is
+std::string clipboardMime(const std::string& ext) {
+    if(ext == "png") return "image/png";
+    if(ext == "jpg" || ext == "jpeg") return "image/jpeg";
+    if(ext == "bmp") return "image/bmp";
+    if(ext == "gif") return "image/gif";
+    return {};
+}
+
+#if defined(__linux__)
+std::string findInPath(const char* name) {
+    const char* path = std::getenv("PATH");
+    std::stringstream dirs(path ? path : "");
+    for(std::string dir; std::getline(dirs, dir, ':');) {
+        std::string candidate = dir + "/" + name;
+        if(!dir.empty() && access(candidate.c_str(), X_OK) == 0) return candidate;
+    }
+    return {};
+}
+
+std::string base64(const std::string& in) {
+    static const char* table = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+    std::string out;
+    std::uint32_t buffer = 0;
+    int bits = 0;
+    for(const char c : in) {
+        buffer = (buffer << 8) | static_cast<std::uint8_t>(c);
+        bits += 8;
+        while(bits >= 6) {
+            bits -= 6;
+            out += table[(buffer >> bits) & 0x3F];
+        }
+    }
+    if(bits > 0) out += table[(buffer << (6 - bits)) & 0x3F];
+    while(out.size() % 4 != 0) out += '=';
+    return out;
+}
+
+// child with stdin from `input` (or /dev/null), stdout into a pipe when `output` is set; returns its exit code
+int run(const std::vector<std::string>& args, const char* input, std::string* output) {
+    std::vector<char*> argv;
+    argv.reserve(args.size() + 1);
+    for(const std::string& a : args) argv.push_back(const_cast<char*>(a.c_str()));
+    argv.push_back(nullptr);
+    int out[2] = { -1, -1 };
+    if(output && pipe(out) != 0) return -1;
+    const int in = open(input ? input : "/dev/null", O_RDONLY | O_CLOEXEC);
+    if(in < 0) return -1;
+    const pid_t pid = fork();
+    if(pid == 0) {
+        // xclip and wl-copy stay behind to serve the selection: they mustn't hold our stdout/stderr
+        const int null = open("/dev/null", O_WRONLY);
+        dup2(in, STDIN_FILENO);
+        dup2(output ? out[1] : null, STDOUT_FILENO);
+        dup2(null, STDERR_FILENO);
+        execv(argv[0], argv.data());
+        _exit(127);
+    }
+    close(in);
+    if(output) {
+        close(out[1]);
+        char buf[512];
+        for(ssize_t n; (n = read(out[0], buf, sizeof(buf))) > 0;) output->append(buf, static_cast<std::size_t>(n));
+        close(out[0]);
+    }
+    int status = 0;
+    if(pid < 0 || waitpid(pid, &status, 0) < 0) return -1;
+    return WIFEXITED(status) ? WEXITSTATUS(status) : -1;
+}
+
+// one PowerShell kept running: it takes seconds to start, so only the first copy pays for it
+class PowerShell {
+public:
+    ~PowerShell() { stop(); }
+
+    // runs one line, returns the reply ("smg-ok" or "smg-err ...") or an error
+    std::string command(const std::string& line) {
+        if(_pid < 0 && !start()) return "smg-err cannot start powershell.exe";
+        const std::string text = line + "\n";
+        if(write(_in, text.data(), text.size()) != static_cast<ssize_t>(text.size())) {
+            stop();
+            return "smg-err powershell exited";
+        }
+        // first reply waits for startup
+        const std::chrono::steady_clock::time_point deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+        for(;;) {
+            const std::size_t eol = _buffer.find('\n');
+            if(eol != std::string::npos) {
+                std::string reply = _buffer.substr(0, eol);
+                _buffer.erase(0, eol + 1);
+                if(!reply.empty() && reply.back() == '\r') reply.pop_back();
+                if(reply.rfind("smg-", 0) == 0) return reply;
+                continue; // anything else PowerShell printed
+            }
+            const long left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - std::chrono::steady_clock::now()).count();
+            pollfd p{ _out, POLLIN, 0 };
+            char buf[512];
+            const ssize_t n = left > 0 && poll(&p, 1, static_cast<int>(left)) > 0 ? read(_out, buf, sizeof(buf)) : 0;
+            if(n <= 0) {
+                stop();
+                return "smg-err powershell did not answer";
+            }
+            _buffer.append(buf, static_cast<std::size_t>(n));
+        }
+    }
+
+private:
+    pid_t _pid = -1;
+    int _in = -1;
+    int _out = -1;
+    std::string _buffer;
+
+    bool start() {
+        std::string exe = findInPath("powershell.exe");
+        // WSL's appendWindowsPath=false leaves it off PATH
+        if(exe.empty()) exe = "/mnt/c/Windows/System32/WindowsPowerShell/v1.0/powershell.exe";
+        if(access(exe.c_str(), X_OK) != 0) return false;
+        int in[2];
+        int out[2];
+        if(pipe(in) != 0) return false;
+        if(pipe(out) != 0) {
+            close(in[0]);
+            close(in[1]);
+            return false;
+        }
+        const char* argv[] = { exe.c_str(), "-NoProfile", "-NonInteractive", "-STA", "-Command", "-", nullptr };
+        _pid = fork();
+        if(_pid == 0) {
+            dup2(in[0], STDIN_FILENO);
+            dup2(out[1], STDOUT_FILENO);
+            close(in[1]);
+            close(out[0]);
+            execv(argv[0], const_cast<char* const*>(argv));
+            _exit(127);
+        }
+        close(in[0]);
+        close(out[1]);
+        _in = in[1];
+        _out = out[0];
+        fcntl(_in, F_SETFD, FD_CLOEXEC);
+        fcntl(_out, F_SETFD, FD_CLOEXEC);
+        if(_pid < 0) {
+            stop();
+            return false;
+        }
+        return command("Add-Type -AssemblyName System.Windows.Forms,System.Drawing; 'smg-ok'") == "smg-ok";
+    }
+
+    void stop() {
+        if(_in >= 0) close(_in); // PowerShell exits at end of input
+        if(_out >= 0) close(_out);
+        if(_pid > 0) waitpid(_pid, nullptr, 0);
+        _in = _out = _pid = -1;
+        _buffer.clear();
+    }
+};
+#endif
+
+// SDL2's clipboard is text-only, so images go through the platform's own tool: PowerShell on WSL
+// (WSLg doesn't bridge images), wl-copy on Wayland, xclip on X11. Copies run off the UI thread
+class ImageClipboard {
+public:
+    ~ImageClipboard() {
+        if(_thread.joinable()) _thread.join();
+    }
+
+    void copy(const fs::path& file) {
+        if(_busy) return;
+        if(_thread.joinable()) _thread.join();
+        _busy = true;
+        report("copying " + utf8(file.filename()) + "...");
+        _thread = std::thread([this, file]() {
+            report(copyNow(file));
+            _busy = false;
+        });
+    }
+
+    void report(std::string message) {
+        std::lock_guard<std::mutex> lock(_mutex);
+        _status = std::move(message);
+        _when = std::chrono::steady_clock::now();
+    }
+
+    // the last message while it's fresh
+    std::string status() {
+        std::lock_guard<std::mutex> lock(_mutex);
+        return _busy || std::chrono::steady_clock::now() - _when < std::chrono::seconds(5) ? _status : std::string();
+    }
+
+private:
+    std::thread _thread;
+    std::mutex _mutex;
+    std::string _status;
+    std::chrono::steady_clock::time_point _when{};
+    std::atomic<bool> _busy{ false };
+#if defined(__linux__)
+    PowerShell _powershell; // worker thread only
+#endif
+
+    std::string copyNow(const fs::path& link) {
+        std::error_code ec;
+        fs::path file = fs::canonical(link, ec);
+        if(ec) file = link;
+        const std::string mime = clipboardMime(extensionOf(file));
+        if(mime.empty()) return "copying images supports png, jpg, bmp and gif";
+        const std::string done = "copied " + utf8(link.filename());
+#if defined(__linux__)
+        if(std::getenv("WSL_DISTRO_NAME")) {
+            std::string windowsPath;
+            const std::string wslpath = findInPath("wslpath");
+            if(wslpath.empty() || run({ wslpath, "-w", file.string() }, nullptr, &windowsPath) != 0) return "wslpath failed";
+            while(!windowsPath.empty() && (windowsPath.back() == '\n' || windowsPath.back() == '\r')) windowsPath.pop_back();
+            // base64 so no path character can break out of the script
+            const std::string reply = _powershell.command("try { $p = [Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" +
+                base64(windowsPath) +
+                "')); $i = [System.Drawing.Image]::FromFile($p); [System.Windows.Forms.Clipboard]::SetImage($i); $i.Dispose(); 'smg-ok' } "
+                "catch { 'smg-err ' + $_.Exception.Message }");
+            return reply == "smg-ok" ? done : reply.substr(std::min<std::size_t>(reply.size(), 8));
+        }
+        const std::string wlcopy = findInPath("wl-copy");
+        if(std::getenv("WAYLAND_DISPLAY") && !wlcopy.empty())
+            return run({ wlcopy, "--type", mime }, file.c_str(), nullptr) == 0 ? done : "wl-copy failed";
+        const std::string xclip = findInPath("xclip");
+        if(std::getenv("DISPLAY") && !xclip.empty())
+            return run({ xclip, "-selection", "clipboard", "-t", mime, "-i", file.string() }, nullptr, nullptr) == 0 ? done
+                                                                                                                     : "xclip failed";
+        return "install wl-clipboard or xclip to copy images";
+#else
+        return "copying images isn't supported on this platform yet";
+#endif
+    }
+};
+
 enum class SortKey { Name, Date, Size, Type };
 
 class Viewer {
@@ -601,6 +843,7 @@ private:
     Full _full;
     Scanner _scanner;
     Worker _worker;
+    ImageClipboard _clipboard;
     bool _recursive = false;
     bool _imagesOnly = false;
     bool _live = true;
@@ -750,10 +993,30 @@ private:
         _dataX = 0;
     }
 
+    void copyImage(const Item& it) {
+        if(it.kind == Kind::Image)
+            _clipboard.copy(it.path);
+        else
+            _clipboard.report("data files copy as a path: Ctrl+Shift+C");
+    }
+
+    void copyPath(const Item& it) {
+        ImGui::SetClipboardText(utf8(it.path).c_str());
+        _clipboard.report("copied path of " + it.name);
+    }
+
     void handleKeys() {
-        if(ImGui::GetIO().WantTextInput) return;
+        const ImGuiIO& io = ImGui::GetIO();
+        if(io.WantTextInput) return;
         const int n = static_cast<int>(_view.size());
         if(ImGui::IsKeyPressed(ImGuiKey_F5)) rescan();
+        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C)) {
+            const int at = indexOf(_open.empty() ? _selected : _open);
+            if(at >= 0 && io.KeyShift)
+                copyPath(item(at));
+            else if(at >= 0)
+                copyImage(item(at));
+        }
         if(!_open.empty()) {
             const int i = indexOf(_open);
             if(ImGui::IsKeyPressed(ImGuiKey_Escape))
@@ -926,6 +1189,8 @@ private:
         const bool pressed = ImGui::InvisibleButton("##tile", cell);
         const bool hovered = ImGui::IsItemHovered();
         const bool tooltip = ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal);
+        if(ImGui::IsItemClicked(ImGuiMouseButton_Right)) _selected = it.key;
+        ImGui::OpenPopupOnItemClick("##menu", ImGuiPopupFlags_MouseButtonRight);
         ImDrawList* dl = ImGui::GetWindowDrawList();
         dl->AddRectFilled(p0, p1, ImGui::GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 6.0f);
         if(selected) dl->AddRect(p0, p1, ImGui::GetColorU32(ImGuiCol_NavCursor), 6.0f, 0, 2.0f);
@@ -972,6 +1237,11 @@ private:
             if(t.table) ImGui::TextDisabled("%zu rows, %zu columns", t.table->rows, t.table->columns.size());
             ImGui::EndTooltip();
         }
+        if(ImGui::BeginPopup("##menu")) {
+            if(ImGui::MenuItem("Copy image", "Ctrl+C", false, it.kind == Kind::Image)) copyImage(it);
+            if(ImGui::MenuItem("Copy path", "Ctrl+Shift+C")) copyPath(it);
+            ImGui::EndPopup();
+        }
         ImGui::PopID();
         return pressed;
     }
@@ -1016,6 +1286,10 @@ private:
         if(ImGui::Button("close")) _open.clear();
         ImGui::SameLine();
         if(ImGui::Button("fit")) _fitOpen = true;
+        ImGui::SameLine();
+        if(it.kind == Kind::Image && ImGui::Button("copy")) copyImage(it);
+        if(it.kind == Kind::Data && ImGui::Button("copy path")) copyPath(it);
+        ImGui::SetItemTooltip("Ctrl+C image, Ctrl+Shift+C path");
         ImGui::SameLine();
         ImGui::AlignTextToFramePadding();
         ImGui::Text("%s", it.name.c_str());
@@ -1151,12 +1425,21 @@ private:
             ImGui::SameLine();
             ImGui::TextDisabled("   scanning");
         }
+        const std::string clip = _clipboard.status();
+        if(!clip.empty()) {
+            ImGui::SameLine();
+            ImGui::TextDisabled("   %s", clip.c_str());
+        }
     }
 };
 
 } // namespace
 
 int main(int argc, char** argv) {
+#if defined(__linux__)
+    // a PowerShell that died mid-copy must not take us down with SIGPIPE
+    std::signal(SIGPIPE, SIG_IGN);
+#endif
     fs::path start = fs::current_path();
     bool recursive = false;
     bool imagesOnly = false;
