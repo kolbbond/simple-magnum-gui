@@ -15,6 +15,7 @@ Everything they need is in bin/, so the folder can be copied or unzipped anywher
   bin\overlay.exe        transparent always-on-top HUD; drag to move, Ctrl+Alt+O toggles click-through
   bin\visualizer.exe     audio spectrum + waveform from the default input; --wav file.wav, --tone
   bin\files.exe          fast file browser: filter, recursive search, text/image preview
+  bin\fview.exe          results viewer: image/CSV thumbnail grid, zoomable lightbox, live refresh
   bin\csvplot.exe        plot CSV columns: drop files on the window, cursor readout, follow live files
   bin\diskusage.exe      disk usage: size-sorted tree, treemap, biggest file types
 
