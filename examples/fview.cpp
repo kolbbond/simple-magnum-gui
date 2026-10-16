@@ -4,7 +4,9 @@
 //   fview [folder | file] [-r] [-i]
 // A file opens its folder with that file in the lightbox.
 // -r includes subfolders, -i shows images only.
-// Keys: Enter or click open, arrows step, Esc close, Backspace up, F5 rescan, Ctrl+wheel tile size.
+// Keys: Enter or click open, arrows step, Esc close, Backspace up, F5 rescan, Ctrl+wheel tile size,
+// Ctrl+C copy image (+ file), Ctrl+Shift+C copy path, Ctrl+V paste image/files into the folder, Ctrl+L path.
+// On Windows a Linux path (~/run, /home/me/run) opens in WSL.
 
 #include <algorithm>
 #include <atomic>
@@ -49,6 +51,10 @@
 #include "imgui.h"
 #include "implot.h"
 
+#include <SDL_clipboard.h>
+
+#include "Capture.hh"
+
 #if defined(_WIN32)
 #    ifndef NOMINMAX
 #        define NOMINMAX
@@ -57,6 +63,8 @@
 #        define WIN32_LEAN_AND_MEAN
 #    endif
 #    include <windows.h>
+#    include <shellapi.h>
+#    include <shlobj.h> // DROPFILES
 #endif
 
 namespace fs = std::filesystem;
@@ -564,6 +572,123 @@ Magnum::GL::Texture2D makeTexture(const Pixels& p, bool crispZoom) {
     return texture;
 }
 
+// Clipboard. Windows: a copied image goes out as a bitmap (pastes into chat, slides, Paint) plus the
+// file itself (pastes into Explorer); a pasted bitmap or file list comes back in. Elsewhere only the
+// path is copied, as text.
+#if defined(_WIN32)
+HGLOBAL globalCopy(const void* data, std::size_t n) {
+    HGLOBAL h = GlobalAlloc(GMEM_MOVEABLE, n);
+    if(!h) return nullptr;
+    std::memcpy(GlobalLock(h), data, n);
+    GlobalUnlock(h);
+    return h;
+}
+
+// rgba rows run bottom-up (Magnum's convention), as in a DIB with positive height
+bool copyToClipboard(const Pixels* image, const fs::path& file) {
+    if(!OpenClipboard(nullptr)) return false;
+    EmptyClipboard();
+    if(image && !image->rgba.empty()) {
+        BITMAPINFOHEADER bih = {};
+        bih.biSize = sizeof(bih);
+        bih.biWidth = image->size.x();
+        bih.biHeight = image->size.y();
+        bih.biPlanes = 1;
+        bih.biBitCount = 32;
+        bih.biCompression = BI_RGB;
+        std::vector<std::uint8_t> dib(sizeof(bih) + image->rgba.size());
+        std::memcpy(dib.data(), &bih, sizeof(bih));
+        std::uint8_t* px = dib.data() + sizeof(bih);
+        for(std::size_t i = 0; i < image->rgba.size(); i += 4) {
+            px[i + 0] = image->rgba[i + 2];
+            px[i + 1] = image->rgba[i + 1];
+            px[i + 2] = image->rgba[i + 0];
+            px[i + 3] = image->rgba[i + 3];
+        }
+        if(HGLOBAL h = globalCopy(dib.data(), dib.size())) SetClipboardData(CF_DIB, h);
+    }
+    const std::wstring w = file.wstring();
+    std::vector<std::uint8_t> drop(sizeof(DROPFILES) + (w.size() + 2) * sizeof(wchar_t), 0); // double-NUL list
+    DROPFILES* df = reinterpret_cast<DROPFILES*>(drop.data());
+    df->pFiles = sizeof(DROPFILES);
+    df->fWide = TRUE;
+    std::memcpy(drop.data() + sizeof(DROPFILES), w.c_str(), w.size() * sizeof(wchar_t));
+    if(HGLOBAL h = globalCopy(drop.data(), drop.size())) SetClipboardData(CF_HDROP, h);
+    CloseClipboard();
+    return true;
+}
+
+// a 24/32-bit clipboard bitmap (screenshots, "copy image") as bottom-up RGBA
+bool clipboardImage(Pixels& out) {
+    if(!IsClipboardFormatAvailable(CF_DIB) || !OpenClipboard(nullptr)) return false;
+    bool ok = false;
+    if(HANDLE h = GetClipboardData(CF_DIB)) {
+        const std::uint8_t* base = static_cast<const std::uint8_t*>(GlobalLock(h));
+        const BITMAPINFOHEADER* bih = reinterpret_cast<const BITMAPINFOHEADER*>(base);
+        const int bpp = bih->biBitCount;
+        if(base && (bpp == 24 || bpp == 32) && (bih->biCompression == BI_RGB || bih->biCompression == BI_BITFIELDS)) {
+            const int w = bih->biWidth;
+            const int hgt = std::abs(bih->biHeight);
+            const bool topDown = bih->biHeight < 0;
+            // BITFIELDS with the plain header carries three colour masks after it
+            const std::size_t masks = bih->biCompression == BI_BITFIELDS && bih->biSize == sizeof(BITMAPINFOHEADER) ? 12 : 0;
+            const std::uint8_t* bits = base + bih->biSize + masks;
+            const std::size_t stride = ((static_cast<std::size_t>(w) * bpp + 31) / 32) * 4;
+            out.size = { w, hgt };
+            out.rgba.assign(static_cast<std::size_t>(w) * hgt * 4, 255);
+            bool anyAlpha = false;
+            for(int y = 0; y < hgt; ++y) {
+                const std::uint8_t* row = bits + stride * static_cast<std::size_t>(topDown ? hgt - 1 - y : y);
+                for(int x = 0; x < w; ++x) {
+                    const std::uint8_t* s = row + static_cast<std::size_t>(x) * (bpp / 8);
+                    std::uint8_t* d = &out.rgba[(static_cast<std::size_t>(y) * w + x) * 4];
+                    d[0] = s[2];
+                    d[1] = s[1];
+                    d[2] = s[0];
+                    if(bpp == 32) {
+                        d[3] = s[3];
+                        anyAlpha = anyAlpha || s[3] != 0;
+                    }
+                }
+            }
+            // most 32-bit clipboard bitmaps leave alpha at 0 and mean opaque
+            if(bpp == 32 && !anyAlpha)
+                for(std::size_t i = 3; i < out.rgba.size(); i += 4) out.rgba[i] = 255;
+            ok = w > 0 && hgt > 0;
+        }
+        GlobalUnlock(h);
+    }
+    CloseClipboard();
+    return ok;
+}
+
+std::vector<fs::path> clipboardFiles() {
+    std::vector<fs::path> files;
+    if(!IsClipboardFormatAvailable(CF_HDROP) || !OpenClipboard(nullptr)) return files;
+    if(HANDLE h = GetClipboardData(CF_HDROP)) {
+        HDROP drop = static_cast<HDROP>(GlobalLock(h));
+        const UINT n = drop ? DragQueryFileW(drop, 0xFFFFFFFF, nullptr, 0) : 0;
+        for(UINT i = 0; i < n; ++i) {
+            std::wstring name(DragQueryFileW(drop, i, nullptr, 0) + 1, L'\0');
+            DragQueryFileW(drop, i, name.data(), static_cast<UINT>(name.size()));
+            name.resize(name.size() - 1);
+            files.emplace_back(name);
+        }
+        GlobalUnlock(h);
+    }
+    CloseClipboard();
+    return files;
+}
+#endif
+
+// name.ext, or name (2).ext, ... so a paste never overwrites
+fs::path freeName(const fs::path& dir, const std::string& stem, const std::string& ext) {
+    std::error_code ec;
+    fs::path p = dir / fs::u8path(stem + ext);
+    for(int i = 2; fs::exists(p, ec); ++i) p = dir / fs::u8path(stem + " (" + std::to_string(i) + ")" + ext);
+    return p;
+}
+
 struct Job {
     fs::path path;
     std::string key;
@@ -763,6 +888,9 @@ private:
     std::vector<Distro> _distros = wslDistros();
     char _pathBuf[1024] = {};
     bool _focusPath = false;
+    Corrade::PluginManager::Manager<Magnum::Trade::AbstractImporter> _clipImporters; // the worker's lives on its thread
+    std::string _notice;
+    float _noticeTime = 0.0f;
 
     void navigate(fs::path dir) {
         std::error_code ec;
@@ -897,10 +1025,108 @@ private:
         _dataX = 0;
     }
 
+    void notify(std::string message) {
+        _notice = std::move(message);
+        _noticeTime = 4.0f;
+    }
+
+    // the lightbox item, else the selected tile
+    const Item* current() {
+        const int i = indexOf(_open.empty() ? _selected : _open);
+        return i < 0 ? nullptr : &item(i);
+    }
+
+    bool decodeForCopy(const fs::path& path, Pixels& out) {
+        std::error_code ec;
+        fs::path source = fs::canonical(path, ec);
+        if(ec) source = path;
+        Corrade::Containers::Pointer<Magnum::Trade::AbstractImporter> importer = _clipImporters.loadAndInstantiate("AnyImageImporter");
+        if(!importer || !importer->openFile(utf8(source))) return false;
+        Corrade::Containers::Optional<Magnum::Trade::ImageData2D> image = importer->image2D(0);
+        return image && toRgba8(*image, FullSide, out);
+    }
+
+    // Ctrl+C: the image (and the file); Ctrl+Shift+C: the path as text
+    void copy(bool pathOnly) {
+        const Item* it = current();
+        if(!it) return;
+        if(pathOnly) {
+            SDL_SetClipboardText(utf8(it->path).c_str());
+            notify("copied path");
+            return;
+        }
+#if defined(_WIN32)
+        Pixels decoded;
+        const Pixels* image = nullptr;
+        if(it->kind == Kind::Image) {
+            // the lightbox already holds the decoded pixels
+            if(_full.key == it->key && !_full.pixels.rgba.empty())
+                image = &_full.pixels;
+            else if(decodeForCopy(it->path, decoded))
+                image = &decoded;
+        }
+        if(!copyToClipboard(image, it->path))
+            notify("clipboard busy, try again");
+        else if(image)
+            notify("copied image " + std::to_string(image->size.x()) + " x " + std::to_string(image->size.y()));
+        else
+            notify("copied file");
+#else
+        SDL_SetClipboardText(utf8(it->path).c_str());
+        notify("copied path");
+#endif
+    }
+
+    // Ctrl+V: copied files are copied into this folder; a bitmap is saved here as PNG
+    void paste() {
+#if defined(_WIN32)
+        const std::vector<fs::path> files = clipboardFiles();
+        if(!files.empty()) {
+            int copied = 0;
+            for(const fs::path& f : files) {
+                std::error_code ec;
+                if(!fs::is_regular_file(f, ec)) continue;
+                const fs::path dst = freeName(_root, utf8(f.stem()), utf8(f.extension()));
+                if(fs::copy_file(f, dst, ec)) {
+                    ++copied;
+                    _selected = utf8(dst);
+                }
+            }
+            notify("pasted " + std::to_string(copied) + " file(s)");
+            rescan();
+            return;
+        }
+        Pixels image;
+        if(clipboardImage(image)) {
+            const std::time_t now = std::time(nullptr);
+            char stem[48];
+            std::strftime(stem, sizeof(stem), "pasted %Y-%m-%d %H%M%S", std::localtime(&now));
+            const fs::path dst = freeName(_root, stem, ".png");
+            const Magnum::ImageView2D view{ Magnum::PixelFormat::RGBA8Unorm, image.size,
+                Corrade::Containers::ArrayView<const void>{ image.rgba.data(), image.rgba.size() } };
+            if(smg::save_image(view, utf8(dst))) {
+                _selected = utf8(dst);
+                _scrollToSelected = true;
+                notify("pasted " + utf8(dst.filename()));
+                rescan();
+            } else {
+                notify("could not save " + utf8(dst.filename()));
+            }
+            return;
+        }
+        notify("clipboard has no image or files");
+#else
+        notify("paste is Windows-only for now");
+#endif
+    }
+
     void handleKeys() {
         if(ImGui::GetIO().WantTextInput) return;
         const int n = static_cast<int>(_view.size());
         if(ImGui::IsKeyPressed(ImGuiKey_F5)) rescan();
+        const ImGuiIO& io = ImGui::GetIO();
+        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_C, false)) copy(io.KeyShift);
+        if(io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_V, false)) paste();
         if(!_open.empty()) {
             const int i = indexOf(_open);
             if(ImGui::IsKeyPressed(ImGuiKey_Escape))
@@ -1342,6 +1568,11 @@ private:
         if(_scanner.busy()) {
             ImGui::SameLine();
             ImGui::TextDisabled("   scanning");
+        }
+        if(_noticeTime > 0.0f) {
+            _noticeTime -= ImGui::GetIO().DeltaTime;
+            ImGui::SameLine();
+            ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.55f, std::min(1.0f, _noticeTime)), "   %s", _notice.c_str());
         }
     }
 };
