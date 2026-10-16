@@ -49,6 +49,16 @@
 #include "imgui.h"
 #include "implot.h"
 
+#if defined(_WIN32)
+#    ifndef NOMINMAX
+#        define NOMINMAX
+#    endif
+#    ifndef WIN32_LEAN_AND_MEAN
+#        define WIN32_LEAN_AND_MEAN
+#    endif
+#    include <windows.h>
+#endif
+
 namespace fs = std::filesystem;
 
 namespace {
@@ -129,6 +139,136 @@ bool isImageExt(const std::string& e) {
 }
 
 bool isDataExt(const std::string& e) { return e == "csv" || e == "tsv" || e == "dat"; }
+
+// Places: home folders and drives, plus WSL distributions on Windows. A WSL distro's files are the
+// share \\wsl.localhost\<distro>\ (Windows starts the distro on first access), so the native viewer
+// reads them like any folder; Linux paths typed or passed in ("/home/me/run", "~/run") map to it.
+struct Place {
+    std::string label;
+    fs::path path;
+};
+
+struct Distro {
+    std::string name;
+    unsigned uid = 1000;
+    bool isDefault = false;
+};
+
+#if defined(_WIN32)
+std::string narrow(const std::wstring& w) { return fs::path(w).u8string(); }
+
+std::wstring regString(HKEY key, const wchar_t* sub, const wchar_t* value) {
+    wchar_t buf[512] = {};
+    DWORD size = sizeof(buf);
+    if(RegGetValueW(key, sub, value, RRF_RT_REG_SZ, nullptr, buf, &size) != ERROR_SUCCESS) return {};
+    return buf;
+}
+
+// registered distributions, from the registry (no wsl.exe launch)
+std::vector<Distro> wslDistros() {
+    std::vector<Distro> out;
+    const wchar_t* lxss = L"Software\\Microsoft\\Windows\\CurrentVersion\\Lxss";
+    HKEY root = nullptr;
+    if(RegOpenKeyExW(HKEY_CURRENT_USER, lxss, 0, KEY_READ, &root) != ERROR_SUCCESS) return out;
+    const std::wstring defaultId = regString(HKEY_CURRENT_USER, lxss, L"DefaultDistribution");
+    wchar_t id[128];
+    for(DWORD i = 0;; ++i) {
+        DWORD len = 128;
+        if(RegEnumKeyExW(root, i, id, &len, nullptr, nullptr, nullptr, nullptr) != ERROR_SUCCESS) break;
+        Distro d;
+        d.name = narrow(regString(root, id, L"DistributionName"));
+        DWORD uid = 0;
+        DWORD size = sizeof(uid);
+        if(RegGetValueW(root, id, L"DefaultUid", RRF_RT_REG_DWORD, nullptr, &uid, &size) == ERROR_SUCCESS) d.uid = uid;
+        d.isDefault = defaultId == id;
+        if(!d.name.empty()) out.push_back(d);
+    }
+    RegCloseKey(root);
+    std::stable_sort(out.begin(), out.end(), [](const Distro& a, const Distro& b) { return a.isDefault > b.isDefault; });
+    return out;
+}
+
+fs::path wslRoot(const std::string& distro) { return fs::u8path("\\\\wsl.localhost\\" + distro + "\\"); }
+
+// the default user's home, from the distro's own /etc/passwd
+fs::path wslHome(const Distro& d) {
+    std::ifstream passwd(wslRoot(d.name) / "etc" / "passwd");
+    const std::string uid = ":" + std::to_string(d.uid) + ":";
+    for(std::string line; std::getline(passwd, line);) {
+        // name:x:uid:gid:gecos:home:shell
+        const std::size_t first = line.find(':');
+        const std::size_t second = first == std::string::npos ? first : line.find(':', first + 1);
+        if(second == std::string::npos || line.compare(second, uid.size(), uid) != 0) continue;
+        std::size_t pos = 0;
+        for(int field = 0; field < 5 && pos != std::string::npos; ++field) pos = line.find(':', pos + 1);
+        if(pos == std::string::npos) break;
+        const std::string home = line.substr(pos + 1, line.find(':', pos + 1) - pos - 1);
+        const std::size_t rel = home.find_first_not_of('/');
+        if(rel == std::string::npos) return wslRoot(d.name);
+        return wslRoot(d.name) / fs::u8path(home.substr(rel)).make_preferred();
+    }
+    return wslRoot(d.name) / "home";
+}
+#else
+std::vector<Distro> wslDistros() { return {}; }
+#endif
+
+std::vector<Place> places() {
+    std::vector<Place> out;
+#if defined(_WIN32)
+    const char* home = std::getenv("USERPROFILE");
+#else
+    const char* home = std::getenv("HOME");
+#endif
+    if(home) {
+        const fs::path h = fs::u8path(home);
+        out.push_back({ "Home", h });
+        for(const char* sub : { "Desktop", "Documents", "Downloads", "Pictures" }) {
+            std::error_code ec;
+            if(fs::is_directory(h / sub, ec)) out.push_back({ sub, h / sub });
+        }
+    }
+#if defined(_WIN32)
+    wchar_t drives[256] = {};
+    const DWORD n = GetLogicalDriveStringsW(255, drives);
+    for(const wchar_t* d = drives; d < drives + n && *d; d += std::wcslen(d) + 1) out.push_back({ narrow(d), fs::path(d) });
+#else
+    out.push_back({ "/", fs::path("/") });
+#endif
+    return out;
+}
+
+// \\?\UNC\server\share and \\?\C:\ (what canonical() returns for network paths) back to plain form
+fs::path cleanPath(const fs::path& p) {
+    const std::string s = utf8(p);
+    if(s.rfind("\\\\?\\UNC\\", 0) == 0) return fs::u8path("\\\\" + s.substr(8));
+    if(s.rfind("\\\\?\\", 0) == 0) return fs::u8path(s.substr(4));
+    return p;
+}
+
+bool isWslPath(const fs::path& p) {
+    const std::string s = toLower(utf8(p));
+    return s.rfind("\\\\wsl.localhost\\", 0) == 0 || s.rfind("\\\\wsl$\\", 0) == 0;
+}
+
+// a user-typed or command-line location; on Windows, Linux paths go to the default WSL distro
+fs::path resolveInput(const std::string& in) {
+#if defined(_WIN32)
+    if(!in.empty() && (in[0] == '/' || in[0] == '~')) {
+        const std::vector<Distro> distros = wslDistros();
+        if(!distros.empty()) {
+            const Distro& d = distros.front();
+            if(in[0] == '~') {
+                const std::string rest = in.size() > 2 ? in.substr(2) : std::string();
+                return rest.empty() ? wslHome(d) : wslHome(d) / fs::u8path(rest).make_preferred();
+            }
+            const std::string rest = in.substr(in.find_first_not_of('/') == std::string::npos ? in.size() : in.find_first_not_of('/'));
+            return rest.empty() ? wslRoot(d.name) : wslRoot(d.name) / fs::u8path(rest).make_preferred();
+        }
+    }
+#endif
+    return fs::u8path(in);
+}
 
 std::string extensionOf(const fs::path& p) {
     const std::string e = toLower(utf8(p.extension()));
@@ -619,13 +759,18 @@ private:
     bool _fitOpen = true;
     int _dataX = 0; // lightbox x column, -1 = row index
     bool _logY = false;
+    std::vector<Place> _places = places();
+    std::vector<Distro> _distros = wslDistros();
+    char _pathBuf[1024] = {};
+    bool _focusPath = false;
 
     void navigate(fs::path dir) {
         std::error_code ec;
-        fs::path canon = fs::weakly_canonical(dir, ec);
+        fs::path canon = cleanPath(fs::weakly_canonical(dir, ec));
         if(ec) canon = std::move(dir);
         if(!fs::is_directory(canon, ec)) return;
         _root = canon;
+        std::snprintf(_pathBuf, sizeof(_pathBuf), "%s", utf8(_root).c_str());
         _listing = Listing{};
         _listing.root = _root;
         _view.clear();
@@ -651,8 +796,10 @@ private:
             _viewDirty = true;
         }
         _rescanClock += ImGui::GetIO().DeltaTime;
-        // a flag change while a scan runs is picked up by the next one
-        if((_live && _rescanClock >= 1.0f) || !_scanned) {
+        // a flag change while a scan runs is picked up by the next one. Every listing of a WSL folder
+        // crosses into the VM, so those rescan less often
+        const float interval = isWslPath(_root) ? 3.0f : 1.0f;
+        if((_live && _rescanClock >= interval) || !_scanned) {
             if(!_scanner.busy()) rescan();
         }
     }
@@ -788,10 +935,18 @@ private:
     void drawBreadcrumbs() {
         fs::path acc;
         std::string prev;
+        // MSVC splits \\wsl.localhost\Ubuntu\home as "\\wsl.localhost", "\", "Ubuntu", "home":
+        // show that as "Ubuntu: / home"
+        int skip = isWslPath(_root) ? 2 : 0;
         for(const fs::path& part : _root) {
             acc /= part;
-            const std::string label = utf8(part);
+            std::string label = utf8(part);
             if(label.empty()) continue;
+            if(skip > 0) {
+                --skip;
+                continue;
+            }
+            if(isWslPath(_root) && prev.empty()) label += ":";
             if(!prev.empty()) {
                 ImGui::SameLine(0.0f, 2.0f);
                 // the root button already reads "/"
@@ -811,7 +966,44 @@ private:
         }
     }
 
+    void drawPlaces() {
+        if(ImGui::Button("Go to"))
+            ImGui::OpenPopup("##places");
+        if(!ImGui::BeginPopup("##places")) return;
+        for(const Place& p : _places)
+            if(ImGui::MenuItem(p.label.c_str())) navigate(p.path);
+#if defined(_WIN32)
+        if(!_distros.empty()) {
+            ImGui::SeparatorText("WSL");
+            for(const Distro& d : _distros) {
+                ImGui::PushID(d.name.c_str());
+                const std::string home = d.name + (d.isDefault ? "  ~  (default)" : "  ~");
+                // reading the distro's passwd starts it if it is stopped, so only on click
+                if(ImGui::MenuItem(home.c_str())) navigate(wslHome(d));
+                if(ImGui::MenuItem((d.name + "  /").c_str())) navigate(wslRoot(d.name));
+                ImGui::PopID();
+            }
+        }
+#endif
+        ImGui::EndPopup();
+    }
+
+    void drawPathBox() {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-1);
+        if(_focusPath) {
+            ImGui::SetKeyboardFocusHere();
+            _focusPath = false;
+        }
+        const char* hint = _distros.empty() ? "path (Ctrl+L)" : "path, or a Linux path like ~/run for WSL (Ctrl+L)";
+        if(ImGui::InputTextWithHint("##path", hint, _pathBuf, sizeof(_pathBuf), ImGuiInputTextFlags_EnterReturnsTrue))
+            navigate(resolveInput(_pathBuf));
+    }
+
     void drawToolbar() {
+        if(ImGui::GetIO().KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L)) _focusPath = true;
+        drawPlaces();
+        drawPathBox();
         drawBreadcrumbs();
 
         const char* sorts[] = { "name", "date", "size", "type" };
@@ -1171,7 +1363,7 @@ int main(int argc, char** argv) {
         else if(a.rfind("--smg-", 0) == 0 || a.rfind("--magnum-", 0) == 0)
             ++i; // skip their values
         else if(a[0] != '-')
-            start = fs::u8path(a);
+            start = resolveInput(a); // on Windows "/home/me/run" or "~/run" opens in WSL
     }
 
     smg::GuiConfig config;
