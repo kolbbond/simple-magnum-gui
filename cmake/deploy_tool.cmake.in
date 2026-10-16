@@ -1,0 +1,44 @@
+# generated from cmake/deploy_tool.cmake.in: private copies of the libraries and Magnum plugins one
+# tool loads, into <prefix>/@SMG_TOOLS_DIR@. Re-running for each tool is cheap: unchanged files are
+# skipped. System libraries stay with the OS; bundled libGL/libdrm/libstdc++ break GPU drivers.
+
+set(_dest "${CMAKE_INSTALL_PREFIX}/@SMG_TOOLS_DIR@")
+
+file(GET_RUNTIME_DEPENDENCIES
+    EXECUTABLES "@SMG_DEPLOY_EXECUTABLE@"
+    DIRECTORIES @SMG_DEPLOY_DIRECTORIES@
+    RESOLVED_DEPENDENCIES_VAR _resolved
+    UNRESOLVED_DEPENDENCIES_VAR _unresolved
+    POST_EXCLUDE_REGEXES "^/(usr/)?lib(32|64)?/" "^/usr/"
+)
+foreach(_lib ${_unresolved})
+    message(WARNING "smg tools: could not find ${_lib}; the tool may not start")
+endforeach()
+
+file(INSTALL DESTINATION "${_dest}" TYPE SHARED_LIBRARY FOLLOW_SYMLINK_CHAIN FILES ${_resolved})
+
+set(_plugin_dir "@SMG_DEPLOY_PLUGIN_DIR@")
+if(_plugin_dir)
+    # Magnum looks for plugins in magnum/ beside its own libraries
+    file(INSTALL "${_plugin_dir}/" DESTINATION "${_dest}/magnum" FILES_MATCHING PATTERN "*.so" PATTERN "*.conf")
+endif()
+
+# the copies still carry the build tree's RPATH; point them at each other instead
+function(_smg_rpath file rpath)
+    # READ_ELF leaves the variables untouched when there is no entry
+    unset(_runpath)
+    unset(_rpath)
+    file(READ_ELF "${file}" RUNPATH _runpath RPATH _rpath)
+    if((_runpath OR _rpath) AND NOT CMAKE_VERSION VERSION_LESS 3.21)
+        file(RPATH_SET FILE "${file}" NEW_RPATH "${rpath}")
+    endif()
+endfunction()
+foreach(_lib ${_resolved})
+    get_filename_component(_real "${_lib}" REALPATH)
+    get_filename_component(_name "${_real}" NAME)
+    _smg_rpath("$ENV{DESTDIR}${_dest}/${_name}" "$ORIGIN")
+endforeach()
+file(GLOB_RECURSE _plugins "$ENV{DESTDIR}${_dest}/magnum/*.so")
+foreach(_p ${_plugins})
+    _smg_rpath("${_p}" "$ORIGIN/../..")
+endforeach()
