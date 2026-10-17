@@ -2,7 +2,7 @@
 // Drag the panel to move it. Click-through lets the mouse reach the windows below; while it is on
 // the overlay can't be clicked, so Ctrl+Alt+O (a global hotkey, Windows) toggles it back. Wayland has
 // no global hotkeys for clients: SIGUSR1 toggles instead, e.g. in hyprland.conf
-//   bind = CTRL ALT, O, exec, pkill -USR1 -f smg-overlay
+//   bind = CTRL ALT, O, exec, pkill -USR1 -x 'smg-overlay|overlay'
 //   overlay [--pos X Y] [--click-through]
 
 #include <chrono>
