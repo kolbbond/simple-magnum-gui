@@ -1,6 +1,8 @@
 // desktop overlay: a transparent, borderless, always-on-top HUD (clock, CPU load, FPS).
 // Drag the panel to move it. Click-through lets the mouse reach the windows below; while it is on
-// the overlay can't be clicked, so Ctrl+Alt+O (a global hotkey, Windows) toggles it back.
+// the overlay can't be clicked, so Ctrl+Alt+O (a global hotkey, Windows) toggles it back. Wayland has
+// no global hotkeys for clients: SIGUSR1 toggles instead, e.g. in hyprland.conf
+//   bind = CTRL ALT, O, exec, pkill -USR1 -f smg-overlay
 //   overlay [--pos X Y] [--click-through]
 
 #include <chrono>
@@ -28,6 +30,7 @@
 #    endif
 #    include <windows.h>
 #else
+#    include <csignal>
 #    include <fstream>
 #    include <sstream>
 #endif
@@ -84,6 +87,10 @@ bool g_hotkeyPressed = false;
 void SDLCALL messageHook(void*, void*, unsigned int message, Uint64 wParam, Sint64) {
     if(message == WM_HOTKEY && wParam == HotkeyId) g_hotkeyPressed = true;
 }
+#else
+volatile std::sig_atomic_t g_toggleSignal = 0;
+
+void onToggleSignal(int) { g_toggleSignal = 1; }
 #endif
 
 // widgets the OS must not treat as drag handle, in ImGui coordinates, refreshed every frame
@@ -147,6 +154,7 @@ int main(int argc, char** argv) {
     const bool hotkey = RegisterHotKey(nullptr, HotkeyId, MOD_CONTROL | MOD_ALT | MOD_NOREPEAT, 'O') != 0;
     SDL_SetWindowsMessageHook(messageHook, nullptr);
 #else
+    std::signal(SIGUSR1, onToggleSignal);
     const bool hotkey = false;
 #endif
 
@@ -165,6 +173,11 @@ int main(int argc, char** argv) {
             g_hotkeyPressed = false;
             gui.set_click_through(!gui.click_through());
         }
+#else
+        if(g_toggleSignal) {
+            g_toggleSignal = 0;
+            gui.set_click_through(!gui.click_through());
+        }
 #endif
         accum += gui.dt();
         if(accum >= 0.5f) {
@@ -181,7 +194,8 @@ int main(int argc, char** argv) {
         ImGui::SetNextWindowSize(viewport->WorkSize);
         ImGui::SetNextWindowBgAlpha(gui.transparent() ? 0.55f : 1.0f);
         ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 14.0f);
-        ImGui::Begin("##overlay", nullptr,
+        ImGui::Begin("##overlay",
+            nullptr,
             ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking);
         ImGui::PopStyleVar();
 
@@ -194,14 +208,16 @@ int main(int argc, char** argv) {
         ImGui::SameLine(ImGui::GetWindowWidth() - 36.0f);
         if(ImGui::SmallButton("x")) gui.exit();
         drag.widgets.clear();
-        drag.widgets.push_back(ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
+        drag.widgets.push_back(
+            ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
 
         ImGui::Text("CPU %3.0f %%   %.0f fps", load, ImGui::GetIO().Framerate);
         ImPlot::PushStyleColor(ImPlotCol_FrameBg, ImVec4(0, 0, 0, 0));
         ImPlot::PushStyleColor(ImPlotCol_PlotBg, ImVec4(0, 0, 0, 0));
-        if(ImPlot::BeginPlot("##cpu", ImVec2(-1, 80),
-               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText
-                   | ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) {
+        if(ImPlot::BeginPlot("##cpu",
+               ImVec2(-1, 80),
+               ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect | ImPlotFlags_NoMouseText |
+                   ImPlotFlags_NoInputs | ImPlotFlags_NoFrame)) {
             ImPlot::SetupAxes(nullptr, nullptr, ImPlotAxisFlags_NoDecorations, ImPlotAxisFlags_NoDecorations);
             ImPlot::SetupAxisLimits(ImAxis_X1, -(HistoryLength - 1), 0.0, ImPlotCond_Always);
             ImPlot::SetupAxisLimits(ImAxis_Y1, 0.0, 100.0, ImPlotCond_Always);
@@ -215,10 +231,11 @@ int main(int argc, char** argv) {
 
         bool clickThrough = gui.click_through();
         if(ImGui::Checkbox("click-through", &clickThrough)) gui.set_click_through(clickThrough);
-        drag.widgets.push_back(ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
+        drag.widgets.push_back(
+            ImVec4(ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y, ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y));
         drag.imguiSize = ImGui::GetIO().DisplaySize;
         ImGui::SameLine();
-        ImGui::TextDisabled(hotkey ? "Ctrl+Alt+O toggles" : "(no global hotkey here)");
+        ImGui::TextDisabled(hotkey ? "Ctrl+Alt+O toggles" : "SIGUSR1 toggles");
 
         ImGui::End();
         return 0;

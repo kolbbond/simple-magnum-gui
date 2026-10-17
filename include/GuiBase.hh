@@ -4,6 +4,7 @@
 #include <chrono>
 #include <string>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 // magnum includes
@@ -49,7 +50,8 @@ struct GuiConfig {
     long max_frames = 0; // exit after this many frames; 0 = until closed. `--smg-frames N` overrides
 
     // desktop overlays. transparent: the window is blended by the framebuffer alpha, which drawBegin
-    // clears to 0, so only what you draw shows (Windows; elsewhere the window stays opaque)
+    // clears to 0, so only what you draw shows (Windows, and Linux through sdl2-compat; elsewhere the
+    // window stays opaque). On Hyprland, borderless or always-on-top windows float, and on-top pins
     bool transparent = false;
     bool borderless = false;
     bool always_on_top = false;
@@ -96,6 +98,15 @@ protected:
 
     bool _transparent = false; // window actually composited by alpha
     bool _click_through = false;
+
+    // placement only the compositor can do (Wayland), applied once the window is mapped
+    bool _wm_float = false;
+    bool _wm_on_top = false;
+    bool _wm_borderless = false;
+    Magnum::Vector2i _wm_size;
+    int _wm_frames = 0;
+    bool _wm_applied = false;
+    Corrade::Containers::Optional<std::pair<int, int>> _wm_pos;
 
     // hidden mode target, plus pending captures (taken at the end of a frame)
     Corrade::Containers::Optional<Magnum::GL::Renderbuffer> _offscreen_color;
@@ -159,7 +170,7 @@ public:
     void set_window_size(int x, int y);
 
     // mouse input goes to whatever is below the window; the window then gets no mouse events,
-    // so pair it with a way back (a global hotkey, a tray icon). false where unsupported (non-Windows)
+    // so pair it with a way back (a global hotkey, a tray icon). false where unsupported (X11, macOS)
     bool set_click_through(bool on);
     [[nodiscard]] bool click_through() const { return _click_through; }
     [[nodiscard]] bool transparent() const { return _transparent; }
