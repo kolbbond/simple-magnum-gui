@@ -205,9 +205,14 @@ void ScenePanel::render_scene(const Magnum::Vector2i& size) {
 }
 
 void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
-    (void)image_size;
-    if(!ImGui::IsItemHovered()) return;
+    // an invisible button over the image owns the drag: the host window no longer moves with it, and a drag that
+    // started elsewhere (title bar, another widget) never reaches the camera
+    ImGui::SetCursorScreenPos(ImVec2{ _image_min.x(), _image_min.y() });
+    ImGui::InvisibleButton("##scene_input", ImVec2{ image_size.x(), image_size.y() },
+        ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
     const ImGuiIO& io = ImGui::GetIO();
+    if(ImGui::IsItemHovered() && io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
+    if(!ImGui::IsItemActive()) return;
     const float dx = io.MouseDelta.x;
     const float dy = io.MouseDelta.y;
     if(ImGui::IsMouseDragging(ImGuiMouseButton_Left))
@@ -216,7 +221,6 @@ void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
         _camera.pan(dx, dy);
     else if(ImGui::IsMouseDragging(ImGuiMouseButton_Right))
         _camera.zoom(-dy * 0.1f);
-    if(io.MouseWheel != 0.0f) _camera.zoom(io.MouseWheel);
 }
 
 void ScenePanel::draw_section_controls() {
