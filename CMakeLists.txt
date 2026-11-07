@@ -211,6 +211,18 @@ else()
     target_link_libraries(smg PUBLIC Magnum::Sdl2Application)
     if(WIN32)
         target_link_libraries(smg PRIVATE dwmapi) # transparent windows
+    elseif(UNIX AND NOT APPLE)
+        # click-through on Wayland (an empty input region); optional
+        find_package(PkgConfig QUIET)
+        if(PkgConfig_FOUND)
+            pkg_check_modules(WAYLAND_CLIENT QUIET wayland-client)
+        endif()
+        if(WAYLAND_CLIENT_FOUND)
+            # by name, not an imported target: a static smg exports its link line to consumers
+            target_include_directories(smg PRIVATE ${WAYLAND_CLIENT_INCLUDE_DIRS})
+            target_link_libraries(smg PRIVATE wayland-client)
+            target_compile_definitions(smg PRIVATE SMG_HAVE_WAYLAND)
+        endif()
     endif()
 endif()
 

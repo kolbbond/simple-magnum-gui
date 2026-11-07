@@ -60,8 +60,10 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     bool hidden_flag = false;
     std::vector<char*> argv;
     for(int i = 0; i < arguments.argc; ++i) {
-        if(std::strcmp(arguments.argv[i], "--smg-hidden") == 0) hidden_flag = true;
-        else argv.push_back(arguments.argv[i]);
+        if(std::strcmp(arguments.argv[i], "--smg-hidden") == 0)
+            hidden_flag = true;
+        else
+            argv.push_back(arguments.argv[i]);
     }
     args.parse(static_cast<int>(argv.size()), argv.data());
     const long frames_flag = args.value<long>("frames");
@@ -77,6 +79,11 @@ GuiBase::GuiBase(const Arguments& arguments, const GuiConfig& config)
     if(config.borderless) flags |= Configuration::WindowFlag::Borderless;
     if(config.always_on_top) flags |= Configuration::WindowFlag::AlwaysOnTop;
     if(hidden) flags |= Configuration::WindowFlag::Hidden;
+    if(config.transparent) flags |= Configuration::WindowFlag(detail::transparent_window_flags());
+    _wm_float = !hidden && (config.borderless || config.always_on_top);
+    _wm_size = config.size;
+    _wm_on_top = config.always_on_top;
+    _wm_borderless = config.borderless;
 #endif
     conf.setWindowFlags(flags);
     conf.setSize(config.size);
@@ -248,8 +255,10 @@ just enable blending and scissor test in the constructor. */
     GL::Renderer::setBlendEquation(GL::Renderer::BlendEquation::Add, GL::Renderer::BlendEquation::Add);
     if(_transparent) {
         // alpha accumulates coverage, so over the cleared (0,0,0,0) the result is premultiplied, as DWM expects
-        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha,
-            GL::Renderer::BlendFunction::One, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
+        GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha,
+            GL::Renderer::BlendFunction::OneMinusSourceAlpha,
+            GL::Renderer::BlendFunction::One,
+            GL::Renderer::BlendFunction::OneMinusSourceAlpha);
     } else {
         GL::Renderer::setBlendFunction(GL::Renderer::BlendFunction::SourceAlpha, GL::Renderer::BlendFunction::OneMinusSourceAlpha);
     }
@@ -292,6 +301,16 @@ void GuiBase::drawEvent() {
     draw_callbacks();
     capture_pending(false); // shots without the UI
     drawEnd();
+
+#if !defined(CORRADE_TARGET_EMSCRIPTEN)
+    // the compositor maps the window a frame or two after the first swap; only then can it be placed
+    if(_wm_frames < 3) ++_wm_frames;
+    if(_wm_frames == 3 && !_wm_applied) {
+        _wm_applied = true;
+        if(_wm_float) detail::compositor_float(_window, _wm_size.x(), _wm_size.y(), _wm_on_top, _wm_borderless);
+        if(_wm_pos) detail::compositor_move(_window, _wm_pos->first, _wm_pos->second);
+    }
+#endif
 
     if(_max_frames > 0 && ++_frames >= _max_frames) exit();
 }
@@ -406,7 +425,13 @@ void GuiBase::set_window_icon(const std::string& icon_file) {
 
 SDL_Window* GuiBase::get_window() const { return _window; }
 
-void GuiBase::set_window_position(int x, int y) { SDL_SetWindowPosition(_window, x, y); }
+void GuiBase::set_window_position(int x, int y) {
+    SDL_SetWindowPosition(_window, x, y);
+    if(!_wm_applied)
+        _wm_pos = std::make_pair(x, y);
+    else
+        detail::compositor_move(_window, x, y);
+}
 
 void GuiBase::set_window_size(int w, int h) { SDL_SetWindowSize(_window, w, h); }
 

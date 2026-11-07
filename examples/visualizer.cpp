@@ -1,4 +1,5 @@
-// minimal music visualizer: SDL2 audio -> Hann-windowed FFT -> log-spaced bars, waveform, radial ring.
+// minimal music visualizer: SDL2 audio -> Hann-windowed FFT -> log-spaced bars or radial ring, over a
+// plot of the raw signal (last 10 ms .. 2 s, min/max per pixel when zoomed out) with RMS and peak in dBFS.
 //   visualizer                 default capture device (mic / line in)
 //   visualizer --wav song.wav  plays the file and shows it
 //   visualizer --tone          silent synthetic sweep, no audio device needed
@@ -16,17 +17,20 @@
 
 #include "GuiBase.hh"
 #include "imgui.h"
+#include "implot.h"
 
 namespace {
 
 constexpr int FftSize = 2048;
 constexpr int BarCount = 64;
 constexpr int SampleRate = 48000;
+constexpr int HistorySamples = SampleRate * 2; // longest signal span shown
+constexpr int SignalPoints = 2000; // plotted per span; longer spans fold into min/max
 constexpr float Pi = 3.14159265358979f;
 
 // fixed-size ring the audio thread writes and the UI reads (under SDL_LockAudioDevice)
 struct Ring {
-    std::vector<float> data = std::vector<float>(FftSize * 2, 0.0f);
+    std::vector<float> data = std::vector<float>(HistorySamples, 0.0f);
     std::size_t head = 0;
     void push(const float* s, int n) {
         for(int i = 0; i < n; ++i) {
@@ -119,8 +123,10 @@ int main(int argc, char** argv) {
     std::string wav;
     bool tone = false;
     for(int i = 1; i < argc; ++i) {
-        if(std::strcmp(argv[i], "--wav") == 0 && i + 1 < argc) wav = argv[++i];
-        else if(std::strcmp(argv[i], "--tone") == 0) tone = true;
+        if(std::strcmp(argv[i], "--wav") == 0 && i + 1 < argc)
+            wav = argv[++i];
+        else if(std::strcmp(argv[i], "--tone") == 0)
+            tone = true;
     }
 
     smg::GuiConfig config;
@@ -152,7 +158,8 @@ int main(int argc, char** argv) {
             device = SDL_OpenAudioDevice(nullptr, 1, &want, nullptr, 0);
             source = "default input device";
         }
-        if(device) SDL_PauseAudioDevice(device, 0);
+        if(device)
+            SDL_PauseAudioDevice(device, 0);
         else {
             std::fprintf(stderr, "no audio device (%s); using the synthetic sweep\n", SDL_GetError());
             tone = true;
@@ -163,6 +170,9 @@ int main(int argc, char** argv) {
     std::vector<float> window(FftSize);
     for(int i = 0; i < FftSize; ++i) window[i] = 0.5f - 0.5f * std::cos(2.0f * Pi * static_cast<float>(i) / (FftSize - 1));
     std::vector<float> samples;
+    std::vector<float> signal; // newest `span`, raw (no gain)
+    std::vector<float> sigX, sigLo, sigHi;
+    float spanMs = 50.0f;
     std::vector<std::complex<float>> spectrum(FftSize);
     std::vector<float> bars(BarCount, 0.0f), peaks(BarCount, 0.0f);
     float gain = 1.0f;
@@ -174,6 +184,7 @@ int main(int argc, char** argv) {
 
     gui.add_callback([&]() {
         const float dt = std::max(gui.dt(), 1.0f / 1000.0f);
+        const int span = std::clamp(static_cast<int>(spanMs * SampleRate / 1000.0f), 64, HistorySamples);
 
         if(tone) {
             // a sweep 60 Hz -> 8 kHz every 6 s plus a pulsing kick, generated at the frame rate
@@ -188,10 +199,35 @@ int main(int argc, char** argv) {
             }
             audio.ring.push(chunk.data(), n);
             audio.ring.latest(samples, FftSize);
+            audio.ring.latest(signal, span);
         } else {
             SDL_LockAudioDevice(device);
             audio.ring.latest(samples, FftSize);
+            audio.ring.latest(signal, span);
             SDL_UnlockAudioDevice(device);
+        }
+
+        // RMS and peak over the shown span; then fold it into at most SignalPoints min/max pairs
+        double sumSq = 0.0;
+        float peakAbs = 0.0f;
+        for(float v : signal) {
+            sumSq += static_cast<double>(v) * v;
+            peakAbs = std::max(peakAbs, std::abs(v));
+        }
+        const float rmsDb = 10.0f * std::log10(static_cast<float>(sumSq / span) + 1e-12f);
+        const float peakDb = 20.0f * std::log10(peakAbs + 1e-6f);
+        const int points = std::min(span, SignalPoints);
+        sigX.resize(points);
+        sigLo.resize(points);
+        sigHi.resize(points);
+        for(int p = 0; p < points; ++p) {
+            const int i0 = static_cast<int>(static_cast<long>(p) * span / points);
+            const int i1 = std::max(i0 + 1, static_cast<int>(static_cast<long>(p + 1) * span / points));
+            const std::vector<float>::const_iterator first = signal.begin() + i0;
+            const std::vector<float>::const_iterator last = signal.begin() + i1;
+            sigLo[p] = *std::min_element(first, last);
+            sigHi[p] = *std::max_element(first, last);
+            sigX[p] = 1000.0f * static_cast<float>(i0 - span) / SampleRate;
         }
 
         for(int i = 0; i < FftSize; ++i) spectrum[i] = samples[i] * window[i];
@@ -224,8 +260,10 @@ int main(int argc, char** argv) {
         const ImGuiViewport* viewport = ImGui::GetMainViewport();
         ImGui::SetNextWindowPos(viewport->WorkPos);
         ImGui::SetNextWindowSize(viewport->WorkSize);
-        ImGui::Begin("##viz", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings
-                | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoScrollbar);
+        ImGui::Begin("##viz",
+            nullptr,
+            ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking |
+                ImGuiWindowFlags_NoScrollbar);
         ImGui::Text("%s   peak %5.0f Hz", source.c_str(), peakHz);
         ImGui::SameLine();
         ImGui::RadioButton("bars", &mode, 0);
@@ -234,13 +272,16 @@ int main(int argc, char** argv) {
         ImGui::SameLine();
         ImGui::SetNextItemWidth(160.0f);
         ImGui::SliderFloat("gain", &gain, 0.1f, 20.0f, "%.1f", ImGuiSliderFlags_Logarithmic);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(160.0f);
+        ImGui::SliderFloat("span", &spanMs, 10.0f, 1000.0f * HistorySamples / SampleRate, "%.0f ms", ImGuiSliderFlags_Logarithmic);
 
         ImDrawList* draw = ImGui::GetWindowDrawList();
         const ImVec2 origin = ImGui::GetCursorScreenPos();
         const ImVec2 avail = ImGui::GetContentRegionAvail();
-        const float waveH = avail.y * 0.22f;
-        const ImVec2 area(avail.x, avail.y - waveH - 8.0f);
-        draw->AddRectFilled(origin, ImVec2(origin.x + avail.x, origin.y + avail.y), IM_COL32(8, 8, 14, 255), 8.0f);
+        const float signalH = avail.y * 0.35f;
+        const ImVec2 area(avail.x, avail.y - signalH - 8.0f);
+        draw->AddRectFilled(origin, ImVec2(origin.x + area.x, origin.y + area.y), IM_COL32(8, 8, 14, 255), 8.0f);
 
         if(mode == 0) {
             const float slot = area.x / BarCount;
@@ -264,20 +305,35 @@ int main(int argc, char** argv) {
                 const float a = 2.0f * Pi * b / (BarCount * 2) - Pi * 0.5f;
                 const ImVec2 d(std::cos(a), std::sin(a));
                 const float l = r0 + bars[i] * len;
-                draw->AddLine(ImVec2(c.x + d.x * r0, c.y + d.y * r0), ImVec2(c.x + d.x * l, c.y + d.y * l),
-                    barColor(static_cast<float>(i) / (BarCount - 1), bars[i]), 4.0f);
+                draw->AddLine(ImVec2(c.x + d.x * r0, c.y + d.y * r0),
+                    ImVec2(c.x + d.x * l, c.y + d.y * l),
+                    barColor(static_cast<float>(i) / (BarCount - 1), bars[i]),
+                    4.0f);
             }
         }
 
-        // waveform strip
-        const float wy = origin.y + avail.y - waveH * 0.5f;
-        const int points = 512;
-        std::vector<ImVec2> line(points);
-        for(int i = 0; i < points; ++i) {
-            const float s = samples[FftSize - points + i] * gain;
-            line[i] = ImVec2(origin.x + avail.x * i / (points - 1), wy - std::clamp(s, -1.0f, 1.0f) * waveH * 0.45f);
+        // the raw signal; amplitude is full scale, so gain does not apply here
+        ImGui::SetCursorScreenPos(ImVec2(origin.x, origin.y + area.y + 8.0f));
+        if(ImPlot::BeginPlot("##signal", ImVec2(avail.x, signalH), ImPlotFlags_NoLegend | ImPlotFlags_NoMenus | ImPlotFlags_NoBoxSelect)) {
+            ImPlot::SetupAxes("ms", nullptr);
+            ImPlot::SetupAxisLimits(ImAxis_X1, -spanMs, 0.0, ImPlotCond_Always);
+            ImPlot::SetupAxisLimits(ImAxis_Y1, -1.0, 1.0, ImPlotCond_Once);
+            const ImVec4 color(0.47f, 0.86f, 1.0f, 1.0f);
+            if(points < span) {
+                ImPlot::SetNextFillStyle(color, 0.45f);
+                ImPlot::PlotShaded("signal", sigX.data(), sigLo.data(), sigHi.data(), points);
+                ImPlot::SetNextLineStyle(color, 1.0f);
+                ImPlot::PlotLine("signal", sigX.data(), sigLo.data(), points);
+            }
+            ImPlot::SetNextLineStyle(color, points < span ? 1.0f : 1.5f);
+            ImPlot::PlotLine("signal", sigX.data(), sigHi.data(), points);
+
+            char levels[64];
+            std::snprintf(levels, sizeof(levels), "RMS %6.1f dBFS   peak %6.1f dBFS", rmsDb, peakDb);
+            const ImVec2 corner = ImPlot::GetPlotPos();
+            ImPlot::GetPlotDrawList()->AddText(ImVec2(corner.x + 8.0f, corner.y + 6.0f), IM_COL32(220, 230, 240, 230), levels);
+            ImPlot::EndPlot();
         }
-        draw->AddPolyline(line.data(), points, IM_COL32(120, 220, 255, 220), ImDrawFlags_None, 1.5f);
 
         ImGui::End();
         return 0;
