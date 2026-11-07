@@ -207,6 +207,12 @@ name prefix.
   `external/imguifiledialog/` from the Project-Rat fork (adds a re-init fix by
   Jeroen van Nugteren); see `external/imguifiledialog/PROVENANCE.md`.
 
+## License
+
+MIT, see [LICENSE](LICENSE). Vendored code keeps its own license (see Acknowledgements
+above), and the bundled fonts are listed with their licenses in
+[assets/LICENSES](assets/LICENSES/README.md).
+
 ## Legacy
 
 Legacy Linux scripts in `scripts/` install to `~/.local`.
