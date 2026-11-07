@@ -103,30 +103,55 @@ bool on_wayland(SDL_Window* window, SDL_SysWMinfo& info) {
     return window && SDL_GetWindowWMInfo(window, &info) && info.subsystem == SDL_SYSWM_WAYLAND;
 }
 
-// one IPC request, "[[BATCH]]a;b" for several; the window is picked by our pid
-bool hyprland_request(const std::string& request) {
+// one IPC request, "[[BATCH]]a;b" for several; returns the raw reply, empty on failure
+std::string hyprland_request(const std::string& request) {
     const char* runtime = std::getenv("XDG_RUNTIME_DIR");
     const char* instance = std::getenv("HYPRLAND_INSTANCE_SIGNATURE");
-    if(!runtime || !instance) return false;
+    if(!runtime || !instance) return {};
     const std::string path = std::string(runtime) + "/hypr/" + instance + "/.socket.sock";
     sockaddr_un addr = {};
     addr.sun_family = AF_UNIX;
-    if(path.size() >= sizeof(addr.sun_path)) return false;
+    if(path.size() >= sizeof(addr.sun_path)) return {};
     std::memcpy(addr.sun_path, path.c_str(), path.size() + 1);
 
     const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if(fd < 0) return false;
+    if(fd < 0) return {};
     bool ok = connect(fd, reinterpret_cast<const sockaddr*>(&addr), sizeof(addr)) == 0 &&
         write(fd, request.data(), request.size()) == static_cast<ssize_t>(request.size());
     char reply[512];
     const ssize_t n = ok ? read(fd, reply, sizeof(reply) - 1) : -1;
     close(fd);
-    if(n <= 0) return false;
-    reply[n] = '\0';
-    return std::strncmp(reply, "ok", 2) == 0;
+    if(n <= 0) return {};
+    return std::string(reply, static_cast<std::size_t>(n));
+}
+
+// a batch answers one "ok" per request, blank-line separated; anything else is an error message
+bool replies_ok(const std::string& reply) {
+    bool any = false;
+    std::size_t start = 0;
+    while(start <= reply.size()) {
+        std::size_t end = reply.find('\n', start);
+        if(end == std::string::npos) end = reply.size();
+        const std::string line = reply.substr(start, end - start);
+        if(!line.empty()) {
+            if(line != "ok") return false;
+            any = true;
+        }
+        start = end + 1;
+    }
+    return any;
+}
+
+// Hyprland 0.57 replaced hyprlang dispatchers with Lua (`dispatch hl.dsp...`), and the old syntax is
+// now an error. Probed once; a no-op dispatch only succeeds where Lua is understood
+bool hyprland_lua() {
+    static const bool lua = replies_ok(hyprland_request("dispatch hl.dsp.no_op()"));
+    return lua;
 }
 
 std::string pid_selector() { return "pid:" + std::to_string(getpid()); }
+
+std::string lua_window() { return "window = '" + pid_selector() + "'"; }
 
 #    if defined(SMG_HAVE_WAYLAND)
 void registry_global(void* data, wl_registry* registry, uint32_t name, const char* interface, uint32_t) {
@@ -189,19 +214,34 @@ bool set_click_through(SDL_Window* window, bool on) {
 bool compositor_float(SDL_Window* window, int w, int h, bool on_top, bool borderless) {
     SDL_SysWMinfo info;
     if(!on_wayland(window, info)) return false;
-    const std::string sel = pid_selector();
     // a tiled window can't be dragged or placed; pin keeps it over every workspace
-    std::string request = "[[BATCH]]dispatch setfloating " + sel;
-    request += ";dispatch resizewindowpixel exact " + std::to_string(w) + " " + std::to_string(h) + "," + sel;
-    if(on_top) request += ";dispatch pin " + sel;
-    if(borderless) request += ";dispatch setprop " + sel + " border_size 0;dispatch setprop " + sel + " no_shadow 1";
-    return hyprland_request(request);
+    std::string request = "[[BATCH]]";
+    if(hyprland_lua()) {
+        const std::string win = lua_window();
+        request += "dispatch hl.dsp.window.float({ action = 'enable', " + win + " })";
+        request += ";dispatch hl.dsp.window.resize({ x = " + std::to_string(w) + ", y = " + std::to_string(h) + ", " + win + " })";
+        if(on_top) request += ";dispatch hl.dsp.window.pin({ action = 'enable', " + win + " })";
+        if(borderless) {
+            request += ";dispatch hl.dsp.window.set_prop({ " + win + ", prop = 'border_size', value = '0' })";
+            request += ";dispatch hl.dsp.window.set_prop({ " + win + ", prop = 'no_shadow', value = '1' })";
+        }
+    } else {
+        const std::string sel = pid_selector();
+        request += "dispatch setfloating " + sel;
+        request += ";dispatch resizewindowpixel exact " + std::to_string(w) + " " + std::to_string(h) + "," + sel;
+        if(on_top) request += ";dispatch pin " + sel;
+        if(borderless) request += ";dispatch setprop " + sel + " border_size 0;dispatch setprop " + sel + " no_shadow 1";
+    }
+    return replies_ok(hyprland_request(request));
 }
 
 bool compositor_move(SDL_Window* window, int x, int y) {
     SDL_SysWMinfo info;
     if(!on_wayland(window, info)) return false;
-    return hyprland_request("dispatch movewindowpixel exact " + std::to_string(x) + " " + std::to_string(y) + "," + pid_selector());
+    const std::string request = hyprland_lua()
+        ? "dispatch hl.dsp.window.move({ x = " + std::to_string(x) + ", y = " + std::to_string(y) + ", " + lua_window() + " })"
+        : "dispatch movewindowpixel exact " + std::to_string(x) + " " + std::to_string(y) + "," + pid_selector();
+    return replies_ok(hyprland_request(request));
 }
 
 #endif
