@@ -49,5 +49,5 @@ The theme: the examples (files, fview, csvplot, diskusage, sysinfo, overlay, vis
 ## Suggested sequencing
 
 1. **Do now; they don't depend on the dependency bump:** the first five, then BackgroundJob and Csv/FileWatch.
-2. **The dependency bump (smg-desk plan, phase 6) comes before** the font/theme API and any new ImPlot-heavy widgets, so they're written against ImGui 1.92 dynamic fonts and `ImPlotSpec` once.
+2. **The dependency bump (smg-desk plan, phase 6) is deferred** until the current pinned versions are solid, and may not happen. If it does, it comes before the font/theme API and any new ImPlot-heavy widgets, so they're written against ImGui 1.92 dynamic fonts and `ImPlotSpec` once. Until then, keep new plotting code on the pinned ImPlot API and keep the font work small.
 3. **Windows CI before** moving more Win32 code (clipboard) into the library.
