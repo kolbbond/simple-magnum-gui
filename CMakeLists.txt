@@ -126,6 +126,11 @@ set(smg_sources
     ${SMG_IMPLOT_DIR}/implot_items.cpp
 )
 
+# system data (/proc, hwmon, NVML, Win32); the browser has none of it
+if(NOT SMG_PLATFORM_WASM)
+    list(APPEND smg_sources src/Sys.cpp)
+endif()
+
 if(ENABLE_IMPLOT3D)
     list(APPEND smg_sources
         ${SMG_IMPLOT3D_DIR}/implot3d.cpp
@@ -209,7 +214,10 @@ if(SMG_PLATFORM_WASM)
     target_link_libraries(smg PUBLIC Magnum::EmscriptenApplication)
 else()
     target_link_libraries(smg PUBLIC Magnum::Sdl2Application)
+    find_package(Threads REQUIRED)
+    target_link_libraries(smg PRIVATE Threads::Threads ${CMAKE_DL_LIBS}) # sys::Command worker, NVML dlopen
     if(WIN32)
+        target_link_libraries(smg PRIVATE iphlpapi powrprof dxgi) # sys::Monitor
         target_link_libraries(smg PRIVATE dwmapi) # transparent windows
     elseif(UNIX AND NOT APPLE)
         # click-through on Wayland (an empty input region); optional

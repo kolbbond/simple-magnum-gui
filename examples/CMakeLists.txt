@@ -82,11 +82,6 @@ endforeach()
 
 message(STATUS "end of example creation")
 
-# sysinfo reads per-core load, clocks, network and adapters through these
-if(TARGET sysinfo AND WIN32)
-    target_link_libraries(sysinfo iphlpapi powrprof dxgi)
-endif()
-
 # the overlay is a desktop widget: no console window behind it
 if(TARGET overlay AND MSVC)
     target_link_options(overlay PRIVATE /SUBSYSTEM:WINDOWS /ENTRY:mainCRTStartup)
