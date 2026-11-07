@@ -66,6 +66,7 @@ set(unit_test_list
     test_scene_panel_abi.cpp
     test_error.cpp
     test_log.cpp
+    test_sys.cpp
 )
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})

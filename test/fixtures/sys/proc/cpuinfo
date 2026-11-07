@@ -1,0 +1,11 @@
+processor	: 0
+model name	: Fixture CPU @ 1.00GHz
+cpu MHz		: 1000.000
+physical id	: 0
+core id		: 0
+
+processor	: 1
+model name	: Fixture CPU @ 1.00GHz
+cpu MHz		: 1200.500
+physical id	: 0
+core id		: 1

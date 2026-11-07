@@ -40,3 +40,6 @@
 #include "Easing.hh"
 #include "Anim.hh"
 #include "Annotations.hh"
+#if !defined(__EMSCRIPTEN__)
+#include "Sys.hh"
+#endif
