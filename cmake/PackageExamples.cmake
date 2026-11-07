@@ -54,6 +54,38 @@ endif()
 
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/../packaging/README.txt DESTINATION . COMPONENT examples)
 
+# MIT/zlib require their notices to travel with the binaries
+set(_smg_root ${CMAKE_CURRENT_LIST_DIR}/..)
+set(_smg_licenses
+    "smg|${_smg_root}/LICENSE"
+    "corrade|${_smg_root}/external/corrade/COPYING"
+    "magnum|${_smg_root}/external/magnum/COPYING"
+    "magnum-integration|${_smg_root}/external/magnum-integration/COPYING"
+    "magnum-plugins|${_smg_root}/external/magnum-plugins/COPYING"
+    "imgui|${_smg_root}/external/magnum-integration/src/MagnumExternal/ImGui/LICENSE.txt"
+    "implot|${_smg_root}/external/implot/LICENSE"
+    "implot3d|${_smg_root}/external/implot3d/LICENSE"
+    "imguifiledialog|${_smg_root}/external/imguifiledialog/LICENSE"
+    "magnum-bloom|${_smg_root}/external/bloom/PROVENANCE.md")
+if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
+    list(APPEND _smg_licenses "sdl2|${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/sdl2/copyright")
+endif()
+foreach(_entry ${_smg_licenses})
+    string(REPLACE "|" ";" _pair "${_entry}")
+    list(GET _pair 0 _name)
+    list(GET _pair 1 _file)
+    if(EXISTS "${_file}")
+        get_filename_component(_ext "${_file}" LAST_EXT)
+        if(NOT _ext)
+            set(_ext ".txt")
+        endif()
+        install(FILES "${_file}" DESTINATION licenses RENAME "${_name}${_ext}" COMPONENT examples)
+    else()
+        message(STATUS "smg examples package: license file missing for ${_name}: ${_file}")
+    endif()
+endforeach()
+install(DIRECTORY ${_smg_root}/assets/LICENSES/ DESTINATION licenses/fonts COMPONENT examples)
+
 # CPack
 set(CPACK_PACKAGE_NAME "smg-examples")
 set(CPACK_PACKAGE_VENDOR "kolbbond")
