@@ -1,9 +1,10 @@
 #include "EventStream.hh"
 
+#include <algorithm>
 #include <cerrno>
 #include <chrono>
-#include <algorithm>
 #include <cstring>
+#include <utility>
 
 #include <poll.h>
 #include <sys/socket.h>
@@ -29,15 +30,23 @@ void EventStream::stop() {
     {
         std::lock_guard<std::mutex> lk(mu_);
         stop_ = true;
+        status_ = "stopped";
     }
     cv_.notify_all();
-    if(thread_.joinable()) thread_.join();
-    std::lock_guard<std::mutex> wl(write_mu_);
-    if(fd_ >= 0) {
-        ::close(fd_);
-        fd_ = -1;
+    if(thread_.joinable()) {
+        if(std::this_thread::get_id() == thread_.get_id()) return; // on_connect; reader exits by itself
+        thread_.join();
     }
+    {
+        std::lock_guard<std::mutex> wl(write_mu_);
+        if(fd_ >= 0) {
+            ::close(fd_);
+            fd_ = -1;
+        }
+    }
+    std::lock_guard<std::mutex> lk(mu_);
     state_ = State::Down;
+    status_ = "stopped";
 }
 
 std::string EventStream::status() const {
@@ -63,15 +72,38 @@ bool EventStream::send(const nlohmann::json& msg) {
     line.push_back('\n');
     std::lock_guard<std::mutex> wl(write_mu_);
     if(fd_ < 0 || state_ != State::Connected) return false;
+    using clock = std::chrono::steady_clock;
+    const auto deadline = clock::now() + std::chrono::seconds(1);
     std::size_t off = 0;
+    bool ok = true;
     while(off < line.size()) {
-        // MSG_NOSIGNAL: a dead peer must not raise SIGPIPE
-        ssize_t n = ::send(fd_, line.data() + off, line.size() - off, MSG_NOSIGNAL);
+        // MSG_NOSIGNAL: a dead peer must not raise SIGPIPE; DONTWAIT: never block on a full buffer
+        ssize_t n = ::send(fd_, line.data() + off, line.size() - off, MSG_NOSIGNAL | MSG_DONTWAIT);
+        if(n > 0) {
+            off += std::size_t(n);
+            continue;
+        }
         if(n < 0 && errno == EINTR) continue;
-        if(n <= 0) return false; // the reader notices the dead socket and reconnects
-        off += std::size_t(n);
+        if(n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            auto left = std::chrono::duration_cast<std::chrono::milliseconds>(deadline - clock::now()).count();
+            if(left <= 0) {
+                ok = false;
+                break;
+            }
+            pollfd p{ fd_, POLLOUT, 0 };
+            int r = ::poll(&p, 1, int(left));
+            if(r == 0 || (r < 0 && errno != EINTR)) {
+                ok = false;
+                break;
+            }
+            continue;
+        }
+        ok = false;
+        break;
     }
-    return true;
+    // a failed or partial write corrupts framing: kill the stream; the reader sees EOF, closes and reconnects
+    if(!ok) ::shutdown(fd_, SHUT_RDWR);
+    return ok;
 }
 
 bool EventStream::wait_backoff(int ms) {
@@ -79,22 +111,39 @@ bool EventStream::wait_backoff(int ms) {
     return !cv_.wait_for(lk, std::chrono::milliseconds(ms), [this] { return stop_.load(); });
 }
 
-void EventStream::feed(const char* data, std::size_t n, std::string& partial) {
-    partial.append(data, n);
-    std::size_t start = 0, nl;
-    while((nl = partial.find('\n', start)) != std::string::npos) {
-        if(nl > start) {
-            auto j = nlohmann::json::parse(partial.begin() + std::ptrdiff_t(start), partial.begin() + std::ptrdiff_t(nl), nullptr, false);
-            if(j.is_discarded()) {
-                ++dropped_;
-            } else {
-                std::lock_guard<std::mutex> lk(mu_);
-                queue_.push_back(std::move(j));
+void EventStream::emit(const std::string& line) {
+    if(line.empty()) return;
+    auto j = nlohmann::json::parse(line, nullptr, false);
+    if(j.is_discarded()) {
+        ++dropped_;
+        return;
+    }
+    std::lock_guard<std::mutex> lk(mu_);
+    queue_.push_back(std::move(j));
+}
+
+// single pass over the new bytes: linear, and an over-long line is skipped to its '\n'
+void EventStream::feed(const char* data, std::size_t n, LineBuf& lb) {
+    std::size_t i = 0;
+    while(i < n) {
+        const char* nl = static_cast<const char*>(std::memchr(data + i, '\n', n - i));
+        const std::size_t chunk = nl ? std::size_t(nl - (data + i)) : n - i;
+        const std::size_t adv = chunk + (nl ? 1 : 0);
+        if(lb.skipping) {
+            if(nl) lb.skipping = false;
+        } else if(lb.partial.size() + chunk > max_line_) {
+            ++dropped_;
+            lb.partial.clear();
+            lb.skipping = !nl;
+        } else {
+            lb.partial.append(data + i, chunk);
+            if(nl) {
+                emit(lb.partial);
+                lb.partial.clear();
             }
         }
-        start = nl + 1;
+        i += adv;
     }
-    partial.erase(0, start);
 }
 
 void EventStream::run() {
@@ -135,9 +184,16 @@ void EventStream::run() {
         }
         backoff = 250;
         set_state(State::Connected, "connected");
-        if(on_connect) on_connect();
+        if(on_connect) {
+            try {
+                on_connect();
+            } catch(...) {
+                std::lock_guard<std::mutex> lk(mu_);
+                status_ = "on_connect threw";
+            }
+        }
 
-        std::string partial;
+        LineBuf lb;
         std::string why = "connection closed";
         char buf[4096];
         while(!stop_) {
@@ -153,7 +209,7 @@ void EventStream::run() {
             if(n < 0 && (errno == EINTR || errno == EAGAIN)) continue;
             if(n < 0) why = std::string("recv: ") + std::strerror(errno);
             if(n <= 0) break;
-            feed(buf, std::size_t(n), partial);
+            feed(buf, std::size_t(n), lb);
         }
 
         {
@@ -162,10 +218,12 @@ void EventStream::run() {
             fd_ = -1;
         }
         if(stop_) break;
+        if(!lb.partial.empty() && !lb.skipping) ++dropped_; // unterminated tail
         set_state(State::Down, why);
         if(!wait_backoff(backoff)) break;
         backoff = std::min(backoff * 2, 4000);
     }
+    state_ = State::Down; // self-stop from on_connect leaves no one else to say so
 }
 
 } // namespace smg
