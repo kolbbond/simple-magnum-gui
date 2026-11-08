@@ -68,6 +68,7 @@ set(unit_test_list
     test_log.cpp
     test_sys.cpp
     test_chat_model.cpp
+    test_chat_input.cpp
 )
 if(NOT SMG_PLATFORM_WASM AND NOT WIN32)
     list(APPEND unit_test_list test_event_stream.cpp)

@@ -44,6 +44,8 @@ private:
 
 class ChatView {
 public:
+    // font for fenced code lines; nullptr = the current font
+    void set_code_font(ImFont* font) { _code_font = font; }
     ChatModel& model() { return _model; }
     void set_role_color(const std::string& role, ImVec4 color) { _colors[role] = color; }
 
@@ -56,6 +58,7 @@ private:
     std::map<std::string, ImVec4> _colors;
     std::string _input;
     bool _refocus = false;
+    ImFont* _code_font = nullptr;
 };
 
 } // namespace smg

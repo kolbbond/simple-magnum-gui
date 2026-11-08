@@ -32,8 +32,8 @@ namespace {
 const ImVec4 kCodeColor(0.75f, 0.85f, 0.65f, 1.f);
 const ImVec4 kErrorColor(1.f, 0.35f, 0.35f, 1.f);
 
-// wrapped text with ``` fences rendered as indented, tinted lines (the default font is already monospace)
-void draw_text(const std::string& text, const ImVec4* color) {
+// wrapped text; ``` fences render indented, tinted, in code_font (nullptr = current font); code lines are not wrapped
+void draw_text(const std::string& text, const ImVec4* color, ImFont* code_font) {
     if(color != nullptr) ImGui::PushStyleColor(ImGuiCol_Text, *color);
     bool code = false;
     size_t pos = 0;
@@ -46,7 +46,9 @@ void draw_text(const std::string& text, const ImVec4* color) {
         } else if(code) {
             ImGui::Indent();
             ImGui::PushStyleColor(ImGuiCol_Text, kCodeColor);
+            if(code_font != nullptr) ImGui::PushFont(code_font);
             ImGui::TextUnformatted(line.data(), line.data() + line.size());
+            if(code_font != nullptr) ImGui::PopFont();
             ImGui::PopStyleColor();
             ImGui::Unindent();
         } else {
@@ -60,8 +62,15 @@ void draw_text(const std::string& text, const ImVec4* color) {
 }
 
 // std::string-backed InputText (imgui_stdlib is not built into smg)
-int resize_cb(ImGuiInputTextCallbackData* d) {
-    if(d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+int input_cb(ImGuiInputTextCallbackData* d) {
+    if(d->EventFlag == ImGuiInputTextFlags_CallbackAlways) {
+        // Shift+Enter -> newline; plain Enter submits via EnterReturnsTrue
+        const ImGuiIO& io = ImGui::GetIO();
+        if(io.KeyMods == ImGuiMod_Shift && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))) {
+            if(d->HasSelection()) d->DeleteChars(d->SelectionStart, d->SelectionEnd - d->SelectionStart);
+            d->InsertChars(d->CursorPos, "\n");
+        }
+    } else if(d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
         auto* s = static_cast<std::string*>(d->UserData);
         s->resize(static_cast<size_t>(d->BufTextLen));
         d->Buf = s->data();
@@ -75,70 +84,68 @@ std::optional<std::string> ChatView::draw(bool input_enabled) {
     const float input_h = ImGui::GetTextLineHeightWithSpacing() * 3 + ImGui::GetStyle().FramePadding.y * 2;
     const float log_h = std::max(1.f, ImGui::GetContentRegionAvail().y - input_h - ImGui::GetStyle().ItemSpacing.y);
 
-    ImGui::BeginChild("##chat_log", ImVec2(0, log_h), ImGuiChildFlags_None);
-    // stick to the bottom unless the user scrolled up
-    const bool stick = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.f;
+    // a skipped child (collapsed/clipped host) must not touch item state: TreeNodeEx would report closed
+    if(ImGui::BeginChild("##chat_log", ImVec2(0, log_h), ImGuiChildFlags_None)) {
+        // stick to the bottom unless the user scrolled up
+        const bool stick = ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 1.f;
 
-    auto& msgs = _model.messages();
-    for(size_t mi = 0; mi < msgs.size(); ++mi) {
-        const ChatMessage& m = msgs[mi];
-        ImGui::PushID(static_cast<int>(mi));
-        if(m.divider) {
-            ImGui::SeparatorText(m.text.c_str());
-        } else {
-            const auto it = _colors.find(m.role);
-            const ImVec4* col = it == _colors.end() ? nullptr : &it->second;
-            if(!m.role.empty()) {
-                if(col != nullptr) ImGui::PushStyleColor(ImGuiCol_Text, *col);
-                ImGui::TextUnformatted(m.role.c_str());
-                if(col != nullptr) ImGui::PopStyleColor();
-            }
-            draw_text(m.text, col);
-            for(size_t ii = 0; ii < m.items.size(); ++ii) {
-                ChatItem& item = _model.item(mi, ii);
-                ImGui::PushID(static_cast<int>(ii));
-                if(item.error) ImGui::PushStyleColor(ImGuiCol_Text, kErrorColor);
-                ImGui::SetNextItemOpen(item.open, ImGuiCond_Always);
-                item.open = ImGui::TreeNodeEx(item.title.c_str(), ImGuiTreeNodeFlags_None);
-                if(item.error) ImGui::PopStyleColor();
-                if(item.open) {
-                    draw_text(item.body, item.error ? &kErrorColor : nullptr);
-                    ImGui::TreePop();
+        auto& msgs = _model.messages();
+        for(size_t mi = 0; mi < msgs.size(); ++mi) {
+            const ChatMessage& m = msgs[mi];
+            ImGui::PushID(static_cast<int>(mi));
+            if(m.divider) {
+                ImGui::SeparatorText(m.text.c_str());
+            } else {
+                const auto it = _colors.find(m.role);
+                const ImVec4* col = it == _colors.end() ? nullptr : &it->second;
+                if(!m.role.empty()) {
+                    if(col != nullptr) ImGui::PushStyleColor(ImGuiCol_Text, *col);
+                    ImGui::TextUnformatted(m.role.c_str());
+                    if(col != nullptr) ImGui::PopStyleColor();
                 }
-                ImGui::PopID();
+                draw_text(m.text, col, _code_font);
             }
+            {
+                for(size_t ii = 0; ii < m.items.size(); ++ii) {
+                    ChatItem& item = _model.item(mi, ii);
+                    ImGui::PushID(static_cast<int>(ii));
+                    if(item.error) ImGui::PushStyleColor(ImGuiCol_Text, kErrorColor);
+                    ImGui::SetNextItemOpen(item.open, ImGuiCond_Always);
+                    item.open = ImGui::TreeNodeEx(item.title.c_str(), ImGuiTreeNodeFlags_None);
+                    if(item.error) ImGui::PopStyleColor();
+                    if(item.open) {
+                        draw_text(item.body, item.error ? &kErrorColor : nullptr, _code_font);
+                        ImGui::TreePop();
+                    }
+                    ImGui::PopID();
+                }
+            }
+            ImGui::PopID();
         }
-        ImGui::PopID();
+        if(stick) ImGui::SetScrollHereY(1.f);
     }
-    if(stick) ImGui::SetScrollHereY(1.f);
     ImGui::EndChild();
 
     std::optional<std::string> out;
-    ImGuiIO& io = ImGui::GetIO();
     if(!input_enabled) ImGui::BeginDisabled();
-    if(_refocus) {
+    if(_refocus && input_enabled) { // keep the request pending while disabled
         ImGui::SetKeyboardFocusHere();
         _refocus = false;
     }
-    // ImGui validates on Ctrl+Enter when CtrlEnterForNewLine is set; present Shift as Ctrl so Shift+Enter inserts the newline
-    const bool ctrl = io.KeyCtrl;
-    io.KeyCtrl = io.KeyShift;
     _input.reserve(256); // InputText needs a non-null, writable buffer
     const bool entered = ImGui::InputTextMultiline("##chat_input",
         _input.data(),
         _input.capacity() + 1,
         ImVec2(-FLT_MIN, input_h),
-        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_CallbackResize,
-        resize_cb,
+        ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_CtrlEnterForNewLine | ImGuiInputTextFlags_CallbackResize |
+            ImGuiInputTextFlags_CallbackAlways,
+        input_cb,
         &_input);
-    io.KeyCtrl = ctrl;
     if(!input_enabled) ImGui::EndDisabled();
     if(entered) {
         const bool blank = _input.find_first_not_of(" \t\r\n") == std::string::npos;
-        if(!blank) {
-            out = std::move(_input);
-            _input.clear();
-        }
+        if(!blank) out = std::move(_input);
+        _input.clear();
         _refocus = true; // Enter deactivates the widget
     }
     return out;
