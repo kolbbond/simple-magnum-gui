@@ -28,6 +28,10 @@ else()
         csvplot.cpp
         diskusage.cpp
     )
+    # EventStream is POSIX-only (see top-level CMakeLists.txt)
+    if(NOT WIN32)
+        list(APPEND example_list agentdeck.cpp)
+    endif()
 endif()
 
 # WASM-specific linker flags
