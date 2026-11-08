@@ -86,6 +86,21 @@ std::string when(const json& v) {
     return buf;
 }
 
+int resize_cb(ImGuiInputTextCallbackData* d) {
+    if(d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
+        auto* str = static_cast<std::string*>(d->UserData);
+        str->resize(static_cast<size_t>(d->BufTextLen));
+        d->Buf = str->data();
+    }
+    return 0;
+}
+
+bool input_text(const char* label, std::string& v, bool multiline) {
+    const ImGuiInputTextFlags f = ImGuiInputTextFlags_CallbackResize;
+    return multiline ? ImGui::InputTextMultiline(label, v.data(), v.capacity() + 1, ImVec2(0, 60), f, resize_cb, &v)
+                     : ImGui::InputText(label, v.data(), v.capacity() + 1, f, resize_cb, &v);
+}
+
 struct OptionVal {
     std::string name, type, help;
     std::vector<std::string> choices;
@@ -156,6 +171,7 @@ struct DeckClient {
     std::map<std::string, std::pair<size_t, size_t>> calls; // call_id -> (message, item)
     json usage = json::object();
     std::string default_agent;
+    std::string chat_arg; // --chat ID until it proves unknown
 
     // controls
     std::vector<AgentInfo> agents;
@@ -163,17 +179,21 @@ struct DeckClient {
     std::string sel_agent, sel_model, want_model;
     std::vector<OptionVal> opts;
     bool sel_init = false, opened = false;
+    bool live = false; // chat_opened seen on this connection
+    bool send_pending = false; // a send awaiting its turn_started
+    std::optional<size_t> last_user;
+    json chat_opts = json::object(); // options of the chat's last switch
     std::string chat_agent; // agent from the chat's last switch, if any
 
     std::deque<json> perms;
     bool perm_open = false;
 
-    // shared with the reader thread
+    // shared with the reader thread (on_connect); smoke flags are UI-thread only
     std::mutex mu;
     std::string want_chat;
     bool smoke_switched = false, smoke_sent = false;
 
-    explicit DeckClient(const std::string& path, const std::string& chat_arg) : es(path), want_chat(chat_arg) {
+    explicit DeckClient(const std::string& path, const std::string& chat_arg_) : es(path), chat_arg(chat_arg_), want_chat(chat_arg_) {
         es.on_connect = [this] {
             std::string c;
             {
@@ -193,9 +213,13 @@ struct DeckClient {
         es.start();
     }
 
-    void send(json cmd, const char* id) {
+    ~DeckClient() { es.stop(); } // joins the reader before mu/want_chat die
+
+    bool ready() const { return live && es.state() == smg::EventStream::State::Connected && !chat_id.empty(); }
+
+    bool send(json cmd, const char* id) {
         cmd["id"] = id;
-        es.send(cmd);
+        return es.send(cmd);
     }
 
     // -- chat model ------------------------------------------------------
@@ -229,8 +253,7 @@ struct DeckClient {
     void tool_call(const json& e) {
         auto& cm = chat.model();
         if(!group) {
-            ChatMessage m;
-            m.role = "assistant";
+            ChatMessage m; // no role: avoids an empty "assistant" header
             group = cm.add(std::move(m));
         }
         stream = std::nullopt; // later text starts a new message after the tools
@@ -253,6 +276,8 @@ struct DeckClient {
         if(item.error) item.open = true;
     }
 
+    std::string prev_agent; // agent before the switch being rendered
+
     void render_entry(const json& e) {
         const std::string t = str(e, "type");
         if(t == "user")
@@ -267,8 +292,12 @@ struct DeckClient {
             tool_call(e);
         else if(t == "tool_result")
             tool_result(e);
-        else if(t == "switch")
-            divider(str(e, "agent"), str(e, "model"), false);
+        else if(t == "switch") {
+            const std::string a = str(e, "agent");
+            // the core's rule: lossy when the agent changes and the target isn't native
+            divider(a, str(e, "model"), !prev_agent.empty() && a != prev_agent && a != "native");
+            prev_agent = a;
+        }
     }
 
     // -- controls --------------------------------------------------------
@@ -278,7 +307,7 @@ struct DeckClient {
         return nullptr;
     }
 
-    void select_agent(const std::string& name, const std::string& model) {
+    void select_agent(const std::string& name, const std::string& model, const json& o = json::object()) {
         sel_agent = name;
         want_model = model;
         sel_model.clear();
@@ -286,6 +315,18 @@ struct DeckClient {
         opts.clear();
         if(const AgentInfo* a = find_agent(name))
             for(const auto& s : a->schema) opts.push_back(option_from(s));
+        for(auto& v : opts) {
+            auto it = o.find(v.name);
+            if(it == o.end()) continue;
+            if(it->is_boolean())
+                v.b = it->get<bool>();
+            else if(it->is_number_integer())
+                v.i = it->get<int>(), v.f = v.i;
+            else if(it->is_number())
+                v.f = it->get<double>(), v.i = static_cast<int>(v.f);
+            else if(it->is_string())
+                v.s = it->get<std::string>();
+        }
         send({ { "type", "list_models" }, { "agent", name } }, "models");
     }
 
@@ -294,7 +335,7 @@ struct DeckClient {
         const std::string target = !chat_agent.empty() ? chat_agent : default_agent;
         if(target.empty()) return;
         sel_init = true;
-        select_agent(find_agent(target) ? target : agents[0].name, want_model);
+        select_agent(find_agent(target) ? target : agents[0].name, want_model, chat_opts);
     }
 
     void apply() {
@@ -306,7 +347,8 @@ struct DeckClient {
 
     void submit(const std::string& text) {
         note("user", text);
-        running = true;
+        last_user = chat.model().messages().size() - 1;
+        running = send_pending = true;
         send({ { "type", "send" }, { "chat_id", chat_id }, { "text", text } }, "send");
     }
 
@@ -323,12 +365,20 @@ struct DeckClient {
         stream = group = std::nullopt;
         chat_agent.clear();
         want_model.clear();
+        chat_opts = json::object();
+        send_pending = false;
+        last_user.reset();
+        prev_agent = default_agent;
         std::string model;
         auto tr = r.find("transcript");
         if(tr != r.end() && tr->is_array())
             for(const auto& e : *tr) {
                 render_entry(e);
-                if(str(e, "type") == "switch") chat_agent = str(e, "agent"), model = str(e, "model");
+                if(str(e, "type") == "switch") {
+                    chat_agent = str(e, "agent"), model = str(e, "model");
+                    auto o = e.find("options");
+                    chat_opts = o != e.end() && o->is_object() ? *o : json::object();
+                }
             }
         want_model = model;
         where =
@@ -337,7 +387,7 @@ struct DeckClient {
         auto pp = r.find("pending_permissions");
         if(pp != r.end() && pp->is_array())
             for(const auto& p : *pp) perms.push_back(p);
-        opened = true;
+        opened = live = true;
         sel_init = false;
         init_selection();
     }
@@ -415,9 +465,24 @@ struct DeckClient {
         }
         if(m.contains("id")) { // reply to one of our commands
             if(t == "error") {
-                note("error", "error: " + str(m, "message"));
-                tools.add(Level::Error, str(m, "id") + ": " + str(m, "message"));
-                if(str(m, "id") == "send") running = false;
+                const std::string id = str(m, "id"), msg = str(m, "message");
+                tools.add(Level::Error, id + ": " + msg);
+                if(id == "perm") return; // late answer to a request someone else resolved
+                if(id == "open" && !chat_arg.empty() && msg.rfind("unknown chat", 0) == 0) {
+                    tools.add(Level::Warn, "unknown chat " + chat_arg + "; opening a new chat instead");
+                    chat_arg.clear();
+                    {
+                        std::lock_guard<std::mutex> lk(mu);
+                        want_chat.clear();
+                    }
+                    send({ { "type", "open_chat" }, { "new", true } }, "open");
+                    return;
+                }
+                note("error", "error: " + msg);
+                if(id == "send" && send_pending) { // rejected: no turn started
+                    send_pending = running = false;
+                    if(last_user) chat.model().append_text(*last_user, "  [not sent]");
+                }
             }
             return;
         }
@@ -434,16 +499,26 @@ struct DeckClient {
             tools.add(err ? Level::Error : Level::Tool, std::string(err ? "error " : "result ") + brief(str(m, "output")));
         } else if(t == "turn_started") {
             running = true;
+            send_pending = false;
             stream = group = std::nullopt;
         } else if(t == "turn_finished") {
             running = false;
+            perms.erase(std::remove_if(perms.begin(), perms.end(), [&](const json& p) { return str(p, "chat_id") == cid; }), perms.end());
             stream = group = std::nullopt;
             if(str(m, "stop_reason") == "cancelled") note("system", "(cancelled)");
         } else if(t == "agent_switched") {
             divider(str(m, "agent"), str(m, "model"), flag(m, "lossy"));
             where = str(m, "agent") + " / " + str(m, "model");
             chat_agent = str(m, "agent");
-            if(find_agent(chat_agent) && chat_agent != sel_agent) select_agent(chat_agent, str(m, "model")); // controls follow the chat
+            prev_agent = chat_agent;
+            if(find_agent(chat_agent) && chat_agent != sel_agent) {
+                select_agent(chat_agent, str(m, "model")); // controls follow the chat
+            } else if(chat_agent == sel_agent) {
+                want_model = str(m, "model");
+                for(const auto& mi : models)
+                    if(mi.available && mi.id == want_model) sel_model = want_model;
+                if(m.contains("options") && m["options"].is_object()) select_agent(chat_agent, want_model, m["options"]);
+            }
         } else if(t == "lossy") {
             note("system", "(history passed as summary)");
         } else if(t == "error") {
@@ -455,14 +530,19 @@ struct DeckClient {
     void answer(bool allow, bool remember) {
         if(perms.empty()) return;
         const std::string rid = str(perms.front(), "request_id");
-        send({ { "type", "permission_response" }, { "request_id", rid }, { "allow", allow }, { "remember_for_chat", remember } }, "perm");
-        tools.add(Level::Info, std::string("permission ") + (allow ? (remember ? "allow-for-chat" : "allow") : "deny") + " sent");
+        const std::string what = allow ? (remember ? "allow-for-chat" : "allow") : "deny";
+        if(!send({ { "type", "permission_response" }, { "request_id", rid }, { "allow", allow }, { "remember_for_chat", remember } },
+               "perm")) {
+            tools.add(Level::Error, "permission " + what + " not sent (core unreachable)");
+            return;
+        }
+        tools.add(Level::Info, "permission " + what + " sent");
         perms.pop_front(); // the core's permission_resolved confirms; a stale answer just gets an error reply
     }
 
     // -- smoke hooks -------------------------------------------------------
     void drive_smoke() {
-        if(chat_id.empty() || es.state() != smg::EventStream::State::Connected) return;
+        if(!ready()) return;
         if(!smoke.switch_to.empty() && !smoke_switched) {
             smoke_switched = true;
             const auto c = smoke.switch_to.find(':');
@@ -502,15 +582,14 @@ struct DeckClient {
         const bool up = es.state() == smg::EventStream::State::Connected;
         ImGui::TextUnformatted(status_line().c_str());
         if(!up) {
-            ImGui::TextColored(ImVec4(1.f, 0.6f, 0.3f, 1.f), "core not running \xE2\x80\x94 start with: pan-deck serve");
+            ImGui::TextColored(ImVec4(1.f, 0.6f, 0.3f, 1.f), "core not running - start with: pan-deck serve");
             ImGui::TextDisabled("%s", es.status().c_str());
         }
         ImGui::Separator();
-        if(auto text = chat.draw(up && !chat_id.empty() && !running)) submit(*text);
+        if(auto text = chat.draw(ready() && !running)) submit(*text);
     }
 
     void draw_controls() {
-        const bool up = es.state() == smg::EventStream::State::Connected;
         if(ImGui::BeginCombo("agent", sel_agent.c_str())) {
             std::string pick;
             for(const auto& a : agents)
@@ -546,21 +625,17 @@ struct DeckClient {
                     ImGui::EndCombo();
                 }
             } else {
-                char buf[1024];
-                std::snprintf(buf, sizeof buf, "%s", o.s.c_str());
-                const bool changed = o.type == "text" ? ImGui::InputTextMultiline(o.name.c_str(), buf, sizeof buf, ImVec2(0, 60))
-                                                      : ImGui::InputText(o.name.c_str(), buf, sizeof buf);
-                if(changed) o.s = buf;
+                input_text(o.name.c_str(), o.s, o.type == "text");
             }
             if(!o.help.empty() && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", o.help.c_str());
             ImGui::PopID();
         }
         ImGui::Separator();
-        ImGui::BeginDisabled(!up || chat_id.empty() || sel_model.empty() || running);
+        ImGui::BeginDisabled(!ready() || sel_model.empty() || running);
         if(ImGui::Button("Apply")) apply();
         ImGui::EndDisabled();
         ImGui::SameLine();
-        ImGui::BeginDisabled(!up || chat_id.empty() || !running);
+        ImGui::BeginDisabled(!ready() || !running);
         if(ImGui::Button("Cancel turn")) send({ { "type", "cancel" }, { "chat_id", chat_id } }, "cancel");
         ImGui::EndDisabled();
     }
@@ -572,7 +647,7 @@ struct DeckClient {
         }
         if(!perm_open) return;
         if(!ImGui::BeginPopupModal("Permission request", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
-            perm_open = false; // dismissed (Esc): reopens next frame while requests remain
+            perm_open = false; // closed without an answer: reopens next frame while requests remain
             return;
         }
         if(perms.empty()) { // answered elsewhere
@@ -590,11 +665,21 @@ struct DeckClient {
             if(ImGui::Button("Deny")) answer(false, false);
             ImGui::SameLine();
             if(ImGui::Button("Allow for chat")) answer(true, true);
+            if(ImGui::IsKeyPressed(ImGuiKey_Y, false))
+                answer(true, false);
+            else if(ImGui::IsKeyPressed(ImGuiKey_N, false))
+                answer(false, false);
+            else if(ImGui::IsKeyPressed(ImGuiKey_A, false))
+                answer(true, true);
         }
         ImGui::EndPopup();
     }
 
     void frame() {
+        if(es.state() != smg::EventStream::State::Connected) {
+            live = false;
+            perms.clear(); // the core denies these when we drop; reopen restores any still pending
+        }
         for(const json& m : es.poll()) on_message(m);
         drive_smoke();
 
