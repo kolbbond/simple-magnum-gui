@@ -131,6 +131,11 @@ if(NOT SMG_PLATFORM_WASM)
     list(APPEND smg_sources src/Sys.cpp)
 endif()
 
+# AF_UNIX event stream: POSIX sockets only
+if(NOT SMG_PLATFORM_WASM AND NOT WIN32)
+    list(APPEND smg_sources src/EventStream.cpp)
+endif()
+
 if(ENABLE_IMPLOT3D)
     list(APPEND smg_sources
         ${SMG_IMPLOT3D_DIR}/implot3d.cpp
@@ -252,6 +257,12 @@ if(ENABLE_IMPLOT3D)
     target_compile_definitions(smg PUBLIC SMG_WITH_IMPLOT3D)
 endif()
 
+# nlohmann/json: header-only, public because EventStream.hh exposes json
+target_include_directories(smg PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/external/json/single_include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/smg/json>
+)
+
 # Bloom: public include so consumers drive bloom::BloomRenderer from their own
 # pipeline; public define so they and the library agree on ScenePanel's layout.
 # Both interfaces are flat, so #include "bloomrenderer.hh" resolves either way.
@@ -349,6 +360,10 @@ install(FILES
 )
 install(FILES ${SMG_IMPLOT_DIR}/implot.h
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg
+)
+
+install(DIRECTORY external/json/single_include/nlohmann
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/smg/json
 )
 
 install(DIRECTORY ${SMG_BLOOM_DIR}/include/

@@ -68,6 +68,9 @@ set(unit_test_list
     test_log.cpp
     test_sys.cpp
 )
+if(NOT SMG_PLATFORM_WASM AND NOT WIN32)
+    list(APPEND unit_test_list test_event_stream.cpp)
+endif()
 foreach(srcfile ${unit_test_list})
     string(REPLACE ".cpp" "" name ${srcfile})
     smg_add_test(${name} ${srcfile} "unit")

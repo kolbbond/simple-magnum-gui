@@ -17,3 +17,6 @@
 [submodule "external/magnum-plugins"]
 	path = external/magnum-plugins
 	url = https://github.com/mosra/magnum-plugins.git
+[submodule "external/json"]
+	path = external/json
+	url = https://github.com/nlohmann/json
