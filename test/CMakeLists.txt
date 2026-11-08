@@ -67,6 +67,7 @@ set(unit_test_list
     test_error.cpp
     test_log.cpp
     test_sys.cpp
+    test_chat_model.cpp
 )
 if(NOT SMG_PLATFORM_WASM AND NOT WIN32)
     list(APPEND unit_test_list test_event_stream.cpp)
@@ -111,6 +112,7 @@ if(SMG_BUILD_GUI_TESTS)
         test_callback_registry.cpp
         test_guibase_config.cpp
         test_annotation_layer.cpp
+        test_chat_view.cpp
     )
     foreach(srcfile ${gui_test_list})
         string(REPLACE ".cpp" "" name ${srcfile})
