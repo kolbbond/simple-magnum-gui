@@ -120,6 +120,7 @@ set(smg_sources
     src/Annotations.cpp
     src/Capture.cpp
     src/ChatView.cpp
+    src/LogPane.cpp
 
     # ImPlot
     ${SMG_IMPLOT_DIR}/implot.cpp
