@@ -3,6 +3,7 @@
 #include "test_util.hh"
 
 #include "imgui.h"
+#include "imgui_internal.h"
 
 #include <stdexcept>
 #include <string>
@@ -92,6 +93,9 @@ static void as_log_strips_ansi_and_levels() {
     CHECK(p.line(0) == "begin");
     CHECK(p.line(1) == "bad");
     CHECK(p.line(2) == "plain");
+    CHECK(p.level(0) == LogPane::Level::Warn);
+    CHECK(p.level(1) == LogPane::Level::Error);
+    CHECK(p.level(2) == LogPane::Level::Info);
 }
 
 static void as_log_buffers_partial() {
@@ -120,10 +124,28 @@ static void as_log_indent() {
     log->msg("body\n");
     log->msg(-2, "x\n");
     log->msg("end\n");
+    log->msg(2, "again\n");
+    log->msg(0, "zero\n"); // incr == 0: no indent, like Log
     CHECK(p.line(0) == "head");
     CHECK(p.line(1) == "  body");
     CHECK(p.line(2) == "  x");
     CHECK(p.line(3) == "end");
+    CHECK(p.line(5) == "zero");
+}
+
+static void adapter_outlives_pane() {
+    ShLogPr log;
+    {
+        LogPane p;
+        log = p.as_log();
+        log->msg("alive\n");
+        CHECK(p.line_count() == 1);
+        log->msg("partial");
+    }
+    log->msg("late\n"); // pane gone: no-op
+    log->newl();
+    log->msg("partial2");
+    log.reset(); // dtor flush must not touch the dead pane
 }
 
 static void two_panes_one_window() {
@@ -151,6 +173,10 @@ static void two_panes_one_window() {
             ImGui::Render();
         }
         CHECK(a.line_count() == 50);
+        int scrolls = 0;
+        for(ImGuiWindow* w : ImGui::GetCurrentContext()->Windows)
+            if(std::string(w->Name).find("##logpane_scroll") != std::string::npos) ++scrolls;
+        CHECK(scrolls == 3); // distinct child windows: PushID separates the panes
     }
     ImGui::DestroyContext();
 }
@@ -166,6 +192,7 @@ int main() {
     as_log_strips_ansi_and_levels();
     as_log_buffers_partial();
     as_log_indent();
+    adapter_outlives_pane();
     two_panes_one_window();
     out_of_range_and_clear();
     TEST_RETURN();

@@ -12,7 +12,7 @@ namespace {
 // Log::msg forwards here; see LogPane::as_log for semantics
 class PaneLog final: public Log {
 public:
-    explicit PaneLog(LogPane& p) : _pane(&p) {}
+    explicit PaneLog(std::weak_ptr<LogPane::Link> l) : _link(std::move(l)) {}
     ~PaneLog() override {
         std::lock_guard<std::mutex> lk(mtx_);
         if(!_pending.empty()) emit();
@@ -22,13 +22,13 @@ public:
     void msg(const char* fmt, ...) override {
         va_list ap;
         va_start(ap, fmt);
-        forward(0, fmt, ap);
+        forward(0, true, fmt, ap);
         va_end(ap);
     }
     void msg(const int incr, const char* fmt, ...) override {
         va_list ap;
         va_start(ap, fmt);
-        forward(incr, fmt, ap);
+        forward(incr, incr != 0, fmt, ap);
         va_end(ap);
     }
     void newl() override {
@@ -39,11 +39,14 @@ public:
 private:
     // caller holds mtx_
     void emit() {
-        _pane->add(_level, _pending.empty() ? std::string_view("\n") : std::string_view(_pending));
+        if(auto l = _link.lock()) {
+            std::lock_guard<std::mutex> lk(l->m);
+            if(l->pane) l->pane->add(_level, _pending.empty() ? std::string_view("\n") : std::string_view(_pending));
+        }
         _pending.clear();
         _level = LogPane::Level::Info;
     }
-    void forward(int incr, const char* fmt, va_list ap) {
+    void forward(int incr, bool indent, const char* fmt, va_list ap) {
         va_list cp;
         va_copy(cp, ap);
         const int n = std::vsnprintf(nullptr, 0, fmt, cp);
@@ -74,12 +77,12 @@ private:
                 emit();
                 continue;
             }
-            if(_pending.empty() && num_indent_ > 0) _pending.assign(size_t(num_indent_), ' ');
+            if(indent && _pending.empty() && num_indent_ > 0) _pending.assign(size_t(num_indent_), ' ');
             _pending += c;
         }
         if(num_indent_ >= -incr) num_indent_ += incr;
     }
-    LogPane* _pane;
+    std::weak_ptr<LogPane::Link> _link;
     std::string _pending;
     LogPane::Level _level = LogPane::Level::Info;
 };
@@ -95,7 +98,18 @@ ImVec4 level_color(LogPane::Level l) {
 
 } // namespace
 
-LogPane::LogPane(size_t cap_bytes) : _cap(cap_bytes ? cap_bytes : 1) {}
+LogPane::LogPane(size_t cap_bytes) : _link(std::make_shared<Link>()), _cap(cap_bytes ? cap_bytes : 1) { _link->pane = this; }
+
+LogPane::~LogPane() {
+    std::lock_guard<std::mutex> lk(_link->m);
+    _link->pane = nullptr;
+}
+
+LogPane::Level LogPane::level(size_t i) const {
+    std::lock_guard<std::mutex> lk(_mtx);
+    if(i >= _lines.size()) throw std::out_of_range("LogPane::level");
+    return _lines[i].level;
+}
 
 void LogPane::add(Level lvl, std::string_view text) {
     std::lock_guard<std::mutex> lk(_mtx);
@@ -138,7 +152,7 @@ std::string_view LogPane::line(size_t i) const {
     return _lines[i].text;
 }
 
-ShLogPr LogPane::as_log() { return std::make_shared<PaneLog>(*this); }
+ShLogPr LogPane::as_log() { return std::make_shared<PaneLog>(_link); }
 
 void LogPane::draw(const char* title) {
     if(title) {

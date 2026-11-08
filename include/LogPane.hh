@@ -4,6 +4,7 @@
 
 #include <cstddef>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
@@ -34,12 +35,25 @@ public:
     // title == nullptr draws inside the current window; otherwise in its own ImGui::Begin/End.
     void draw(const char* title = nullptr);
 
-    // Adapter forwarding Log::msg to add(). Holds a raw pointer: the pane must outlive EVERY
-    // holder of the returned ShLogPr (e.g. a GuiBase _lg), and the adapter's destructor.
+    // Adapter forwarding Log::msg to add(). It holds a weak link to the pane, so it may outlive it
+    // (e.g. a GuiBase _lg released after a derived LogPane member): once the pane is gone every
+    // msg/newl/flush is a no-op. Destruction is serialised with forwarding by an internal mutex.
     // Text is buffered until '\n' (a partial line stays pending; newl() ends the line, an empty
-    // one if nothing is pending; pending text is flushed on destruction). ANSI SGR codes are
-    // stripped; red -> Error, yellow -> Warn, else Info. Indent = leading spaces on each line start.
+    // one if nothing is pending; pending text is flushed on adapter destruction if the pane lives).
+    // ANSI SGR codes are stripped; red -> Error, yellow -> Warn, else Info. Indent matches Log:
+    // msg(fmt) always indents, msg(incr, fmt) only when incr != 0.
     ShLogPr as_log();
+
+    ~LogPane();
+    LogPane(const LogPane&) = delete;
+    LogPane& operator=(const LogPane&) = delete;
+    Level level(size_t i) const; // owning thread; throws std::out_of_range
+
+    // internal: liveness link shared with the Log adapter
+    struct Link {
+        std::mutex m;
+        LogPane* pane;
+    };
 
 private:
     struct Entry {
@@ -49,6 +63,7 @@ private:
     void draw_body();
     void clear_locked();
 
+    std::shared_ptr<Link> _link;
     size_t _cap;
     size_t _bytes = 0;
     std::deque<Entry> _lines; // pop_front is O(1)
