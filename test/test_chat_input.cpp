@@ -3,6 +3,8 @@
 #include "imgui.h"
 #include "test_util.hh"
 
+#include <string>
+
 using namespace smg;
 
 namespace {
@@ -19,7 +21,7 @@ struct Harness {
         ImGui::NewFrame();
         ImGui::SetNextWindowPos({ 0, 0 });
         ImGui::SetNextWindowSize({ 800, 600 });
-        if(collapsed) ImGui::SetNextWindowCollapsed(true, ImGuiCond_Always);
+        ImGui::SetNextWindowCollapsed(collapsed, ImGuiCond_Always);
         ImGui::Begin("c");
         if(auto r = view.draw(enabled)) last = r;
         ImGui::End();
@@ -123,6 +125,21 @@ int main() {
         h.collapsed = true;
         for(int k = 0; k < 3; ++k) h.frame();
         for(int k = 0; k < 5; ++k) CHECK(m.item(i, k).open);
+    }
+
+    {
+        // Shift+Enter over a leftward (end < start) selection replaces it
+        Harness h;
+        for(int i = 0; i < 3; ++i) h.frame();
+        h.click_input();
+        for(const char c : std::string("abcdef")) h.chr(c);
+        h.shift(true);
+        h.tap(ImGuiKey_LeftArrow);
+        h.tap(ImGuiKey_LeftArrow);
+        h.tap(ImGuiKey_Enter);
+        h.shift(false);
+        h.tap(ImGuiKey_Enter);
+        CHECK(h.last && *h.last == "abcd\n");
     }
 
     ImGui::DestroyContext();

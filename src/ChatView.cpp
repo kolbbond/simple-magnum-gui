@@ -67,7 +67,13 @@ int input_cb(ImGuiInputTextCallbackData* d) {
         // Shift+Enter -> newline; plain Enter submits via EnterReturnsTrue
         const ImGuiIO& io = ImGui::GetIO();
         if(io.KeyMods == ImGuiMod_Shift && (ImGui::IsKeyPressed(ImGuiKey_Enter) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter))) {
-            if(d->HasSelection()) d->DeleteChars(d->SelectionStart, d->SelectionEnd - d->SelectionStart);
+            // SelectionStart/End are unsorted (start > end after Shift+Left)
+            const int a = std::min(d->SelectionStart, d->SelectionEnd);
+            const int b = std::max(d->SelectionStart, d->SelectionEnd);
+            if(b > a) {
+                d->DeleteChars(a, b - a);
+                d->CursorPos = a;
+            }
             d->InsertChars(d->CursorPos, "\n");
         }
     } else if(d->EventFlag == ImGuiInputTextFlags_CallbackResize) {
