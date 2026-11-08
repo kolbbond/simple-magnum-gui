@@ -61,6 +61,24 @@ int main() {
     // ortho projection has no perspective foreshortening: w == 1
     CHECK(smgtest::approx(oclip.w(), 1.0f));
 
+    // invert_y flips the vertical orbit direction only
+    {
+        Camera a, b;
+        b.set_invert_y(true);
+        CHECK(!a.invert_y() && b.invert_y());
+        a.orbit(0.0f, 20.0f);
+        b.orbit(0.0f, 20.0f);
+        const float ya = (a.eye() - a.pivot()).normalized().y();
+        const float yb = (b.eye() - b.pivot()).normalized().y();
+        const float y0 = (Camera{}.eye() - Camera{}.pivot()).normalized().y();
+        CHECK(ya < y0 && yb > y0); // camera-style lowers the eye on drag-down, grab-style raises it
+        Camera c, d;
+        d.set_invert_y(true);
+        c.orbit(20.0f, 0.0f);
+        d.orbit(20.0f, 0.0f);
+        CHECK(smgtest::approx((c.eye() - d.eye()).length(), 0.0f)); // horizontal unchanged
+    }
+
     // iso preset selects orthographic and the 2:1 dimetric pitch
     Camera iso;
     iso.iso();

@@ -35,6 +35,9 @@ public:
     [[nodiscard]] Ray unproject(const Magnum::Vector2& screen_px, const Magnum::Vector2& viewport_px) const;
 
     void orbit(float dx, float dy); // screen-pixel deltas
+    // vertical drag: false = camera-style (drag down lowers the eye), true = grab-style (drag down tilts top toward you)
+    void set_invert_y(bool on) { _invert_y = on; }
+    [[nodiscard]] bool invert_y() const { return _invert_y; }
     void pan(float dx, float dy);
     void zoom(float delta); // + = closer
     void fit(const Bounds& b, float margin = 1.5f);
@@ -64,6 +67,7 @@ private:
     float _distance{ 5.0f };
     float _yaw{ 0.6f }; // radians, around up axis
     float _pitch{ 0.4f }; // radians, elevation
+    bool _invert_y{ false };
     float _fov_deg{ 45.0f };
     float _near{ 0.05f };
     float _far{ 500.0f };

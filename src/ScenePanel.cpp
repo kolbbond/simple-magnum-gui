@@ -224,6 +224,10 @@ void ScenePanel::handle_input(const Magnum::Vector2& image_size) {
 }
 
 void ScenePanel::draw_section_controls() {
+    bool inv = _camera.invert_y();
+    if(ImGui::Checkbox("invert vertical", &inv)) _camera.set_invert_y(inv);
+    if(ImGui::IsItemHovered()) ImGui::SetTooltip("Vertical drag direction: on = drag down tilts the top toward you");
+    ImGui::SameLine();
     ImGui::Checkbox("Section", &_section.enabled);
     if(!_section.enabled) return;
 

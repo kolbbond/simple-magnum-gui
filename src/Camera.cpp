@@ -90,7 +90,8 @@ Camera::Ray Camera::unproject(const Magnum::Vector2& screen_px, const Magnum::Ve
 
 void Camera::orbit(float dx, float dy) {
     _yaw += dx * kOrbitRate;
-    _pitch = std::clamp(_pitch - dy * kOrbitRate, -kPitchLimit, kPitchLimit);
+    const float sy = _invert_y ? -1.0f : 1.0f;
+    _pitch = std::clamp(_pitch - sy * dy * kOrbitRate, -kPitchLimit, kPitchLimit);
 }
 
 void Camera::pan(float dx, float dy) {
