@@ -17,11 +17,13 @@ class LogPane {
 public:
     enum class Level { Info, Warn, Error, Tool };
 
-    // cap_bytes bounds the summed size of stored line text (newlines/levels not counted);
-    // oldest lines are dropped first, the newest is always kept (truncated if alone > cap).
+    // cap_bytes bounds the sum of (line size + 1) over stored lines (the +1 charges the newline, so
+    // blank-line floods are bounded too). Oldest lines drop first; the newest is always kept, cut
+    // to at most cap-1 bytes on a UTF-8 boundary. cap 0 is clamped to 1 (newest line only, empty).
     explicit LogPane(size_t cap_bytes = 1 << 20);
 
-    // Thread-safe: add, clear, line_count, as_log()->msg.
+    // add, clear, line_count and the as_log() adapter are mutex-guarded (log from any thread);
+    // draw() must run on the UI thread and holds the mutex while drawing.
     // Multi-line input is split on '\n'; a trailing '\n' adds no empty line; "" adds nothing.
     void add(Level lvl, std::string_view line);
     void clear();
@@ -32,8 +34,11 @@ public:
     // title == nullptr draws inside the current window; otherwise in its own ImGui::Begin/End.
     void draw(const char* title = nullptr);
 
-    // Adapter forwarding Log::msg(fmt, ...) to add(Info, ...). Holds a raw pointer:
-    // the pane must outlive the returned Log (and every copy of the pointer).
+    // Adapter forwarding Log::msg to add(). Holds a raw pointer: the pane must outlive EVERY
+    // holder of the returned ShLogPr (e.g. a GuiBase _lg), and the adapter's destructor.
+    // Text is buffered until '\n' (a partial line stays pending; newl() ends the line, an empty
+    // one if nothing is pending; pending text is flushed on destruction). ANSI SGR codes are
+    // stripped; red -> Error, yellow -> Warn, else Info. Indent = leading spaces on each line start.
     ShLogPr as_log();
 
 private:
@@ -42,6 +47,7 @@ private:
         std::string text;
     };
     void draw_body();
+    void clear_locked();
 
     size_t _cap;
     size_t _bytes = 0;
