@@ -1,0 +1,107 @@
+name: release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - scripts/package_sdk.sh
+      - scripts/check_sdk.sh
+      - test/consumer/**
+      - external/CMakeLists.txt
+      - cmake/smg*.cmake.in
+      - .github/workflows/release.yml
+
+jobs:
+  sdk-linux:
+    runs-on: ubuntu-latest
+    # glibc 2.28 floor; the goose-tools wheel builds in the same image
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - name: Install build deps
+        run: >
+          dnf install -y --setopt=install_weak_deps=False
+          SDL2-devel freetype-devel mesa-libGL-devel
+          libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      # must match goose's cmake.deps/smg ExternalProject args
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_SHARED_LIBS=ON
+          -DENABLE_TESTING=OFF
+          -DENABLE_EXAMPLES=OFF
+          -DMAGNUM_WITH_FREETYPEFONT=ON
+          -DMAGNUM_WITH_MAGNUMFONT=ON
+
+      - name: Tag matches project version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/CMakeCache.txt)
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME != PROJECT_VERSION $version"
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: scripts/package_sdk.sh build dist
+
+      - name: Check relocated SDK
+        run: scripts/check_sdk.sh dist/*.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sdk-linux-x86_64
+          path: dist/
+          if-no-files-found: error
+
+  # SDK built with gcc-toolset, consumed by a distro GCC: same CXX11 ABI must hold
+  consumer-ubuntu:
+    needs: [sdk-linux]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install consumer deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libsdl2-dev libgl-dev libfreetype6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdk-linux-x86_64
+          path: dist
+
+      - name: Verify checksum
+        run: cd dist && sha256sum -c *.sha256
+
+      - name: Check relocated SDK
+        run: scripts/check_sdk.sh dist/*.tar.gz
+
+  publish:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [sdk-linux, consumer-ubuntu]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: sdk-linux-x86_64
+          path: dist
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --title "$GITHUB_REF_NAME" --generate-notes
