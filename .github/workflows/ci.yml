@@ -18,7 +18,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xorg-dev ccache \
-            xvfb libgl1-mesa-dri
+            xvfb libgl1-mesa-dri libfreetype-dev
 
       - name: ccache
         uses: actions/cache@v4
@@ -33,6 +33,7 @@ jobs:
           -DCMAKE_BUILD_TYPE=Release
           -DENABLE_EXAMPLES=ON
           -DSMG_BUILD_GUI_TESTS=ON
+          -DMAGNUM_WITH_FREETYPEFONT=ON
           -DCMAKE_INSTALL_PREFIX=${{ runner.temp }}/smg
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
