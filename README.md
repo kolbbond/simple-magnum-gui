@@ -93,6 +93,25 @@ Add library path:
 export LD_LIBRARY_PATH=/path/to/simple-magnum-gui/.deps/usr/lib:${LD_LIBRARY_PATH}
 ```
 
+### Prebuilt SDK (Linux)
+
+Each `v*` release ships a relocatable smg + Corrade/Magnum/plugins install, built in
+`manylinux_2_28` (runs on glibc ≥ 2.28):
+```bash
+ver=0.1.0
+curl -LO https://github.com/kolbbond/simple-magnum-gui/releases/download/v$ver/smg-$ver-linux-x86_64.tar.gz
+tar -xzf smg-$ver-linux-x86_64.tar.gz
+cmake -B build -DCMAKE_PREFIX_PATH=$PWD/smg-$ver-linux-x86_64   # then find_package(smg)
+```
+
+Unpack anywhere; RUNPATHs and plugin lookup are `$ORIGIN`-relative, so no `LD_LIBRARY_PATH`.
+Not bundled, install from the distro: SDL2 (`libSDL2-2.0.so.0`), FreeType (`libfreetype.so.6`),
+libGL/GLX, plus SDL2 and GL headers to build against it. Don't mix it with another Magnum/Corrade
+in the same build, and load only one `libsmg.so` per process.
+
+`scripts/package_sdk.sh <build-dir> <out-dir>` builds the tarball from any build tree;
+`scripts/check_sdk.sh <tarball>` checks it from a fresh path.
+
 ### Windows
 
 Use vcpkg (classic mode) for SDL2/Freetype/libjpeg-turbo:
