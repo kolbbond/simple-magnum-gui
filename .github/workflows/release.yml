@@ -1,6 +1,6 @@
 name: release
 
-# v* tags build, smoke and publish both packages; a dispatch or a PR touching packaging does the
+# v* tags build, smoke and publish all packages; a dispatch or a PR touching packaging does the
 # same minus the release
 on:
   push:
@@ -12,6 +12,8 @@ on:
       - scripts/**
       - cmake/**
       - packaging/**
+      - external/CMakeLists.txt
+      - test/consumer/**
   workflow_dispatch:
     inputs:
       version:
@@ -311,8 +313,86 @@ jobs:
           path: ${{ runner.temp }}/smoke
           if-no-files-found: ignore
 
+  # the C++ SDK (headers, shared libs, bundled Corrade/Magnum + plugins, CMake config); glibc 2.28
+  # floor, and the goose-tools wheel later builds in the same image
+  sdk-linux:
+    runs-on: ubuntu-latest
+    container: quay.io/pypa/manylinux_2_28_x86_64
+    steps:
+      - name: Install build deps
+        run: >
+          dnf install -y --setopt=install_weak_deps=False
+          SDL2-devel freetype-devel mesa-libGL-devel
+          libXrandr-devel libXinerama-devel libXcursor-devel libXi-devel
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      # must match goose's cmake.deps/smg ExternalProject args
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DBUILD_SHARED_LIBS=ON
+          -DENABLE_TESTING=OFF
+          -DENABLE_EXAMPLES=OFF
+          -DMAGNUM_WITH_FREETYPEFONT=ON
+          -DMAGNUM_WITH_MAGNUMFONT=ON
+
+      # the SDK is named from PROJECT_VERSION, not the tag
+      - name: Tag matches project version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          version=$(sed -n 's/^CMAKE_PROJECT_VERSION:STATIC=//p' build/CMakeCache.txt)
+          if [ "${GITHUB_REF_NAME#v}" != "$version" ]; then
+            echo "::error::tag $GITHUB_REF_NAME != PROJECT_VERSION $version"
+            exit 1
+          fi
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: scripts/package_sdk.sh build dist
+
+      - name: Check relocated SDK
+        run: scripts/check_sdk.sh dist/smg-*.tar.gz
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smg-sdk-linux-x86_64
+          path: dist/
+          if-no-files-found: error
+
+  # SDK built with gcc-toolset, consumed by a distro GCC: same CXX11 ABI must hold
+  sdk-consumer:
+    needs: sdk-linux
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install consumer deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libsdl2-dev libgl-dev libfreetype6
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smg-sdk-linux-x86_64
+          path: dist
+
+      - name: Verify checksum
+        working-directory: dist
+        run: sha256sum -c smg-*.tar.gz.sha256
+
+      - name: Check relocated SDK
+        run: scripts/check_sdk.sh dist/smg-*.tar.gz
+
   release:
-    needs: [linux, linux-smoke, windows, windows-smoke]
+    needs: [linux, linux-smoke, windows, windows-smoke, sdk-linux, sdk-consumer]
     # a dispatch on a tag ref must not publish
     if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
