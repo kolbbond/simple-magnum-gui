@@ -48,6 +48,13 @@ set(MAGNUM_BUILD_PLUGINS_STATIC OFF CACHE BOOL "" FORCE)
 set(MAGNUM_WITH_IMGUIINTEGRATION ON CACHE BOOL "" FORCE)
 
 # Build in order
+# libs in lib/, plugins in lib/magnum/<kind>/ -> relocatable without LD_LIBRARY_PATH
+if(APPLE)
+    set(CMAKE_INSTALL_RPATH "@loader_path;@loader_path/../..")
+elseif(UNIX)
+    set(CMAKE_INSTALL_RPATH "$ORIGIN;$ORIGIN/../..")
+endif()
+
 add_subdirectory(corrade)
 add_subdirectory(magnum)
 add_subdirectory(magnum-plugins)
