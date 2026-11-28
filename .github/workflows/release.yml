@@ -330,10 +330,10 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      # must match goose's cmake.deps/smg ExternalProject args
+      # must match goose's cmake.deps/smg ExternalProject args; the image has no ninja, so Makefiles
       - name: Configure
         run: >
-          cmake -B build -G Ninja
+          cmake -B build
           -DCMAKE_BUILD_TYPE=Release
           -DBUILD_SHARED_LIBS=ON
           -DENABLE_TESTING=OFF
@@ -352,7 +352,7 @@ jobs:
           fi
 
       - name: Build
-        run: cmake --build build
+        run: cmake --build build --parallel 4
 
       - name: Package
         run: scripts/package_sdk.sh build dist
