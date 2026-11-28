@@ -178,7 +178,17 @@ the others rely on threads, the filesystem or OS APIs that a browser doesn't off
 
 `cpack` in the build directory produces `package/smg-examples-<version>-win64.zip` and an NSIS
 installer: the examples plus every DLL and Magnum plugin they load, runnable on a machine without
-any of the dependencies installed.
+any of the dependencies installed. Build it in Release, so the zip carries `bin/magnum/` rather than
+the debug `magnum-d/` plugins (CI runs the same steps from an x64 MSVC dev shell):
+
+```powershell
+& "$env:VCPKG_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo --triplet x64-windows
+cmake --preset windows-vcpkg-release -DSMG_PACKAGE_VERSION=0.2.0   # optional, defaults to the project version
+cmake --build build
+cd build; cpack -G ZIP                                              # -> package/smg-examples-0.2.0-win64.zip
+Expand-Archive package\smg-examples-0.2.0-win64.zip $env:TEMP\smg
+& "$env:TEMP\smg\smg-examples-0.2.0-win64\bin\scene_panel.exe" --smg-frames 5 --smg-hidden
+```
 
 ### Installing examples as tools (Linux)
 
