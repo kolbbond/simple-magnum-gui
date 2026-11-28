@@ -16,6 +16,7 @@ endif()
 
 set(SMG_TOOL_PREFIX "smg-" CACHE STRING "name prefix of installed tools: bin/<prefix><example>")
 set(SMG_TOOLS_DIR "${CMAKE_INSTALL_LIBDIR}/smg-tools")
+include(SmgLicenses)
 
 # where the build put the libraries the tools load, plus any prefix Magnum was found in
 set(_smg_tool_lib_dirs "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
@@ -52,6 +53,9 @@ foreach(_t ${_smg_tools})
 
     string(CONFIGURE "${_smg_tool_link_code}" _code @ONLY)
     install(CODE "${_code}" COMPONENT tool-${_t} EXCLUDE_FROM_ALL)
+
+    # in every tool component, so any subset installed carries the notices
+    smg_install_licenses(${CMAKE_INSTALL_DATADIR}/licenses/smg tool-${_t} EXCLUDE_FROM_ALL)
 endforeach()
 
 string(REPLACE ";" " " _smg_tool_names "${_smg_tools}")

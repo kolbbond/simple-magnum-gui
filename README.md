@@ -47,6 +47,9 @@ Expand-Archive smg-examples-0.1.0-win64.zip .
 
 **Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball.
 
+Both packages carry the license texts of smg and everything bundled (Corrade, Magnum, ImGui, ImPlot,
+ImGuiFileDialog, fonts): `share/licenses/smg/` in the tarball, `licenses\` in the zip.
+
 Releasing: add a `## [X.Y.Z]` section to [CHANGELOG.md](CHANGELOG.md), then push a `vX.Y.Z` tag;
 [`release.yml`](.github/workflows/release.yml) builds, smoke-tests and attaches both packages with
 their checksums. A manual `workflow_dispatch` run does the same without publishing.

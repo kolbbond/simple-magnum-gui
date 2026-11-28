@@ -35,7 +35,8 @@ First tagged release.
   `file_dialog`, `csvplot`, `diskusage`, `files`, `fview`, `sysinfo`, `visualizer`, `overlay`.
 - Linux tool installs (`make install-tools`, one `tool-<name>` install component per example).
 - Windows `cpack` zip and NSIS installer; WebAssembly build with live demos on GitHub Pages.
-- MIT license, with third-party license texts shipped in the packages.
+- MIT license; both packages ship the license texts of smg and every bundled component
+  (`share/licenses/smg/` in the tarball, `licenses/` in the zip).
 
 [Unreleased]: https://github.com/kolbbond/simple-magnum-gui/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/kolbbond/simple-magnum-gui/releases/tag/v0.1.0
