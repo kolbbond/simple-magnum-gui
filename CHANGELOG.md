@@ -10,9 +10,7 @@ their `.sha256` files; that section becomes the release notes.
 
 ## [Unreleased]
 
-## [0.1.0] - 2026-11-28
-
-First tagged release.
+Planned as 0.1.0, the first tagged release.
 
 ### Added
 
@@ -39,5 +37,4 @@ First tagged release.
 - MIT license; both packages ship the license texts of smg and every bundled component
   (`share/licenses/smg/` in the tarball, `licenses/` in the zip).
 
-[Unreleased]: https://github.com/kolbbond/simple-magnum-gui/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/kolbbond/simple-magnum-gui/releases/tag/v0.1.0
+[Unreleased]: https://github.com/kolbbond/simple-magnum-gui/commits/master

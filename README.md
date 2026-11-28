@@ -46,15 +46,18 @@ Expand-Archive smg-examples-0.1.0-win64.zip .
 .\smg-examples-0.1.0-win64\bin\scene_panel.exe
 ```
 
-**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball (notices in
-`/usr/share/licenses/smg-tools-bin/`).
+**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball, pulling in
+`sdl2 libglvnd wayland` (notices in `/usr/share/licenses/smg-tools-bin/`). Until the first release is
+published its `sha256sums` is a placeholder; after it, `updpkgsums` fills it from the tarball (must match
+the release's `.sha256` asset).
 
 Both packages carry the license texts of smg and everything bundled (Corrade, Magnum, ImGui, ImPlot,
 ImGuiFileDialog, fonts): `share/licenses/smg/` in the tarball, `licenses\` in the zip.
 
 Releasing: add a `## [X.Y.Z]` section to [CHANGELOG.md](CHANGELOG.md), then push a `vX.Y.Z` tag;
 [`release.yml`](.github/workflows/release.yml) builds, smoke-tests and attaches both packages with
-their checksums. A manual `workflow_dispatch` run does the same without publishing.
+their checksums. Only a pushed `v*` tag publishes a release; `workflow_dispatch` runs and pull requests
+build and smoke-test the packages as workflow artifacts without publishing.
 
 ## Getting Started
 
