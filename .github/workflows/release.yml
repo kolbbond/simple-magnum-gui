@@ -155,11 +155,17 @@ jobs:
           arch: x64
 
       # msvc-dev-cmd points VCPKG_ROOT at Visual Studio's bundled, manifest-only vcpkg, whose tree has
-      # none of the classic installs above, so SDL2 went unfound; point it back at the runner's
+      # none of the classic installs above, so SDL2 went unfound; point it back at the runner's for
+      # every later step (a regenerate during Build reads it too)
+      - name: Restore runner vcpkg
+        shell: pwsh
+        run: |
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
       - name: Configure
         shell: pwsh
         run: |
-          $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
+          if ($env:VCPKG_ROOT -ne $env:VCPKG_INSTALLATION_ROOT) { throw "VCPKG_ROOT=$env:VCPKG_ROOT, not the runner's" }
           cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION" -DENABLE_TESTING=OFF `
             "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -274,6 +280,37 @@ jobs:
           if ($bad) { throw "plugin warnings: $($bad -join '; ')" }
           Write-Host 'ok   scene_panel.exe'
 
+      # proof it rendered: the last frame lands in a PNG (the built-in writer, no plugin needed)
+      - name: Smoke screenshot
+        shell: pwsh
+        env:
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $log = Join-Path $env:RUNNER_TEMP 'smoke'
+          $png = Join-Path $log 'shot.png'
+          $p = Start-Process -FilePath $env:SMG_EXE -ArgumentList '--smg-frames', '5', '--smg-hidden', '--smg-screenshot', "`"$png`"" `
+            -WorkingDirectory $log -NoNewWindow -PassThru `
+            -RedirectStandardOutput "$log\shot-out.log" -RedirectStandardError "$log\shot-err.log"
+          $null = $p.Handle
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'scene_panel.exe timed out' }
+          $out = Get-Content "$log\shot-out.log", "$log\shot-err.log"
+          $out | Write-Host
+          if ($p.ExitCode -ne 0) { throw "scene_panel.exe exited $($p.ExitCode)" }
+          if (-not ($out | Select-String -SimpleMatch 'smg: saved')) { throw "no 'smg: saved' line" }
+          if (-not (Test-Path $png)) { throw "no $png" }
+          $bytes = [IO.File]::ReadAllBytes($png)
+          $magic = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+          if ($bytes.Length -lt 100 -or (Compare-Object $bytes[0..7] $magic)) { throw "$png is not a PNG ($($bytes.Length) bytes)" }
+          Write-Host "ok   shot.png ($($bytes.Length) bytes)"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-windows
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: ignore
+
   release:
     needs: [linux, linux-smoke, windows, windows-smoke]
     # a dispatch on a tag ref must not publish
@@ -287,6 +324,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           path: dist
+          pattern: smg-*
           merge-multiple: true
 
       # the "## [1.2.3]" / "## 1.2.3" / "## v1.2.3" section of CHANGELOG.md, up to the next "## "
