@@ -56,11 +56,14 @@ jobs:
           key: ccache-release-ubuntu-22.04-${{ github.sha }}
           restore-keys: ccache-release-ubuntu-22.04-
 
+      # --no-as-needed: Ubuntu's gcc drops unused NEEDED entries, so libMagnumText (needed only by the
+      # MagnumFont plugin) would never be deployed and check_closure fails on the plugin
       - name: Configure
         run: >
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DENABLE_EXAMPLES=ON
+          -DCMAKE_EXE_LINKER_FLAGS=-Wl,--no-as-needed
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
@@ -145,17 +148,24 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
-          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
           & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo --triplet x64-windows
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dll = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin\SDL2.dll"
+          if (-not (Test-Path $dll)) { throw "vcpkg installed no $dll" }
 
       - uses: ilammy/msvc-dev-cmd@v1
         with:
           arch: x64
 
+      # msvc-dev-cmd points VCPKG_ROOT at Visual Studio's bundled, manifest-only vcpkg, whose tree has
+      # none of the classic installs above, so SDL2 went unfound; point it back at the runner's
       - name: Configure
         shell: pwsh
-        run: cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION"
+        run: |
+          $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
+          cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION" `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build
         run: cmake --build build
