@@ -18,6 +18,11 @@ stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 
 cmake --install "$build" --prefix "$stage/$name" --strip >&2
+# Debian/Ubuntu find_package skips lib64/cmake; configure with CMAKE_INSTALL_LIBDIR=lib LIB_SUFFIX=
+if [ -d "$stage/$name/lib64" ]; then
+    echo "package_sdk: install has lib64/, which Debian/Ubuntu consumers can't find" >&2
+    exit 1
+fi
 tar -C "$stage" -czf "$out/$name.tar.gz" "$name"
 (cd "$out" && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256")
 

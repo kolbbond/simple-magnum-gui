@@ -330,10 +330,13 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
-      # must match goose's cmake.deps/smg ExternalProject args; the image has no ninja, so Makefiles
+      # must match goose's cmake.deps/smg ExternalProject args; the image has no ninja, so Makefiles.
+      # lib/, not RHEL's lib64/: Debian/Ubuntu find_package never searches lib64/cmake
       - name: Configure
         run: >
           cmake -B build
+          -DCMAKE_INSTALL_LIBDIR=lib
+          -DLIB_SUFFIX=
           -DCMAKE_BUILD_TYPE=Release
           -DBUILD_SHARED_LIBS=ON
           -DENABLE_TESTING=OFF
