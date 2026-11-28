@@ -1,0 +1,356 @@
+name: release
+
+# v* tags build, smoke and publish both packages; a dispatch or a PR touching packaging does the
+# same minus the release
+on:
+  push:
+    tags: ['v*']
+  # temporary: workflow_dispatch only exists once this file is on the default branch
+  pull_request:
+    paths:
+      - .github/workflows/release.yml
+      - scripts/**
+      - cmake/**
+      - packaging/**
+  workflow_dispatch:
+    inputs:
+      version:
+        description: package version (no leading v)
+        default: 0.0.0-dev
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # tag v1.2.3 -> 1.2.3; dispatch -> the input; a PR (ref 33/merge) -> 0.0.0-dev
+  RAW_VERSION: ${{ github.event_name == 'push' && github.ref_name || inputs.version || '0.0.0-dev' }}
+
+jobs:
+  linux:
+    # oldest supported glibc/libstdc++: binaries built here run on 22.04, Debian 12 and newer
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Version
+        shell: bash
+        run: echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xorg-dev ccache
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-release-ubuntu-22.04-${{ github.sha }}
+          restore-keys: ccache-release-ubuntu-22.04-
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DENABLE_EXAMPLES=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build
+
+      # also writes the .sha256; nothing runs the binaries in this job
+      - name: Package
+        run: scripts/package_linux.sh build "$VERSION" dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smg-linux
+          path: |
+            dist/smg-tools-*.tar.gz
+            dist/smg-tools-*.tar.gz.sha256
+          if-no-files-found: error
+
+  # a clean distro with only the README's runtime packages, so a missing OS dependency shows up
+  linux-smoke:
+    needs: linux
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        image: ['ubuntu:22.04', 'debian:12']
+    container: ${{ matrix.image }}
+    steps:
+      # runtime: libgl1 libopengl0 libsdl2-2.0-0 libwayland-client0; smoke only: xvfb xauth, Mesa's software
+      # DRI driver (a desktop has a GPU driver instead), file for the script's ELF check
+      - name: Install runtime deps
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            libgl1 libopengl0 libsdl2-2.0-0 libwayland-client0 \
+            xvfb xauth libgl1-mesa-dri file ca-certificates
+
+      # only for scripts/package_linux.sh; the tools come from the artifact
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: smg-linux
+          path: ${{ runner.temp }}/dl
+
+      - name: Verify checksum
+        working-directory: ${{ runner.temp }}/dl
+        run: sha256sum -c smg-tools-*.tar.gz.sha256
+
+      # --smoke unpacks into a fresh temp dir, checks the library closure and license notices, then
+      # runs every bin/smg-* in a scrubbed env
+      - name: Smoke (xvfb)
+        shell: bash
+        run: |
+          tarball=$(ls "$RUNNER_TEMP"/dl/smg-tools-*.tar.gz)
+          xvfb-run -a -s "-screen 0 1920x1080x24" scripts/package_linux.sh --smoke "$tarball"
+
+  windows:
+    runs-on: windows-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Version
+        shell: bash
+        run: echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+
+      # vcpkg binary cache: classic-mode installs restore prebuilt ports instead of rebuilding
+      - name: vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-cache
+          key: vcpkg-${{ runner.os }}-sdl2-freetype-libjpeg-turbo-${{ hashFiles('CMakePresets.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-sdl2-freetype-libjpeg-turbo-
+
+      - name: vcpkg install
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo --triplet x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $dll = "$env:VCPKG_INSTALLATION_ROOT\installed\x64-windows\bin\SDL2.dll"
+          if (-not (Test-Path $dll)) { throw "vcpkg installed no $dll" }
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      # msvc-dev-cmd points VCPKG_ROOT at Visual Studio's bundled, manifest-only vcpkg, whose tree has
+      # none of the classic installs above, so SDL2 went unfound; point it back at the runner's for
+      # every later step (a regenerate during Build reads it too)
+      - name: Restore runner vcpkg
+        shell: pwsh
+        run: |
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      - name: Configure
+        shell: pwsh
+        run: |
+          if ($env:VCPKG_ROOT -ne $env:VCPKG_INSTALLATION_ROOT) { throw "VCPKG_ROOT=$env:VCPKG_ROOT, not the runner's" }
+          cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION" -DENABLE_TESTING=OFF `
+            "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        working-directory: build
+        run: cpack -G ZIP
+
+      # sha256sum format so `sha256sum -c` verifies it on any platform
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $zip = Get-Item "build\package\smg-examples-$env:VERSION-win64.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
+          [IO.File]::WriteAllText("$($zip.FullName).sha256", "$hash  $($zip.Name)`n")
+          Get-Content "$($zip.FullName).sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smg-windows
+          path: |
+            build/package/smg-examples-*-win64.zip
+            build/package/smg-examples-*-win64.zip.sha256
+          if-no-files-found: error
+
+  # a fresh runner with no build tree: Magnum would otherwise find plugins in the compiled-in
+  # build\bin\magnum before the zip's own
+  windows-smoke:
+    needs: windows
+    runs-on: windows-latest
+    env:
+      # hosted runners have no GPU and the basic display driver stops at GL 1.1
+      MESA_TAG: 26.3.1
+      MESA_SHA256: 64e84cf13d67dd354640bf443ed0445e6a83afd06a5729f0750b3744d633b3f1
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: smg-windows
+          path: ${{ runner.temp }}\dl
+
+      - name: Verify and unzip
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $sums = Get-Item "$env:RUNNER_TEMP\dl\smg-examples-*-win64.zip.sha256"
+          $want, $name = (Get-Content $sums.FullName -TotalCount 1) -split '\s+', 2
+          $zip = Join-Path $sums.DirectoryName $name.TrimStart('*')
+          $got = (Get-FileHash -Algorithm SHA256 $zip).Hash.ToLower()
+          if ($got -ne $want) { throw "checksum mismatch: $got != $want" }
+          Write-Host "ok   $name"
+          Expand-Archive -Path $zip -DestinationPath "$env:RUNNER_TEMP\pkg" -Force
+
+      # the window icon needs AnyImageImporter plus StbImageImporter, which provides PngImporter
+      - name: Check plugins
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-ChildItem "$env:RUNNER_TEMP\pkg" -Recurse -Filter scene_panel.exe | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          if (-not $exe) { throw 'no bin\scene_panel.exe in the zip' }
+          $importers = Join-Path $exe.DirectoryName 'magnum\importers'
+          $missing = 0
+          foreach ($f in 'AnyImageImporter.dll', 'StbImageImporter.dll', 'StbImageImporter.conf') {
+            if (Test-Path (Join-Path $importers $f)) { Write-Host "ok   magnum\importers\$f" }
+            else { Write-Host "MISSING magnum\importers\$f"; $missing++ }
+          }
+          Get-ChildItem $importers -ErrorAction SilentlyContinue | Format-Table Name, Length
+          if ($missing) { throw "$missing plugin files missing" }
+          "SMG_EXE=$($exe.FullName)" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+
+      # pinned and hashed; downloaded with no token, into a dir of its own
+      - name: Mesa llvmpipe
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $mesa = Join-Path $env:RUNNER_TEMP 'mesa'
+          New-Item -ItemType Directory -Force $mesa | Out-Null
+          $archive = Join-Path $mesa "mesa3d-$env:MESA_TAG-release-msvc.7z"
+          Invoke-WebRequest -Uri "https://github.com/pal1000/mesa-dist-win/releases/download/$env:MESA_TAG/mesa3d-$env:MESA_TAG-release-msvc.7z" -OutFile $archive
+          $got = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLower()
+          if ($got -ne $env:MESA_SHA256) { throw "mesa checksum mismatch: $got" }
+          7z x $archive "-o$mesa\x" -y | Out-Null
+          if ($LASTEXITCODE -ne 0) { throw '7z failed' }
+          $bin = Split-Path $env:SMG_EXE
+          if (-not (Test-Path "$mesa\x\x64\opengl32.dll")) { throw 'no x64\opengl32.dll in the mesa archive' }
+          foreach ($dll in 'opengl32.dll', 'libgallium_wgl.dll', 'libglapi.dll', 'dxil.dll') {
+            $src = Join-Path "$mesa\x\x64" $dll
+            if (Test-Path $src) { Copy-Item $src $bin; Write-Host "copied $dll" }
+          }
+
+      - name: Smoke
+        shell: pwsh
+        env:
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $exe = Get-Item $env:SMG_EXE
+          $log = Join-Path $env:RUNNER_TEMP 'smoke'
+          New-Item -ItemType Directory -Force $log | Out-Null
+          $p = Start-Process -FilePath $exe.FullName -ArgumentList '--smg-frames', '5', '--smg-hidden' `
+            -WorkingDirectory $log -NoNewWindow -PassThru `
+            -RedirectStandardOutput "$log\out.log" -RedirectStandardError "$log\err.log"
+          $null = $p.Handle # else ExitCode reads back empty
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'scene_panel.exe timed out' }
+          $out = Get-Content "$log\out.log", "$log\err.log"
+          $out | Write-Host
+          if ($p.ExitCode -ne 0) { throw "scene_panel.exe exited $($p.ExitCode)" }
+          # a missing plugin only warns, so the exit code alone would pass
+          $bad = $out | Select-String -Pattern 'PluginManager', 'not found', 'skipping icon'
+          if ($bad) { throw "plugin warnings: $($bad -join '; ')" }
+          Write-Host 'ok   scene_panel.exe'
+
+      # proof it rendered: the last frame lands in a PNG (the built-in writer, no plugin needed)
+      - name: Smoke screenshot
+        shell: pwsh
+        env:
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $log = Join-Path $env:RUNNER_TEMP 'smoke'
+          $png = Join-Path $log 'shot.png'
+          $p = Start-Process -FilePath $env:SMG_EXE -ArgumentList '--smg-frames', '5', '--smg-hidden', '--smg-screenshot', "`"$png`"" `
+            -WorkingDirectory $log -NoNewWindow -PassThru `
+            -RedirectStandardOutput "$log\shot-out.log" -RedirectStandardError "$log\shot-err.log"
+          $null = $p.Handle
+          if (-not $p.WaitForExit(120000)) { $p.Kill(); throw 'scene_panel.exe timed out' }
+          $out = Get-Content "$log\shot-out.log", "$log\shot-err.log"
+          $out | Write-Host
+          if ($p.ExitCode -ne 0) { throw "scene_panel.exe exited $($p.ExitCode)" }
+          if (-not ($out | Select-String -SimpleMatch 'smg: saved')) { throw "no 'smg: saved' line" }
+          if (-not (Test-Path $png)) { throw "no $png" }
+          $bytes = [IO.File]::ReadAllBytes($png)
+          $magic = [byte[]](0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A)
+          if ($bytes.Length -lt 100 -or (Compare-Object $bytes[0..7] $magic)) { throw "$png is not a PNG ($($bytes.Length) bytes)" }
+          Write-Host "ok   shot.png ($($bytes.Length) bytes)"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: smoke-windows
+          path: ${{ runner.temp }}/smoke
+          if-no-files-found: ignore
+
+  release:
+    needs: [linux, linux-smoke, windows, windows-smoke]
+    # a dispatch on a tag ref must not publish
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          pattern: smg-*
+          merge-multiple: true
+
+      # the "## [1.2.3]" / "## 1.2.3" / "## v1.2.3" section of CHANGELOG.md, up to the next "## "
+      - name: Release notes
+        id: notes
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if [ -f CHANGELOG.md ]; then
+            awk -v v="$v" '
+              /^## / { if (found) exit; h = $0; sub(/^## +\[?v?/, "", h); if (index(h, v) == 1 && substr(h, length(v) + 1, 1) !~ /[0-9A-Za-z.-]/) { found = 1; next } }
+              found { print }
+            ' CHANGELOG.md > notes.md
+          fi
+          if [ -s notes.md ]; then
+            echo "path=notes.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "no CHANGELOG.md section for $v; using generated notes"
+          fi
+          ls -l dist
+
+      - uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65  # v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
+          fail_on_unmatched_files: true

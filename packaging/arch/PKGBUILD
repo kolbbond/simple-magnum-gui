@@ -1,0 +1,32 @@
+# Maintainer: kolbbond
+# Prebuilt smg-* tools from the GitHub release tarball (scripts/package_linux.sh).
+#
+# sha256sums is a placeholder until v$pkgver is published; the real value is the release's
+# $_tarname.tar.gz.sha256 asset. After a release: set pkgver, reset pkgrel=1, then
+#   updpkgsums && makepkg --printsrcinfo > .SRCINFO
+# (updpkgsums is in pacman-contrib)
+pkgname=smg-tools-bin
+pkgver=0.1.0
+pkgrel=1
+pkgdesc='simple-magnum-gui tools: file browser, results viewer, CSV plotter, disk usage, system monitor, HUD overlay (prebuilt)'
+arch=('x86_64')
+url='https://github.com/kolbbond/simple-magnum-gui'
+# smg, Corrade, Magnum, ImGui, ImPlot, ImGuiFileDialog: MIT; bloom: Unlicense; fonts: OFL-1.1, Apache-2.0
+license=('MIT' 'Unlicense' 'OFL-1.1' 'Apache-2.0')
+# runtime: SDL2, GLVND (libOpenGL.so.0) and Wayland come from the OS; Magnum, Corrade, ImGui and libsmg ship in lib/smg-tools
+depends=('glibc' 'gcc-libs' 'libgl' 'libglvnd' 'sdl2' 'wayland')
+provides=('smg-tools')
+conflicts=('smg-tools')
+# prebuilt: no sources for a -debug package
+options=('!debug')
+_tarname="smg-tools-$pkgver-linux-x86_64"
+source=("$url/releases/download/v$pkgver/$_tarname.tar.gz")
+sha256sums=('SKIP')
+
+package() {
+    install -dm755 "$pkgdir/usr"
+    # bin/smg-* are relative links into lib/smg-tools/bin; cp -a keeps them
+    cp -a "$srcdir/$_tarname/." "$pkgdir/usr/"
+    # the tarball's notices (smg + every bundled component) go where Arch looks for them
+    mv "$pkgdir/usr/share/licenses/smg" "$pkgdir/usr/share/licenses/$pkgname"
+}

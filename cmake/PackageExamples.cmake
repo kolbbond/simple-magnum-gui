@@ -18,13 +18,19 @@ if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
 endif()
 
 # Magnum's runtime plugins (the window icon needs AnyImageImporter + StbImageImporter); a shared
-# Magnum looks for them in magnum/ next to its DLLs
+# Magnum looks for them in magnum/ next to its DLLs. Built from source, the plugin dir is only known
+# per config (bin/magnum vs magnum-d on Windows, lib/magnum on Linux) and doesn't exist at configure
+# time, so take it from the plugin target.
 set(_smg_plugin_dir "")
-foreach(_dir ${_smg_dll_dirs})
-    if(NOT _smg_plugin_dir AND IS_DIRECTORY "${_dir}/magnum/importers")
-        set(_smg_plugin_dir "${_dir}/magnum")
-    endif()
-endforeach()
+if(TARGET AnyImageImporter)
+    set(_smg_plugin_dir "$<TARGET_FILE_DIR:AnyImageImporter>/..")
+else()
+    foreach(_dir ${_smg_dll_dirs})
+        if(NOT _smg_plugin_dir AND IS_DIRECTORY "${_dir}/magnum/importers")
+            set(_smg_plugin_dir "${_dir}/magnum")
+        endif()
+    endforeach()
+endif()
 if(_smg_plugin_dir)
     install(DIRECTORY "${_smg_plugin_dir}/" DESTINATION ${CMAKE_INSTALL_BINDIR}/magnum COMPONENT examples
         FILES_MATCHING PATTERN "*.dll" PATTERN "*.so" PATTERN "*.conf")
@@ -39,6 +45,15 @@ foreach(_t ${_smg_examples})
 endforeach()
 set(SMG_DEPLOY_EXECUTABLES "${_smg_example_files}")
 set(SMG_DEPLOY_DIRECTORIES "${_smg_dll_dirs}")
+# GET_RUNTIME_DEPENDENCIES needs dumpbin on Windows; cpack may not run from a VS dev shell
+set(SMG_DEPLOY_DUMPBIN "")
+if(MSVC)
+    get_filename_component(_smg_cl_dir "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    find_program(SMG_DUMPBIN dumpbin HINTS "${_smg_cl_dir}")
+    if(SMG_DUMPBIN)
+        set(SMG_DEPLOY_DUMPBIN "${SMG_DUMPBIN}")
+    endif()
+endif()
 configure_file(${CMAKE_CURRENT_LIST_DIR}/deploy_examples.cmake.in
     ${CMAKE_BINARY_DIR}/deploy_examples.cmake.gen @ONLY)
 file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/deploy_examples-$<CONFIG>.cmake
@@ -54,43 +69,17 @@ endif()
 
 install(FILES ${CMAKE_CURRENT_LIST_DIR}/../packaging/README.txt DESTINATION . COMPONENT examples)
 
-# MIT/zlib require their notices to travel with the binaries
-set(_smg_root ${CMAKE_CURRENT_LIST_DIR}/..)
-set(_smg_licenses
-    "smg|${_smg_root}/LICENSE"
-    "corrade|${_smg_root}/external/corrade/COPYING"
-    "magnum|${_smg_root}/external/magnum/COPYING"
-    "magnum-integration|${_smg_root}/external/magnum-integration/COPYING"
-    "magnum-plugins|${_smg_root}/external/magnum-plugins/COPYING"
-    "imgui|${_smg_root}/external/magnum-integration/src/MagnumExternal/ImGui/LICENSE.txt"
-    "implot|${_smg_root}/external/implot/LICENSE"
-    "implot3d|${_smg_root}/external/implot3d/LICENSE"
-    "imguifiledialog|${_smg_root}/external/imguifiledialog/LICENSE"
-    "magnum-bloom|${_smg_root}/external/bloom/PROVENANCE.md")
-if(DEFINED VCPKG_INSTALLED_DIR AND DEFINED VCPKG_TARGET_TRIPLET)
-    list(APPEND _smg_licenses "sdl2|${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/share/sdl2/copyright")
-endif()
-foreach(_entry ${_smg_licenses})
-    string(REPLACE "|" ";" _pair "${_entry}")
-    list(GET _pair 0 _name)
-    list(GET _pair 1 _file)
-    if(EXISTS "${_file}")
-        get_filename_component(_ext "${_file}" LAST_EXT)
-        if(NOT _ext)
-            set(_ext ".txt")
-        endif()
-        install(FILES "${_file}" DESTINATION licenses RENAME "${_name}${_ext}" COMPONENT examples)
-    else()
-        message(STATUS "smg examples package: license file missing for ${_name}: ${_file}")
-    endif()
-endforeach()
-install(DIRECTORY ${_smg_root}/assets/LICENSES/ DESTINATION licenses/fonts COMPONENT examples)
+include(SmgLicenses)
+smg_install_licenses(licenses examples)
 
 # CPack
 set(CPACK_PACKAGE_NAME "smg-examples")
 set(CPACK_PACKAGE_VENDOR "kolbbond")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "simple-magnum-gui example programs")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+# release builds pass the tag, e.g. -DSMG_PACKAGE_VERSION=0.2.0
+set(SMG_PACKAGE_VERSION "${PROJECT_VERSION}" CACHE STRING "version in the examples package name")
+string(REGEX REPLACE "^v" "" _smg_pkg_version "${SMG_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_VERSION "${_smg_pkg_version}")
 set(CPACK_PACKAGE_INSTALL_DIRECTORY "smg-examples")
 set(CPACK_PACKAGE_DIRECTORY "${CMAKE_BINARY_DIR}/package")
 set(CPACK_COMPONENTS_ALL examples)
@@ -108,7 +97,7 @@ endforeach()
 
 if(WIN32)
     set(CPACK_GENERATOR "ZIP;NSIS")
-    set(CPACK_NSIS_DISPLAY_NAME "smg examples ${PROJECT_VERSION}")
+    set(CPACK_NSIS_DISPLAY_NAME "smg examples ${CPACK_PACKAGE_VERSION}")
     set(CPACK_NSIS_PACKAGE_NAME "smg examples")
     set(CPACK_NSIS_EXECUTABLES_DIRECTORY "${CMAKE_INSTALL_BINDIR}")
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)

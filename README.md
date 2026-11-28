@@ -25,6 +25,40 @@ plots and OpenGL scenes. Good for quick tools, debugging views and data visualiz
 - **Capture** — screenshots, frame recording and hidden off-screen rendering, from code or the
   command line (below), which also makes every app testable in CI without a display
 
+## Download
+
+Prebuilt tools and examples are on [GitHub Releases](https://github.com/kolbbond/simple-magnum-gui/releases)
+(changes in [CHANGELOG.md](CHANGELOG.md)). Each asset has a `.sha256` beside it.
+
+**Linux** (x86_64; built on Ubuntu 22.04, so glibc 2.35 or newer — Ubuntu 22.04+, Debian 12+, current
+Arch/Fedora; needs `libgl1 libopengl0 libsdl2-2.0-0 libwayland-client0` or your distro's equivalents):
+```bash
+sha256sum -c smg-tools-0.1.0-linux-x86_64.tar.gz.sha256
+tar xf smg-tools-0.1.0-linux-x86_64.tar.gz
+./smg-tools-0.1.0-linux-x86_64/bin/smg-fview         # runs in place
+cp -a smg-tools-0.1.0-linux-x86_64/. ~/.local/        # or install: smg-fview, smg-csvplot, ... on PATH
+```
+
+**Windows** (x64; needs an OpenGL 3.3 driver):
+```powershell
+(Get-FileHash smg-examples-0.1.0-win64.zip -Algorithm SHA256).Hash   # compare with the .sha256
+Expand-Archive smg-examples-0.1.0-win64.zip .
+.\smg-examples-0.1.0-win64\bin\scene_panel.exe
+```
+
+**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball, pulling in
+`sdl2 libglvnd wayland` (notices in `/usr/share/licenses/smg-tools-bin/`). Until the first release is
+published its `sha256sums` is a placeholder; after it, `updpkgsums` fills it from the tarball (must match
+the release's `.sha256` asset).
+
+Both packages carry the license texts of smg and everything bundled (Corrade, Magnum, ImGui, ImPlot,
+ImGuiFileDialog, fonts): `share/licenses/smg/` in the tarball, `licenses\` in the zip.
+
+Releasing: add a `## [X.Y.Z]` section to [CHANGELOG.md](CHANGELOG.md), then push a `vX.Y.Z` tag;
+[`release.yml`](.github/workflows/release.yml) builds, smoke-tests and attaches both packages with
+their checksums. Only a pushed `v*` tag publishes a release; `workflow_dispatch` runs and pull requests
+build and smoke-test the packages as workflow artifacts without publishing.
+
 ## Getting Started
 
 Clone with submodules:
@@ -178,7 +212,17 @@ the others rely on threads, the filesystem or OS APIs that a browser doesn't off
 
 `cpack` in the build directory produces `package/smg-examples-<version>-win64.zip` and an NSIS
 installer: the examples plus every DLL and Magnum plugin they load, runnable on a machine without
-any of the dependencies installed.
+any of the dependencies installed. Build it in Release, so the zip carries `bin/magnum/` rather than
+the debug `magnum-d/` plugins (CI runs the same steps from an x64 MSVC dev shell):
+
+```powershell
+& "$env:VCPKG_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo --triplet x64-windows
+cmake --preset windows-vcpkg-release -DSMG_PACKAGE_VERSION=0.2.0   # optional, defaults to the project version
+cmake --build build
+cd build; cpack -G ZIP                                              # -> package/smg-examples-0.2.0-win64.zip
+Expand-Archive package\smg-examples-0.2.0-win64.zip $env:TEMP\smg
+& "$env:TEMP\smg\smg-examples-0.2.0-win64\bin\scene_panel.exe" --smg-frames 5 --smg-hidden
+```
 
 ### Installing examples as tools (Linux)
 
