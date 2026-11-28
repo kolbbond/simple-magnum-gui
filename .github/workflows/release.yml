@@ -380,7 +380,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            cmake ninja-build g++ libsdl2-dev libgl-dev libfreetype6
+            cmake ninja-build g++ libsdl2-dev libgl-dev libopengl0 libfreetype6
 
       - uses: actions/download-artifact@v4
         with:

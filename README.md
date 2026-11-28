@@ -106,7 +106,7 @@ cmake -B build -DCMAKE_PREFIX_PATH=$PWD/smg-$ver-linux-x86_64   # then find_pack
 
 Unpack anywhere; RUNPATHs and plugin lookup are `$ORIGIN`-relative, so no `LD_LIBRARY_PATH`.
 Not bundled, install from the distro: SDL2 (`libSDL2-2.0.so.0`), FreeType (`libfreetype.so.6`),
-libGL/GLX, plus SDL2 and GL headers to build against it. Don't mix it with another Magnum/Corrade
+libGL/GLX and libOpenGL (libglvnd; `libopengl0` on Debian/Ubuntu), plus SDL2 and GL headers to build against it. Don't mix it with another Magnum/Corrade
 in the same build, and load only one `libsmg.so` per process.
 
 `scripts/package_sdk.sh <build-dir> <out-dir>` builds the tarball from any build tree;
