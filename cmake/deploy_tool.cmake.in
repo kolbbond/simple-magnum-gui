@@ -4,8 +4,22 @@
 
 set(_dest "${CMAKE_INSTALL_PREFIX}/@SMG_TOOLS_DIR@")
 
+set(_plugin_dir "")
+set(_plugin_dirs "@SMG_DEPLOY_PLUGIN_DIRS@")
+foreach(_dir IN LISTS _plugin_dirs)
+    if(NOT _plugin_dir AND IS_DIRECTORY "${_dir}/importers")
+        set(_plugin_dir "${_dir}")
+    endif()
+endforeach()
+set(_plugin_modules "")
+if(_plugin_dir)
+    file(GLOB_RECURSE _plugin_modules "${_plugin_dir}/*.so")
+endif()
+
+# plugins are dlopen()ed, so their own deps (libMagnumText for MagnumFont) are invisible from the exe
 file(GET_RUNTIME_DEPENDENCIES
     EXECUTABLES "@SMG_DEPLOY_EXECUTABLE@"
+    MODULES ${_plugin_modules}
     DIRECTORIES @SMG_DEPLOY_DIRECTORIES@
     RESOLVED_DEPENDENCIES_VAR _resolved
     UNRESOLVED_DEPENDENCIES_VAR _unresolved
@@ -17,13 +31,6 @@ endforeach()
 
 file(INSTALL DESTINATION "${_dest}" TYPE SHARED_LIBRARY FOLLOW_SYMLINK_CHAIN FILES ${_resolved})
 
-set(_plugin_dir "")
-set(_plugin_dirs "@SMG_DEPLOY_PLUGIN_DIRS@")
-foreach(_dir IN LISTS _plugin_dirs)
-    if(NOT _plugin_dir AND IS_DIRECTORY "${_dir}/importers")
-        set(_plugin_dir "${_dir}")
-    endif()
-endforeach()
 if(_plugin_dir)
     # Magnum looks for plugins in magnum/ beside its own libraries
     file(INSTALL "${_plugin_dir}/" DESTINATION "${_dest}/magnum" FILES_MATCHING PATTERN "*.so" PATTERN "*.conf")

@@ -56,14 +56,11 @@ jobs:
           key: ccache-release-ubuntu-22.04-${{ github.sha }}
           restore-keys: ccache-release-ubuntu-22.04-
 
-      # --no-as-needed: Ubuntu's gcc drops unused NEEDED entries, so libMagnumText (needed only by the
-      # MagnumFont plugin) would never be deployed and check_closure fails on the plugin
       - name: Configure
         run: >
           cmake -B build -G Ninja
           -DCMAKE_BUILD_TYPE=Release
           -DENABLE_EXAMPLES=ON
-          -DCMAKE_EXE_LINKER_FLAGS=-Wl,--no-as-needed
           -DCMAKE_C_COMPILER_LAUNCHER=ccache
           -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
 
