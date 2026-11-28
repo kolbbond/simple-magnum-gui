@@ -30,7 +30,8 @@ plots and OpenGL scenes. Good for quick tools, debugging views and data visualiz
 Prebuilt tools and examples are on [GitHub Releases](https://github.com/kolbbond/simple-magnum-gui/releases)
 (changes in [CHANGELOG.md](CHANGELOG.md)). Each asset has a `.sha256` beside it.
 
-**Linux** (x86_64; needs glibc, libGL, SDL2 from the OS):
+**Linux** (x86_64; built on Ubuntu 22.04, so glibc 2.35 or newer — Ubuntu 22.04+, Debian 12+, current
+Arch/Fedora; needs `libgl1 libsdl2-2.0-0 libwayland-client0` or your distro's equivalents):
 ```bash
 sha256sum -c smg-tools-0.1.0-linux-x86_64.tar.gz.sha256
 tar xf smg-tools-0.1.0-linux-x86_64.tar.gz
