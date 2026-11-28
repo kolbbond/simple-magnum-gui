@@ -18,3 +18,6 @@ build-*/
 # stray top-level clones — the real ones live under external/ as submodules
 /implot
 /implot3d
+
+# release artifacts (scripts/package_linux.sh)
+/dist
