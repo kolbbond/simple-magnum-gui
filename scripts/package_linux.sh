@@ -102,7 +102,7 @@ package() {
         echo "package_linux: warning: $build is not a Release build" >&2
 
     # every tool-<example> install component cmake/InstallTools.cmake declared
-    tools=$(grep -rhoE 'CMAKE_INSTALL_COMPONENT STREQUAL "tool-[^"]+"' "$build" --include=cmake_install.cmake |
+    tools=$({ grep -rhoE 'CMAKE_INSTALL_COMPONENT STREQUAL "tool-[^"]+"' "$build" --include=cmake_install.cmake || true; } |
         sed -E 's/.*"tool-([^"]+)"/\1/' | sort -u)
     [ -n "$tools" ] || die "no tool-* components in $build (ENABLE_EXAMPLES=ON on Linux?)"
 
