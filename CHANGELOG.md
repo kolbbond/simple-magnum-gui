@@ -5,7 +5,7 @@ All notable changes to this project are documented here. The format follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 To release: move the Unreleased entries into a new `## [X.Y.Z] - YYYY-MM-DD` section, commit, then
-push a `vX.Y.Z` tag. `release.yml` builds both packages, smoke-tests them and attaches them with
+push a `vX.Y.Z` tag. `release.yml` builds every package, smoke-tests them and attaches them with
 their `.sha256` files; that section becomes the release notes.
 
 ## [Unreleased]
@@ -18,6 +18,9 @@ Planned as 0.1.0, the first tagged release.
   - `smg-tools-<version>-linux-x86_64.tar.gz`: relocatable `bin/smg-*` tools with private
     smg/Magnum libraries and plugins (`scripts/package_linux.sh`)
   - `smg-examples-<version>-win64.zip`: the examples plus every DLL and Magnum plugin they load
+  - `smg-<version>-linux-x86_64.tar.gz`: relocatable C++ SDK (headers, shared libs, bundled
+    Corrade/Magnum and plugins, CMake config for `find_package(smg)`), built in `manylinux_2_28`
+    (`scripts/package_sdk.sh`, checked by `scripts/check_sdk.sh`)
   - a `.sha256` file for each, in `sha256sum` format
 - Arch package `smg-tools-bin` for the release tarball (`packaging/arch/PKGBUILD`), with every bundled
   license under `/usr/share/licenses/smg-tools-bin/`.
