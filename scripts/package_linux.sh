@@ -3,13 +3,14 @@
 #   scripts/package_linux.sh BUILD_DIR VERSION [OUT_DIR=dist]
 #     -> OUT_DIR/smg-tools-VERSION-linux-x86_64.tar.gz + .sha256
 #   scripts/package_linux.sh --smoke TARBALL
-#     unpacks into a temp dir and runs every bin/smg-* for a few hidden frames in a scrubbed env
+#     unpacks into a temp dir, checks the license notices, and runs every bin/smg-* for a few
+#     hidden frames in a scrubbed env
 # The tarball holds bin/smg-<name> links into lib/smg-tools/bin, beside private libs and Magnum
 # plugins (cmake/InstallTools.cmake); glibc, libGL and SDL2 stay with the OS.
 set -euo pipefail
 
 usage() {
-    sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' >&2
+    sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2
     exit 2
 }
 
@@ -38,6 +39,22 @@ check_closure() {
     return $bad
 }
 
+# notices cmake/SmgLicenses.cmake installs; every redistributed component must keep its own
+LICENSES=(smg.txt corrade.txt magnum.txt magnum-integration.txt magnum-plugins.txt imgui.txt implot.txt
+    implot3d.txt imguifiledialog.txt magnum-bloom.md fonts/README.md fonts/OFL-1.1.txt fonts/Apache-2.0.txt)
+
+check_licenses() {
+    local dir=$1/share/licenses/smg f bad=0
+    for f in "${LICENSES[@]}"; do
+        if [ ! -s "$dir/$f" ]; then
+            echo "missing license: share/licenses/smg/$f" >&2
+            bad=1
+        fi
+    done
+    [ $bad -eq 0 ] && echo "ok   ${#LICENSES[@]} license files"
+    return $bad
+}
+
 smoke() {
     local tarball=$1 root sums exe name rc fail=0 count=0
     [ -f "$tarball" ] || die "no such tarball: $tarball"
@@ -50,6 +67,7 @@ smoke() {
     root=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n 1)
     [ -d "$root/bin" ] || die "tarball has no top-level <dir>/bin"
     check_closure "$root" || die "library closure is incomplete"
+    check_licenses "$root" || die "license notices are incomplete"
 
     # XAUTHORITY: xvfb-run's server refuses clients without its cookie
     local -a keep=()
@@ -98,6 +116,7 @@ package() {
         cmake --install "$build" --component "tool-$t" --prefix "$prefix" >/dev/null || die "install of tool-$t failed"
     done
     check_closure "$prefix" "$build" || die "library closure is incomplete"
+    check_licenses "$prefix" || die "license notices are incomplete"
 
     # reproducible-ish: fixed owner and order, no build-host user names
     tar --sort=name --owner=0 --group=0 --numeric-owner -C "$stage" -czf "$out/$name.tar.gz" "$name"
