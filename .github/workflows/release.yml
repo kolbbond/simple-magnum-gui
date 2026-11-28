@@ -1,0 +1,227 @@
+name: release
+
+# v* tags build, smoke and publish both packages; a manual dispatch does the same minus the release
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: package version (no leading v)
+        default: 0.0.0-dev
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  # tag v1.2.3 -> 1.2.3; dispatch -> the input
+  RAW_VERSION: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Version
+        shell: bash
+        run: echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cmake ninja-build g++ libsdl2-dev libgl1-mesa-dev xorg-dev ccache \
+            xvfb libgl1-mesa-dri
+
+      - name: ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ccache-release-${{ runner.os }}-${{ github.sha }}
+          restore-keys: |
+            ccache-release-${{ runner.os }}-
+            ccache-${{ runner.os }}-
+
+      - name: Configure
+        run: >
+          cmake -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DENABLE_EXAMPLES=ON
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache
+          -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        run: scripts/package_linux.sh build "$VERSION" dist
+
+      # a fresh dir so the smoke sees only what ships; --smoke also checks the .sha256
+      - name: Smoke (xvfb)
+        env:
+          LIBGL_ALWAYS_SOFTWARE: "1"
+        run: |
+          mkdir -p "$RUNNER_TEMP/smoke"
+          cp dist/smg-tools-*.tar.gz dist/smg-tools-*.tar.gz.sha256 "$RUNNER_TEMP/smoke/"
+          xvfb-run -a -s "-screen 0 1920x1080x24" \
+            scripts/package_linux.sh --smoke "$RUNNER_TEMP/smoke/smg-tools-$VERSION-linux-x86_64.tar.gz"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smg-linux
+          path: |
+            dist/smg-tools-*.tar.gz
+            dist/smg-tools-*.tar.gz.sha256
+          if-no-files-found: error
+
+  windows:
+    runs-on: windows-latest
+    env:
+      VCPKG_DEFAULT_BINARY_CACHE: ${{ github.workspace }}\vcpkg-cache
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Version
+        shell: bash
+        run: echo "VERSION=${RAW_VERSION#v}" >> "$GITHUB_ENV"
+
+      # vcpkg binary cache: classic-mode installs restore prebuilt ports instead of rebuilding
+      - name: vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: vcpkg-cache
+          key: vcpkg-${{ runner.os }}-sdl2-freetype-libjpeg-turbo-${{ hashFiles('CMakePresets.json') }}
+          restore-keys: vcpkg-${{ runner.os }}-sdl2-freetype-libjpeg-turbo-
+
+      - name: vcpkg install
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force $env:VCPKG_DEFAULT_BINARY_CACHE | Out-Null
+          "VCPKG_ROOT=$env:VCPKG_INSTALLATION_ROOT" | Out-File -Append -Encoding utf8 $env:GITHUB_ENV
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install sdl2 freetype libjpeg-turbo --triplet x64-windows
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        shell: pwsh
+        run: cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION"
+
+      - name: Build
+        run: cmake --build build
+
+      - name: Package
+        working-directory: build
+        run: cpack -G ZIP
+
+      - name: Smoke
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GALLIUM_DRIVER: llvmpipe
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $zip = Get-Item "build\package\smg-examples-$env:VERSION-win64.zip"
+          $dest = Join-Path $env:RUNNER_TEMP 'smoke'
+          Expand-Archive -Path $zip.FullName -DestinationPath $dest -Force
+          $exe = Get-ChildItem -Path $dest -Recurse -Filter scene_panel.exe | Where-Object { $_.Directory.Name -eq 'bin' } | Select-Object -First 1
+          if (-not $exe) { throw "no bin\scene_panel.exe in $($zip.Name)" }
+
+          function Invoke-Smoke {
+            $p = Start-Process -FilePath $exe.FullName -ArgumentList '--smg-frames', '5', '--smg-hidden' `
+              -WorkingDirectory $exe.DirectoryName -NoNewWindow -PassThru `
+              -RedirectStandardOutput "$dest\out.log" -RedirectStandardError "$dest\err.log"
+            $null = $p.Handle # else ExitCode reads back empty
+            if (-not $p.WaitForExit(120000)) { $p.Kill(); Write-Host 'timed out'; return 1 }
+            Get-Content "$dest\out.log", "$dest\err.log" | Write-Host
+            return $p.ExitCode
+          }
+
+          $rc = Invoke-Smoke
+          if ($rc -ne 0) {
+            # hosted runners have no GPU; the basic display driver stops at GL 1.1
+            Write-Host "exit $rc with the system GL; retrying with Mesa llvmpipe"
+            $mesa = Join-Path $env:RUNNER_TEMP 'mesa'
+            gh release download --repo pal1000/mesa-dist-win --pattern '*-release-msvc.7z' --dir $mesa
+            if ($LASTEXITCODE -ne 0) { throw 'mesa download failed' }
+            $archive = Get-ChildItem $mesa -Filter *.7z | Select-Object -First 1
+            7z x $archive.FullName "-o$mesa\x" -y | Out-Null
+            foreach ($dll in 'opengl32.dll', 'libgallium_wgl.dll', 'libglapi.dll', 'dxil.dll') {
+              $src = Join-Path "$mesa\x\x64" $dll
+              if (Test-Path $src) { Copy-Item $src $exe.DirectoryName }
+            }
+            $rc = Invoke-Smoke
+          }
+          if ($rc -ne 0) { throw "scene_panel.exe exited $rc" }
+          Write-Host 'ok   scene_panel.exe'
+
+      # sha256sum format so `sha256sum -c` verifies it on any platform
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $zip = Get-Item "build\package\smg-examples-$env:VERSION-win64.zip"
+          $hash = (Get-FileHash -Algorithm SHA256 $zip.FullName).Hash.ToLower()
+          [IO.File]::WriteAllText("$($zip.FullName).sha256", "$hash  $($zip.Name)`n")
+          Get-Content "$($zip.FullName).sha256"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smg-windows
+          path: |
+            build/package/smg-examples-*-win64.zip
+            build/package/smg-examples-*-win64.zip.sha256
+          if-no-files-found: error
+
+  release:
+    needs: [linux, windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      # the "## [1.2.3]" / "## 1.2.3" / "## v1.2.3" section of CHANGELOG.md, up to the next "## "
+      - name: Release notes
+        id: notes
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if [ -f CHANGELOG.md ]; then
+            awk -v v="$v" '
+              /^## / { if (found) exit; h = $0; sub(/^## +\[?v?/, "", h); if (index(h, v) == 1 && substr(h, length(v) + 1, 1) !~ /[0-9A-Za-z.-]/) { found = 1; next } }
+              found { print }
+            ' CHANGELOG.md > notes.md
+          fi
+          if [ -s notes.md ]; then
+            echo "path=notes.md" >> "$GITHUB_OUTPUT"
+          else
+            echo "no CHANGELOG.md section for $v; using generated notes"
+          fi
+          ls -l dist
+
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.sha256
+          body_path: ${{ steps.notes.outputs.path }}
+          generate_release_notes: ${{ steps.notes.outputs.path == '' }}
+          fail_on_unmatched_files: true
