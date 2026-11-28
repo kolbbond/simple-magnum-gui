@@ -10,8 +10,7 @@
 set -euo pipefail
 
 usage() {
-    sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//' >&2
-    exit 2
+    sed -n '2,8p' "$0" | sed 's/^# \{0,1\}//'
 }
 
 die() {
@@ -59,9 +58,9 @@ smoke() {
     local tarball=$1 root sums exe name rc fail=0 count=0
     [ -f "$tarball" ] || die "no such tarball: $tarball"
     sums="$tarball.sha256"
-    if [ -f "$sums" ]; then
-        (cd "$(dirname "$tarball")" && sha256sum -c "$(basename "$sums")") || die "checksum mismatch"
-    fi
+    # fail closed: an unverified tarball is not the one that was built
+    [ -f "$sums" ] || die "no checksum file: $sums"
+    (cd "$(dirname "$tarball")" && sha256sum -c "$(basename "$sums")") || die "checksum mismatch"
     tmp=$(mktemp -d)
     tar -xzf "$tarball" -C "$tmp"
     root=$(find "$tmp" -mindepth 1 -maxdepth 1 -type d | head -n 1)
@@ -133,12 +132,13 @@ trap 'rm -rf ${tmp:+"$tmp"} ${stage:+"$stage"}' EXIT
 
 case "${1:-}" in
     --smoke)
-        [ $# -eq 2 ] || usage
+        [ $# -eq 2 ] || { usage >&2; exit 2; }
         smoke "$2"
         ;;
-    -h | --help | "") usage ;;
+    -h | --help) usage ;;
+    "") usage >&2; exit 2 ;;
     *)
-        [ $# -ge 2 ] && [ $# -le 3 ] || usage
+        [ $# -ge 2 ] && [ $# -le 3 ] || { usage >&2; exit 2; }
         package "$@"
         ;;
 esac
