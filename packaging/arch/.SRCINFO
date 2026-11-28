@@ -1,0 +1,21 @@
+pkgbase = smg-tools-bin
+	pkgdesc = simple-magnum-gui tools: file browser, results viewer, CSV plotter, disk usage, system monitor, HUD overlay (prebuilt)
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/kolbbond/simple-magnum-gui
+	arch = x86_64
+	license = MIT
+	depends = glibc
+	depends = gcc-libs
+	depends = libgl
+	depends = sdl2
+	depends = wayland
+	provides = smg-tools
+	conflicts = smg-tools
+	options = !debug
+	source = https://github.com/kolbbond/simple-magnum-gui/releases/download/v0.1.0/smg-tools-0.1.0-linux-x86_64.tar.gz
+	source = LICENSE-0.1.0::https://raw.githubusercontent.com/kolbbond/simple-magnum-gui/v0.1.0/LICENSE
+	sha256sums = SKIP
+	sha256sums = SKIP
+
+pkgname = smg-tools-bin
