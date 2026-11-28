@@ -18,7 +18,7 @@ endif
 CMAKE_FLAGS := -DCMAKE_BUILD_TYPE=$(CMAKE_BUILD_TYPE)
 CMAKE_EXTRA_FLAGS ?=
 
-.PHONY: all configure build clean install test install-tools uninstall-tools
+.PHONY: all configure build clean install test install-tools uninstall-tools package-linux
 
 all: build
 
@@ -57,3 +57,9 @@ uninstall-tools:
 		case "$$t" in */smg-tools/bin/*) dir=$$(cd "$$(dirname "$$l")/$$(dirname "$$t")/.." && pwd); rm -f "$$l"; echo "removed $$l";; esac; \
 	done; \
 	if [ -n "$$dir" ] && [ "$$(basename "$$dir")" = smg-tools ]; then rm -rf "$$dir"; echo "removed $$dir"; fi
+
+# relocatable tools tarball + .sha256 in dist/ (the release workflow's Linux artifact)
+VERSION ?= 0.0.0-dev
+package-linux: build
+	scripts/package_linux.sh $(BUILD_DIR) $(VERSION)
+	scripts/package_linux.sh --smoke dist/smg-tools-$(VERSION)-linux-x86_64.tar.gz

@@ -22,11 +22,10 @@ set(_smg_tool_lib_dirs "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}" "${CMAKE_RUNTIME_OUTP
 foreach(_prefix ${CMAKE_PREFIX_PATH})
     list(APPEND _smg_tool_lib_dirs "${_prefix}/lib" "${_prefix}/${CMAKE_INSTALL_LIBDIR}")
 endforeach()
-set(_smg_tool_plugin_dir "")
+# candidates for the Magnum plugin dir; picked at install time, since a fresh tree has not built them yet
+set(_smg_tool_plugin_dirs "")
 foreach(_dir ${_smg_tool_lib_dirs})
-    if(NOT _smg_tool_plugin_dir AND IS_DIRECTORY "${_dir}/magnum/importers")
-        set(_smg_tool_plugin_dir "${_dir}/magnum")
-    endif()
+    list(APPEND _smg_tool_plugin_dirs "${_dir}/magnum")
 endforeach()
 
 set(_smg_tool_link_code [=[
@@ -46,7 +45,7 @@ foreach(_t ${_smg_tools})
 
     set(SMG_DEPLOY_EXECUTABLE "$<TARGET_FILE:${_t}>")
     set(SMG_DEPLOY_DIRECTORIES "${_smg_tool_lib_dirs}")
-    set(SMG_DEPLOY_PLUGIN_DIR "${_smg_tool_plugin_dir}")
+    set(SMG_DEPLOY_PLUGIN_DIRS "${_smg_tool_plugin_dirs}")
     configure_file(${CMAKE_CURRENT_LIST_DIR}/deploy_tool.cmake.in ${CMAKE_BINARY_DIR}/deploy_tool_${_t}.cmake.gen @ONLY)
     file(GENERATE OUTPUT ${CMAKE_BINARY_DIR}/deploy_tool_${_t}-$<CONFIG>.cmake INPUT ${CMAKE_BINARY_DIR}/deploy_tool_${_t}.cmake.gen)
     install(SCRIPT ${CMAKE_BINARY_DIR}/deploy_tool_${_t}-$<CONFIG>.cmake COMPONENT tool-${_t} EXCLUDE_FROM_ALL)
