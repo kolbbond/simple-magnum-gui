@@ -13,7 +13,7 @@ url='https://github.com/kolbbond/simple-magnum-gui'
 # smg, Corrade, Magnum, ImGui, ImPlot, ImGuiFileDialog: MIT; bloom: Unlicense; fonts: OFL-1.1, Apache-2.0
 license=('MIT' 'Unlicense' 'OFL-1.1' 'Apache-2.0')
 # what the tarball leaves to the OS; Magnum, Corrade, ImGui and libsmg ship in lib/smg-tools
-depends=('glibc' 'gcc-libs' 'libgl' 'sdl2' 'wayland')
+depends=('glibc' 'gcc-libs' 'libgl' 'libglvnd' 'sdl2' 'wayland')
 provides=('smg-tools')
 conflicts=('smg-tools')
 # prebuilt: no sources for a -debug package

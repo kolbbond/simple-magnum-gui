@@ -11,6 +11,7 @@ pkgbase = smg-tools-bin
 	depends = glibc
 	depends = gcc-libs
 	depends = libgl
+	depends = libglvnd
 	depends = sdl2
 	depends = wayland
 	provides = smg-tools

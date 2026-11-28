@@ -89,7 +89,7 @@ jobs:
         image: ['ubuntu:22.04', 'debian:12']
     container: ${{ matrix.image }}
     steps:
-      # runtime: libgl1 libsdl2-2.0-0 libwayland-client0; smoke only: xvfb xauth, Mesa's software
+      # runtime: libgl1 libopengl0 libsdl2-2.0-0 libwayland-client0; smoke only: xvfb xauth, Mesa's software
       # DRI driver (a desktop has a GPU driver instead), file for the script's ELF check
       - name: Install runtime deps
         env:
@@ -97,7 +97,7 @@ jobs:
         run: |
           apt-get update
           apt-get install -y --no-install-recommends \
-            libgl1 libsdl2-2.0-0 libwayland-client0 \
+            libgl1 libopengl0 libsdl2-2.0-0 libwayland-client0 \
             xvfb xauth libgl1-mesa-dri file ca-certificates
 
       # only for scripts/package_linux.sh; the tools come from the artifact
@@ -160,7 +160,7 @@ jobs:
         shell: pwsh
         run: |
           $env:VCPKG_ROOT = $env:VCPKG_INSTALLATION_ROOT
-          cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION" `
+          cmake --preset windows-vcpkg-release "-DSMG_PACKAGE_VERSION=$env:VERSION" -DENABLE_TESTING=OFF `
             "-DCMAKE_TOOLCHAIN_FILE=$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
