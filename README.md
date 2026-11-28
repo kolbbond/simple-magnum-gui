@@ -45,7 +45,8 @@ Expand-Archive smg-examples-0.1.0-win64.zip .
 .\smg-examples-0.1.0-win64\bin\scene_panel.exe
 ```
 
-**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball.
+**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball (notices in
+`/usr/share/licenses/smg-tools-bin/`).
 
 Both packages carry the license texts of smg and everything bundled (Corrade, Magnum, ImGui, ImPlot,
 ImGuiFileDialog, fonts): `share/licenses/smg/` in the tarball, `licenses\` in the zip.
