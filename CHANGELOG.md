@@ -21,7 +21,8 @@ First tagged release.
     smg/Magnum libraries and plugins (`scripts/package_linux.sh`)
   - `smg-examples-<version>-win64.zip`: the examples plus every DLL and Magnum plugin they load
   - a `.sha256` file for each, in `sha256sum` format
-- Arch package `smg-tools-bin` for the release tarball (`packaging/arch/PKGBUILD`).
+- Arch package `smg-tools-bin` for the release tarball (`packaging/arch/PKGBUILD`), with every bundled
+  license under `/usr/share/licenses/smg-tools-bin/`.
 - `GuiBase`: window plus ImGui/ImPlot/ImPlot3D context and a per-frame callback loop; MSAA, HiDPI
   fonts, docking.
 - `ScenePanel`: 3D viewport inside an ImGui window with orbit camera, meshes, bloom and iso sprites.
