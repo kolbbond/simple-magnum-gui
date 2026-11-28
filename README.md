@@ -25,6 +25,32 @@ plots and OpenGL scenes. Good for quick tools, debugging views and data visualiz
 - **Capture** — screenshots, frame recording and hidden off-screen rendering, from code or the
   command line (below), which also makes every app testable in CI without a display
 
+## Download
+
+Prebuilt tools and examples are on [GitHub Releases](https://github.com/kolbbond/simple-magnum-gui/releases)
+(changes in [CHANGELOG.md](CHANGELOG.md)). Each asset has a `.sha256` beside it.
+
+**Linux** (x86_64; needs glibc, libGL, SDL2 from the OS):
+```bash
+sha256sum -c smg-tools-0.1.0-linux-x86_64.tar.gz.sha256
+tar xf smg-tools-0.1.0-linux-x86_64.tar.gz
+./smg-tools-0.1.0-linux-x86_64/bin/smg-fview         # runs in place
+cp -a smg-tools-0.1.0-linux-x86_64/. ~/.local/        # or install: smg-fview, smg-csvplot, ... on PATH
+```
+
+**Windows** (x64; needs an OpenGL 3.3 driver):
+```powershell
+(Get-FileHash smg-examples-0.1.0-win64.zip -Algorithm SHA256).Hash   # compare with the .sha256
+Expand-Archive smg-examples-0.1.0-win64.zip .
+.\smg-examples-0.1.0-win64\bin\scene_panel.exe
+```
+
+**Arch**: `cd packaging/arch && makepkg -si` installs `smg-tools-bin` from the release tarball.
+
+Releasing: add a `## [X.Y.Z]` section to [CHANGELOG.md](CHANGELOG.md), then push a `vX.Y.Z` tag;
+[`release.yml`](.github/workflows/release.yml) builds, smoke-tests and attaches both packages with
+their checksums. A manual `workflow_dispatch` run does the same without publishing.
+
 ## Getting Started
 
 Clone with submodules:
