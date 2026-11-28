@@ -1,9 +1,10 @@
 # Maintainer: kolbbond
 # Prebuilt smg-* tools from the GitHub release tarball (scripts/package_linux.sh).
 #
-# sha256sums stay SKIP until v$pkgver is published. After a release: set pkgver, reset pkgrel=1, then
+# sha256sums is a placeholder until v$pkgver is published; the real value is the release's
+# $_tarname.tar.gz.sha256 asset. After a release: set pkgver, reset pkgrel=1, then
 #   updpkgsums && makepkg --printsrcinfo > .SRCINFO
-# (updpkgsums is in pacman-contrib; the value must match the release's .sha256 asset)
+# (updpkgsums is in pacman-contrib)
 pkgname=smg-tools-bin
 pkgver=0.1.0
 pkgrel=1
@@ -12,7 +13,7 @@ arch=('x86_64')
 url='https://github.com/kolbbond/simple-magnum-gui'
 # smg, Corrade, Magnum, ImGui, ImPlot, ImGuiFileDialog: MIT; bloom: Unlicense; fonts: OFL-1.1, Apache-2.0
 license=('MIT' 'Unlicense' 'OFL-1.1' 'Apache-2.0')
-# what the tarball leaves to the OS; Magnum, Corrade, ImGui and libsmg ship in lib/smg-tools
+# runtime: SDL2, GLVND (libOpenGL.so.0) and Wayland come from the OS; Magnum, Corrade, ImGui and libsmg ship in lib/smg-tools
 depends=('glibc' 'gcc-libs' 'libgl' 'libglvnd' 'sdl2' 'wayland')
 provides=('smg-tools')
 conflicts=('smg-tools')
